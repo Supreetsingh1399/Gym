@@ -1,11 +1,19 @@
 {
   "compilerOptions": {
+    "target": "es2017",
+    "module": "commonjs",
+    "allowJs": true,
+    "outDir": "build",
+    "rootDir": ".",
+    "skipLibCheck": true,
     "types": [
+      "node",
       "nativewind/types"
     ],
     "jsx": "react-native",
     "esModuleInterop": true,
     "lib": [
+      "es6",
       "ES2015",
       "DOM"
     ],
