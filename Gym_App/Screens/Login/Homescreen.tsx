@@ -14,7 +14,7 @@ import {
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { SafeAreaView } from "react-native-safe-area-context";
 // @ts-ignore
-const handleLogin = ({ navigation }) => {
+const HandleLogin = ({ navigation }) => {
   // Function to handle the login
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -30,9 +30,15 @@ const handleLogin = ({ navigation }) => {
         Alert.alert("Error", "Please enter a valid email");
         return;
       }
-
       await signInWithEmailAndPassword(FireBase_Auth, email, password);
-      navigation.navigate("User_SignUp");
+      if (FireBase_Auth.currentUser && FireBase_Auth.currentUser.uid === 'user') {
+        navigation.navigate("Home");
+      } else if (FireBase_Auth.currentUser && FireBase_Auth.currentUser.uid === 'trainer') {
+        navigation.navigate("TrainerHome");
+      } else {
+        Alert.alert("Error", "Invalid User");
+      }
+
     } catch (error: any) {
       setError(error.message);
       Alert.alert("Error", error.message);
@@ -82,4 +88,4 @@ const handleLogin = ({ navigation }) => {
   );
 };
 
-export default handleLogin;
+export default HandleLogin;

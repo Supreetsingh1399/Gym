@@ -5,11 +5,12 @@ import {
   TextInput,
   Button,
   KeyboardAvoidingView,
+  Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { NavigationProp } from "@react-navigation/native";
 import { FireBase_Auth } from "../../Backend/firebase";
-import { sendPasswordResetEmail } from "firebase/auth";
+import { fetchSignInMethodsForEmail, sendPasswordResetEmail } from "firebase/auth";
 
 type ForgotPassProps = {
   navigation: NavigationProp<any>;
@@ -32,13 +33,21 @@ const ForgotPass = ({ navigation }: ForgotPassProps) => {
     }
     setError("");
     try {
-      await sendPasswordResetEmail(FireBase_Auth, email);
-      navigation.navigate("Login");
-    } catch (error: any) {
-      setError(error.message || "Failed to reset password");
-      console.log(error);
+      // Check if email exists
+      const methods = await fetchSignInMethodsForEmail(FireBase_Auth, email);
+      if (methods.length === 0) {
+        setError("No account exists with this email");
+      return;
     }
-  };
+    // Send reset email if account exists
+    await sendPasswordResetEmail(FireBase_Auth, email);
+    Alert.alert("Success", "Password reset email sent!");
+    navigation.navigate("Login");
+  } catch (error: any) {
+    setError(error.message || "Failed to reset password");
+    console.log(error);
+  }
+};
 //   Return the Your Password Reset Screen
 
 

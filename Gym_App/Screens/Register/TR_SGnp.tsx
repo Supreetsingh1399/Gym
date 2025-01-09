@@ -52,11 +52,11 @@ const TR_SignUp = ({ navigation }) => {
   };
   return (
     <SafeAreaView className="flex-1 justify-center items-center">
-      <KeyboardAvoidingView>
+      <KeyboardAvoidingView className="justify-center gap-1 p-4 w-full h-full">
         <View>
           {step === 1 && (
             <View>
-              <Text className="text-red-500 text-center">
+              <Text className="text-red-500 text-center text-2xl">
                 Personal Details..
               </Text>
               <TextInput
@@ -92,11 +92,13 @@ const TR_SignUp = ({ navigation }) => {
           )}
           {step === 2 && (
             <View>
-              <Text className="text-red-500 text-center">
+              <Text className="text-red-500 text-center text-2xl mb-3">
                 Professional & GYM Details..
               </Text>
+              <View className="gap-1 border-2 border-black p-2 ">
               <TextInput
                 placeholder="Enter your Gym Name"
+                underlineColorAndroid={"black"}
                 value={TrainerData.gymName}
                 onChangeText={(text) =>
                   setTrainerData({ ...TrainerData, gymName: text })
@@ -104,6 +106,7 @@ const TR_SignUp = ({ navigation }) => {
               />
               <TextInput
                 placeholder="Enter your Gym Address"
+                underlineColorAndroid={"black"}
                 value={TrainerData.gymAddress}
                 onChangeText={(text) =>
                   setTrainerData({ ...TrainerData, gymAddress: text })
@@ -111,6 +114,7 @@ const TR_SignUp = ({ navigation }) => {
               />
               <TextInput
                 placeholder="Enter your Gym City"
+                underlineColorAndroid={"black"}
                 value={TrainerData.gymCity}
                 onChangeText={(text) =>
                   setTrainerData({ ...TrainerData, gymCity: text })
@@ -119,6 +123,7 @@ const TR_SignUp = ({ navigation }) => {
               <TextInput
                 placeholder="Enter your Gym State"
                 value={TrainerData.gymState}
+                underlineColorAndroid={"black"}
                 onChangeText={(text) =>
                   setTrainerData({ ...TrainerData, gymState: text })
                 }
@@ -126,6 +131,7 @@ const TR_SignUp = ({ navigation }) => {
               <TextInput
                 placeholder="Enter your Gym Zip"
                 value={TrainerData.gymZip}
+                underlineColorAndroid={"black"}
                 onChangeText={(text) =>
                   setTrainerData({ ...TrainerData, gymZip: text })
                 }
@@ -133,6 +139,7 @@ const TR_SignUp = ({ navigation }) => {
               <TextInput
                 placeholder="Enter your Gym Country"
                 value={TrainerData.gymCountry}
+                underlineColorAndroid={"black"}
                 onChangeText={(text) =>
                   setTrainerData({ ...TrainerData, gymCountry: text })
                 }
@@ -140,6 +147,7 @@ const TR_SignUp = ({ navigation }) => {
               <TextInput
                 placeholder="Enter your Gym Phone"
                 value={TrainerData.gymPhone}
+                underlineColorAndroid={"black"}
                 onChangeText={(text) =>
                   setTrainerData({ ...TrainerData, gymPhone: text })
                 }
@@ -147,6 +155,7 @@ const TR_SignUp = ({ navigation }) => {
               <TextInput
                 placeholder="Enter your Gym Email"
                 value={TrainerData.gymEmail}
+                underlineColorAndroid={"black"}
                 onChangeText={(text) =>
                   setTrainerData({ ...TrainerData, gymEmail: text })
                 }
@@ -154,12 +163,14 @@ const TR_SignUp = ({ navigation }) => {
               <TextInput
                 placeholder="Enter your Gym Website"
                 value={TrainerData.gymWebsite}
+                underlineColorAndroid={"black"}
                 onChangeText={(text) =>
                   setTrainerData({ ...TrainerData, gymWebsite: text })
                 }
               />
-              <Button title="Back" onPress={handleBack} />
+              <Button  title="Back" onPress={handleBack} />
               <Button title="Submit" onPress={handleSubmit} />
+            </View>
             </View>
           )}
         </View>
