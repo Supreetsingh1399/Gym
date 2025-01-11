@@ -10,7 +10,10 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { NavigationProp } from "@react-navigation/native";
 import { FireBase_Auth } from "../../Backend/firebase";
-import { fetchSignInMethodsForEmail, sendPasswordResetEmail } from "firebase/auth";
+import {
+  fetchSignInMethodsForEmail,
+  sendPasswordResetEmail,
+} from "firebase/auth";
 
 type ForgotPassProps = {
   navigation: NavigationProp<any>;
@@ -20,14 +23,13 @@ const ForgotPass = ({ navigation }: ForgotPassProps) => {
   const [email, setEmail] = useState("");
   const [error, setError] = useState("");
 
-// Function to handle the reset password
+  // Function to handle the reset password
 
   const handleResetPassword = async () => {
     if (!email) {
       setError("Please enter email");
       return;
-    }
-    else if (!email.includes("@") || !email.includes(".")) {
+    } else if (!email.includes("@") || !email.includes(".")) {
       setError("Please enter a valid email");
       return;
     }
@@ -37,19 +39,18 @@ const ForgotPass = ({ navigation }: ForgotPassProps) => {
       const methods = await fetchSignInMethodsForEmail(FireBase_Auth, email);
       if (methods.length === 0) {
         setError("No account exists with this email");
-      return;
+        return;
+      }
+      // Send reset email if account exists
+      await sendPasswordResetEmail(FireBase_Auth, email);
+      Alert.alert("Success", "Password reset email sent!");
+      navigation.navigate("Login");
+    } catch (error: any) {
+      setError(error.message || "Failed to reset password");
+      console.log(error);
     }
-    // Send reset email if account exists
-    await sendPasswordResetEmail(FireBase_Auth, email);
-    Alert.alert("Success", "Password reset email sent!");
-    navigation.navigate("Login");
-  } catch (error: any) {
-    setError(error.message || "Failed to reset password");
-    console.log(error);
-  }
-};
-//   Return the Your Password Reset Screen
-
+  };
+  //   Return the Your Password Reset Screen
 
   return (
     <SafeAreaView className="flex-1 justify-center items-center w-full h-full">
@@ -66,9 +67,7 @@ const ForgotPass = ({ navigation }: ForgotPassProps) => {
             keyboardType="email-address"
             autoCapitalize="none"
           />
-          {error ? (
-            <Text className="text-red-500 mb-2">{error}</Text>
-          ) : null}
+          {error ? <Text className="text-red-500 mb-2">{error}</Text> : null}
           <Button title="Submit" onPress={handleResetPassword} />
         </View>
       </KeyboardAvoidingView>

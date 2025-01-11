@@ -6,11 +6,14 @@ import {
   Button,
   KeyboardAvoidingView,
   Text,
+  Alert,
+  ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 //@ts-ignore
 const TR_SignUp = ({ navigation }) => {
   const [step, setStep] = useState(1);
+  const [loading, setLoading] = useState(false);
   const [TrainerData, setTrainerData] = useState({
     email: "",
     password: "",
@@ -20,69 +23,80 @@ const TR_SignUp = ({ navigation }) => {
     gymAddress: "",
     gymCity: "",
     gymState: "",
-    gymZip: "",
-    gymCountry: "",
     gymPhone: "",
     gymEmail: "",
     gymWebsite: "",
-    Availability: "",
-    Price: "",
-    Description: "",
-    Speciality: "",
-    Age: "",
   });
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
-  const handleNext = () => setStep(step + 1);
+
+  const handleNext = () => {
+    if (!TrainerData.email || !TrainerData.password || !TrainerData.name) {
+      Alert.alert("Error", "Please fill in all required fields.");
+      return;
+    }
+    setStep(step + 1);
+  };
+
   const handleBack = () => setStep(step - 1);
+
   const handleSubmit = async () => {
+    setLoading(true);
     try {
-      await axios.post("http://localhost:5000/api/trainer/register", {
-        ...TrainerData,
-        status: "pending",
-      }); //mark as pending
-      alert("Sign Up Successfull! Please wait for admin approval");
-    } catch (err) {
-      if (err instanceof Error) {
-        setError(err.message);
-      } else {
-        setError("An unknown error occurred");
-      }
+      const response = await axios.post(
+        "http://192.168.2.216:5000/Register/Trainers",
+        {
+          tableName: "Trainers",
+          databaseName: "Register",
+          ...TrainerData,
+          status: "pending",
+          createdAt: new Date().toISOString(),
+        },
+      );
+
+      Alert.alert("Success", "Registration successful!");
+      navigation.navigate("Login");
+    } catch (error: any) {
+      const errorMessage =
+        error.response?.data?.message ||
+        "Something went wrong. Please try again.";
+      Alert.alert("Error", errorMessage);
+    } finally {
+      setLoading(false);
     }
   };
+
   return (
     <SafeAreaView className="flex-1 justify-center items-center">
-      <KeyboardAvoidingView className="justify-center gap-1 p-4 w-full h-full">
+      <KeyboardAvoidingView className="justify-center p-4 w-full h-full">
         <View>
           {step === 1 && (
             <View>
-              <Text className="text-red-500 text-center text-2xl">
-                Personal Details..
-              </Text>
+              <Text className="text-center text-2xl">Personal Details</Text>
               <TextInput
-                placeholder="Enter your Email"
+                placeholder="Email"
                 value={TrainerData.email}
                 onChangeText={(text) =>
                   setTrainerData({ ...TrainerData, email: text })
                 }
               />
               <TextInput
-                placeholder="Enter your Password"
+                placeholder="Password"
+                secureTextEntry
                 value={TrainerData.password}
                 onChangeText={(text) =>
                   setTrainerData({ ...TrainerData, password: text })
                 }
               />
               <TextInput
-                placeholder="Enter your Name"
+                placeholder="Name"
                 value={TrainerData.name}
                 onChangeText={(text) =>
                   setTrainerData({ ...TrainerData, name: text })
                 }
               />
               <TextInput
-                placeholder="Enter your Phone"
+                placeholder="Phone"
                 value={TrainerData.phone}
+                keyboardType="phone-pad"
                 onChangeText={(text) =>
                   setTrainerData({ ...TrainerData, phone: text })
                 }
@@ -90,87 +104,68 @@ const TR_SignUp = ({ navigation }) => {
               <Button title="Next" onPress={handleNext} />
             </View>
           )}
+
           {step === 2 && (
             <View>
-              <Text className="text-red-500 text-center text-2xl mb-3">
-                Professional & GYM Details..
-              </Text>
-              <View className="gap-1 border-2 border-black p-2 ">
+              <Text className="text-center text-2xl">Gym Details</Text>
               <TextInput
-                placeholder="Enter your Gym Name"
-                underlineColorAndroid={"black"}
+                placeholder="Gym Name"
                 value={TrainerData.gymName}
                 onChangeText={(text) =>
                   setTrainerData({ ...TrainerData, gymName: text })
                 }
               />
               <TextInput
-                placeholder="Enter your Gym Address"
-                underlineColorAndroid={"black"}
+                placeholder="Gym Address"
                 value={TrainerData.gymAddress}
                 onChangeText={(text) =>
                   setTrainerData({ ...TrainerData, gymAddress: text })
                 }
               />
               <TextInput
-                placeholder="Enter your Gym City"
-                underlineColorAndroid={"black"}
+                placeholder="Gym City"
                 value={TrainerData.gymCity}
                 onChangeText={(text) =>
                   setTrainerData({ ...TrainerData, gymCity: text })
                 }
               />
               <TextInput
-                placeholder="Enter your Gym State"
+                placeholder="Gym State"
                 value={TrainerData.gymState}
-                underlineColorAndroid={"black"}
                 onChangeText={(text) =>
                   setTrainerData({ ...TrainerData, gymState: text })
                 }
               />
               <TextInput
-                placeholder="Enter your Gym Zip"
-                value={TrainerData.gymZip}
-                underlineColorAndroid={"black"}
-                onChangeText={(text) =>
-                  setTrainerData({ ...TrainerData, gymZip: text })
-                }
-              />
-              <TextInput
-                placeholder="Enter your Gym Country"
-                value={TrainerData.gymCountry}
-                underlineColorAndroid={"black"}
-                onChangeText={(text) =>
-                  setTrainerData({ ...TrainerData, gymCountry: text })
-                }
-              />
-              <TextInput
-                placeholder="Enter your Gym Phone"
+                placeholder="Gym Phone"
                 value={TrainerData.gymPhone}
-                underlineColorAndroid={"black"}
+                keyboardType="phone-pad"
                 onChangeText={(text) =>
                   setTrainerData({ ...TrainerData, gymPhone: text })
                 }
               />
               <TextInput
-                placeholder="Enter your Gym Email"
+                placeholder="Gym Email"
                 value={TrainerData.gymEmail}
-                underlineColorAndroid={"black"}
+                keyboardType="email-address"
                 onChangeText={(text) =>
                   setTrainerData({ ...TrainerData, gymEmail: text })
                 }
               />
               <TextInput
-                placeholder="Enter your Gym Website"
+                placeholder="Gym Website"
                 value={TrainerData.gymWebsite}
-                underlineColorAndroid={"black"}
                 onChangeText={(text) =>
                   setTrainerData({ ...TrainerData, gymWebsite: text })
                 }
               />
-              <Button  title="Back" onPress={handleBack} />
-              <Button title="Submit" onPress={handleSubmit} />
-            </View>
+              <Button title="Back" onPress={handleBack} />
+              <Button
+                title={loading ? "Submitting..." : "Submit"}
+                onPress={handleSubmit}
+                disabled={loading}
+              />
+              {loading && <ActivityIndicator />}
             </View>
           )}
         </View>
@@ -178,4 +173,5 @@ const TR_SignUp = ({ navigation }) => {
     </SafeAreaView>
   );
 };
+
 export default TR_SignUp;

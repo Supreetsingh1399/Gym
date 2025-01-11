@@ -6,31 +6,17 @@
     "outDir": "build",
     "rootDir": ".",
     "skipLibCheck": true,
-    "types": [
-      "node",
-      "nativewind/types"
-    ],
+    "types": ["node", "nativewind/types"],
     "jsx": "react-native",
     "esModuleInterop": true,
-    "lib": [
-      "es6",
-      "ES2015",
-      "DOM"
-    ],
+    "lib": ["es6", "ES2015", "DOM"],
     "strict": true,
     "baseUrl": ".",
     "paths": {
-      "*": [
-        "*"
-      ]
+      "*": ["*"]
     }
   },
-  "include": [
-    "**/*.ts",
-    "**/*.tsx"
-  ],
-  "exclude": [
-    "node_modules"
-  ],
+  "include": ["**/*.ts", "**/*.tsx"],
+  "exclude": ["node_modules"],
   "extends": "expo/tsconfig.base"
 }

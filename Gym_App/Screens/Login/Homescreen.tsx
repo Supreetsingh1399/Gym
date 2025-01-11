@@ -9,41 +9,50 @@ import {
   KeyboardAvoidingView,
   TouchableOpacity,
   Alert,
-  
 } from "react-native";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { getFirestore, doc, getDoc } from "firebase/firestore";
 // @ts-ignore
 const HandleLogin = ({ navigation }) => {
   // Function to handle the login
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
   const handleSignIn = async () => {
     try {
       if (!email || !password) {
         Alert.alert("Error", "Please enter email and password");
         return;
       }
-      
+
       if (!email.includes("@") || !email.includes(".")) {
         Alert.alert("Error", "Please enter a valid email");
         return;
       }
-      await signInWithEmailAndPassword(FireBase_Auth, email, password);
-      if (FireBase_Auth.currentUser && FireBase_Auth.currentUser.uid === 'user') {
-        navigation.navigate("Home");
-      } else if (FireBase_Auth.currentUser && FireBase_Auth.currentUser.uid === 'trainer') {
-        navigation.navigate("TrainerHome");
-      } else {
-        Alert.alert("Error", "Invalid User");
+      const userCredential = await signInWithEmailAndPassword(FireBase_Auth, email, password);
+        // Get user data from Firestore
+        const db = getFirestore();
+        const userDoc = await getDoc(doc(db, "users", userCredential.user.uid));
+        
+        if (userDoc.exists()) {
+          const userData = userDoc.data();
+          if (userData.type === "user"||userData.type === "") {
+            navigation.navigate("UserHome");
+          } else if (userData.type === "trainer") {
+            navigation.navigate("TrainerHome");
+          }
+        } else {
+          Alert.alert("Error", "User data not found");
+        }
+      } catch (error: any) {
+        setError(error.message);
+        Alert.alert("Error", error.message);
+      } finally {
+        setLoading(false);
       }
-
-    } catch (error: any) {
-      setError(error.message);
-      Alert.alert("Error", error.message);
-    }
-  };
+    };
 
   // Return the Login Screen
   return (
@@ -64,23 +73,35 @@ const HandleLogin = ({ navigation }) => {
             onChangeText={(text) => setPassword(text)}
             secureTextEntry
           />
-            <TouchableOpacity className="bg-blue-500 text-white p-2 rounded-lg mb-2 w-40"
-            onPress={() => {handleSignIn()}}
+          <TouchableOpacity
+            className="bg-blue-500 text-white p-2 rounded-lg mb-2 w-40"
+            onPress={() => {
+              handleSignIn();
+            }}
           >
             <Text className=" text-white  text-center">LOGIN</Text>
           </TouchableOpacity>
-          <TouchableOpacity className="bg-blue-500 text-white p-2 rounded-lg mb-2 w-40"
+          <TouchableOpacity
+            className="bg-blue-500 text-white p-2 rounded-lg mb-2 w-40"
             onPress={() => navigation.navigate("Forgot_Password")}
           >
             <Text className=" text-white  text-center">Forgot Password</Text>
           </TouchableOpacity>
-          <TouchableOpacity className="bg-blue-500 text-white p-2 rounded-lg mb-2 w-40" onPress={() => navigation.navigate("User_SignUp")}>
-            <Text className=" text-white  text-center">Create User Account</Text>
+          <TouchableOpacity
+            className="bg-blue-500 text-white p-2 rounded-lg mb-2 w-40"
+            onPress={() => navigation.navigate("User_SignUp")}
+          >
+            <Text className=" text-white  text-center">
+              Create User Account
+            </Text>
           </TouchableOpacity>
-          <TouchableOpacity className="bg-blue-500 rounded-lg p-2 mb-2 w-40"
+          <TouchableOpacity
+            className="bg-blue-500 rounded-lg p-2 mb-2 w-40"
             onPress={() => navigation.navigate("Trainer_SignUp")}
           >
-            <Text className=" text-white  text-center">Create Trainer Account</Text>
+            <Text className=" text-white  text-center">
+              Create Trainer Account
+            </Text>
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>

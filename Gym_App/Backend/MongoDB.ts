@@ -1,34 +1,76 @@
+import express, { Request, Response } from "express";
 import mongoose from "mongoose";
 import dotenv from "dotenv";
+import cors from "cors";
 import path from "path";
-// Configure dotenv with correct path
+import Trainer from "../Models/Trainer_model";
+import User from "../Models/User_models";
+
 dotenv.config({ path: path.resolve(__dirname, "../../.env") });
 
-// Debug log for MongoDB URI
-console.log("MONGODB_URI exists:", !!process.env.MONGODB_URI);
+const app = express();
+const PORT = process.env.PORT || 5000;
 
-const MONGODB_URI = process.env.MONGODB_URI;
+// Middleware
+app.use(cors());
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
-const MongoDB = async (): Promise<void> => {
+// MongoDB Connection
+const connectDB = async () => {
   try {
-    if (!MONGODB_URI) {
-      throw new Error("MongoDB URI is not defined in environment variables");
-    }
+    const uri = process.env.MONGODB_URI;
+    if (!uri)
+      throw new Error("MongoDB URI is missing in environment variables");
 
-    await mongoose.connect(MONGODB_URI);
-    console.log("MongoDB Connected Successfully!");
+    await mongoose.connect(uri);
+    console.log("MongoDB connected successfully!");
   } catch (error) {
-    if (error instanceof Error) {
-      console.error("MongoDB Connection Error:", error.message);
-      process.exit(1);
-    } else {
-      console.error("Unexpected error during MongoDB connection:", error);
-      process.exit(1);
-    }
+    console.error("Error connecting to MongoDB:", error);
+    process.exit(1);
   }
 };
 
-// Immediately invoke the connection
-MongoDB().catch(console.error);
+connectDB();
 
-export default MongoDB;
+// Routes
+app.post("/Register/Trainers", async (req: Request, res: Response) => {
+  try {
+    const newTrainer = new Trainer(req.body);
+    const savedTrainer = await newTrainer.save();
+    res.status(201).json({
+      success: true,
+      message: "Trainer registered successfully!",
+      data: savedTrainer,
+    });
+  } catch (error) {
+    res.status(400).json({
+      success: false,
+      message: error instanceof Error ? error.message : "Registration failed.",
+    });
+  }
+});
+app.post("/Register/Users", async (req: Request, res: Response) => {
+  try {
+    const newUser = new User(req.body);
+    const savedUser = await newUser.save();
+    res.status(201).json({
+      success: true,
+      message: "User registered successfully!",
+      data: savedUser,
+    });
+  } catch (error) {
+    res.status(400).json({
+      success: false,
+      message: error instanceof Error ? error.message : "Registration failed.",
+    });
+  }
+});
+// Health Check
+app.get("/health", (req: Request, res: Response) => {
+  res.status(200).send({ status: "Server is healthy" });
+});
+
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+
+export default app;
