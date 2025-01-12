@@ -14,6 +14,7 @@ import {
   fetchSignInMethodsForEmail,
   sendPasswordResetEmail,
 } from "firebase/auth";
+import { getFirestore, collection, where, getDocs, query } from "firebase/firestore";
 
 type ForgotPassProps = {
   navigation: NavigationProp<any>;
@@ -24,30 +25,32 @@ const ForgotPass = ({ navigation }: ForgotPassProps) => {
   const [error, setError] = useState("");
 
   // Function to handle the reset password
-
   const handleResetPassword = async () => {
     if (!email) {
       setError("Please enter email");
       return;
-    } else if (!email.includes("@") || !email.includes(".")) {
-      setError("Please enter a valid email");
-      return;
     }
+  
     setError("");
     try {
-      // Check if email exists
-      const methods = await fetchSignInMethodsForEmail(FireBase_Auth, email);
-      if (methods.length === 0) {
+      // Check if user exists in Firestore
+      const db = getFirestore();
+      const usersRef = collection(db, "users");
+      const q = query(usersRef, where("email", "==", email));
+      const querySnapshot = await getDocs(q);
+  
+      if (querySnapshot.empty) {
         setError("No account exists with this email");
         return;
       }
-      // Send reset email if account exists
+  
+      // Send password reset email
       await sendPasswordResetEmail(FireBase_Auth, email);
       Alert.alert("Success", "Password reset email sent!");
-      navigation.navigate("Login");
+      navigation.navigate("HomeScreen");
     } catch (error: any) {
+      console.error("Reset password error:", error);
       setError(error.message || "Failed to reset password");
-      console.log(error);
     }
   };
   //   Return the Your Password Reset Screen

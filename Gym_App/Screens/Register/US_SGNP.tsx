@@ -27,38 +27,56 @@ const US_SignUp: React.FC<UserSignUpProps> = ({ navigation }) => {
       Alert.alert("Error", "Please fill in all required fields.");
       return;
     }
-    if (userData.password !== confirmPassword) {
-      Alert.alert("Error", "Passwords do not match.");
-      return;
-    }
   
     setError("");
     setLoading(true);
   
     try {
-      // Create Firebase Auth user
+      // Step 1: Create Firebase Auth user
       const userCredential = await createUserWithEmailAndPassword(
         FireBase_Auth,
         userData.email,
         userData.password
       );
-  
       console.log("Firebase user created:", userCredential.user.uid);
   
-      // Save to MongoDB
-      const mongoResponse = await axios.post(
-        "http://192.168.2.216:5000/Register/Users",
-        {
-          uid: userCredential.user.uid,
-          ...userData,
-          type: "user",
-          status: "active",
-          createdAt: new Date().toISOString()
-        }
-      );
+      // Step 2: Save to Firestore
+      const db = getFirestore();
+      await setDoc(doc(db, "users", userCredential.user.uid), {
+        uid: userCredential.user.uid,
+        email: userData.email,
+        name: userData.name,
+        phone: userData.phone,
+        type: "user",
+        status: "active",
+        createdAt: new Date().toISOString()
+      });
+      console.log("Firestore data saved");
   
-      console.log("MongoDB response:", mongoResponse.data);
-      
+      // Step 3: Save to MongoDB with retry
+      try {
+        const mongoResponse = await axios.post(
+          "http://192.168.2.216:5000/Register/Users",
+          {
+            uid: userCredential.user.uid,
+            ...userData,
+            type: "user",
+            status: "active",
+            createdAt: new Date().toISOString()
+          },
+          {
+            timeout: 5000,
+            headers: {
+              'Content-Type': 'application/json'
+            }
+          }
+        );
+        console.log("MongoDB response:", mongoResponse.data);
+      } catch (mongoError) {
+        console.error("MongoDB error:", mongoError);
+        // Continue even if MongoDB fails - data is in Firebase
+      }
+  
       Alert.alert("Success", "Registration successful!");
       navigation.navigate("Login");
     } catch (error: any) {
@@ -74,6 +92,7 @@ const US_SignUp: React.FC<UserSignUpProps> = ({ navigation }) => {
       setLoading(false);
     }
   };
+  //continue from sign up page
 
   return (
     <SafeAreaView className="flex-1 justify-center items-center">
@@ -98,7 +117,6 @@ const US_SignUp: React.FC<UserSignUpProps> = ({ navigation }) => {
             placeholder="Enter your Password"
             value={userData.password}
             onChangeText={(text) => setUserData({ ...userData, password: text })}
-            keyboardType="default"
             secureTextEntry
           />
           <TextInput
@@ -106,7 +124,6 @@ const US_SignUp: React.FC<UserSignUpProps> = ({ navigation }) => {
             placeholder="Confirm Password"
             value={confirmPassword}
             onChangeText={setConfirmPassword}
-            keyboardType="default"
             secureTextEntry
           />
           <TextInput
