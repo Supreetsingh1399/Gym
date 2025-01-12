@@ -97,7 +97,7 @@ const US_SignUp: React.FC<UserSignUpProps> = ({ navigation }) => {
   return (
     <SafeAreaView className="flex-1 justify-center items-center">
       <KeyboardAvoidingView>
-        <View className="p-4">
+        <View className=" flex-shrink-0 p-4 w-full">
           <TextInput
             className="border-2 border-black p-2 mb-4 rounded"
             placeholder="Enter your Name"
@@ -105,7 +105,7 @@ const US_SignUp: React.FC<UserSignUpProps> = ({ navigation }) => {
             onChangeText={(text) => setUserData({ ...userData, name: text })}
           />
           <TextInput
-            className="border-2 border-black p-2 mb-4 rounded"
+            className="border-2 border-black p-2  mb-4 rounded"
             placeholder="Enter your Email"
             value={userData.email}
             onChangeText={(text) => setUserData({ ...userData, email: text })}
@@ -127,7 +127,7 @@ const US_SignUp: React.FC<UserSignUpProps> = ({ navigation }) => {
             secureTextEntry
           />
           <TextInput
-            className="border-2 border-black p-2 mb-4 rounded"
+            className="border-2 border-black p-2  mb-4 rounded"
             placeholder="Enter your Phone"
             value={userData.phone}
             onChangeText={(text) => setUserData({ ...userData, phone: text })}
