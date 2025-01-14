@@ -33,24 +33,18 @@ const ForgotPass = ({ navigation }: ForgotPassProps) => {
   
     setError("");
     try {
-      // Check if user exists in Firestore
-      const db = getFirestore();
-      const usersRef = collection(db, "users");
-      const q = query(usersRef, where("email", "==", email));
-      const querySnapshot = await getDocs(q);
-  
-      if (querySnapshot.empty) {
-        setError("No account exists with this email");
-        return;
-      }
-  
-      // Send password reset email
+      // Send password reset email directly through Firebase Auth
       await sendPasswordResetEmail(FireBase_Auth, email);
       Alert.alert("Success", "Password reset email sent!");
-      navigation.navigate("HomeScreen");
+      navigation.navigate("Login");
     } catch (error: any) {
       console.error("Reset password error:", error);
-      setError(error.message || "Failed to reset password");
+      const errorMessage = 
+        error.code === 'auth/user-not-found' 
+          ? "No account exists with this email" 
+          : "Failed to reset password";
+      setError(errorMessage);
+      Alert.alert("Error", errorMessage);
     }
   };
   //   Return the Your Password Reset Screen

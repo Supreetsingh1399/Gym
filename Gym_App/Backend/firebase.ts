@@ -15,3 +15,16 @@ const app = initializeApp(firebaseConfig);
 export const FireBase_Auth = getAuth(app);
 export const FireBase_DB = getFirestore(app);
 
+// Auth settings
+export const actionCodeSettings = {
+  url: 'https://gymbuddy-7db1e.firebaseapp.com',
+  handleCodeInApp: true,
+  iOS: {
+    bundleId: 'com.gymbuddy.app'
+  },
+  android: {
+    packageName: 'com.gymbuddy.app',
+    installApp: true,
+  },
+  dynamicLinkDomain: 'gymbuddy.page.link'
+};
