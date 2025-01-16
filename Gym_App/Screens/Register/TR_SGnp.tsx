@@ -29,20 +29,46 @@ const TR_SignUp = ({ navigation }) => {
   });
 
   const handleNext = () => {
+
     if (!TrainerData.email || !TrainerData.password || !TrainerData.name) {
       Alert.alert("Error", "Please fill in all required fields.");
       return;
     }
     setStep(step + 1);
   };
-
+ const handleError = (error: any) => {
+  if(!TrainerData.phone || !TrainerData.gymName || !TrainerData.gymAddress || !TrainerData.gymCity || !TrainerData.gymState || !TrainerData.gymPhone || !TrainerData.gymEmail || !TrainerData.gymWebsite){
+    Alert.alert("Error", "Please fill in all required fields.");
+    return;
+  }
+  else if(!TrainerData.email.includes("@") || !TrainerData.email.includes(".")){
+    Alert.alert("Error", "Please enter a valid email.");
+    return;
+  }
+  else if(TrainerData.phone.length !== 10){
+    Alert.alert("Error", "Please enter a valid phone number.");
+    return;
+  }
+  else if(TrainerData.gymPhone.length !== 10){
+    Alert.alert("Error", "Please enter a valid phone number.");
+    return;
+  }
+  else if(TrainerData.gymEmail.includes("@") || !TrainerData.gymEmail.includes(".")){
+    Alert.alert("Error", "Please enter a valid email.");
+    return;
+  }
+  else if(TrainerData.gymWebsite.includes("http") || !TrainerData.gymWebsite.includes(".")){
+    Alert.alert("Error", "Please enter a valid website.");
+    return;
+  }
+ }
   const handleBack = () => setStep(step - 1);
 
   const handleSubmit = async () => {
     setLoading(true);
     try {
       const response = await axios.post(
-        "http://192.168.2.216:5000/Register/Trainers",
+        "https://gym-dhlm.onrender.com/Register/Trainers",
         {
           tableName: "Trainers",
           databaseName: "Register",
@@ -51,15 +77,12 @@ const TR_SignUp = ({ navigation }) => {
           createdAt: new Date().toISOString(),
         },
       );
-
+      console.log("MongoDB response:", response.data);
       Alert.alert("Success", "Registration successful!");
-      navigation.navigate("Login");
+      navigation.navigate("HomeScreen");
+   
     } catch (error: any) {
-      const errorMessage =
-        error.response?.data?.message ||
-        "Something went wrong. Please try again.";
-      Alert.alert("Error", errorMessage);
-    } finally {
+      handleError(error);
       setLoading(false);
     }
   };

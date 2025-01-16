@@ -39,6 +39,8 @@ const US_SignUp: React.FC<UserSignUpProps> = ({ navigation }) => {
         userData.password
       );
       console.log("Firebase user created:", userCredential.user.uid);
+      Alert.alert("Success", "Registration successful!");
+      navigation.navigate("UserHome");
   
       // Step 2: Save to Firestore
       const db = getFirestore();
@@ -56,7 +58,7 @@ const US_SignUp: React.FC<UserSignUpProps> = ({ navigation }) => {
       // Step 3: Save to MongoDB with retry
       try {
         const mongoResponse = await axios.post(
-          "http://192.168.2.216:5000/Register/Users",
+          "https://gym-dhlm.onrender.com/Register/Users",
           {
             uid: userCredential.user.uid,
             ...userData,
@@ -77,8 +79,7 @@ const US_SignUp: React.FC<UserSignUpProps> = ({ navigation }) => {
         // Continue even if MongoDB fails - data is in Firebase
       }
   
-      Alert.alert("Success", "Registration successful!");
-      navigation.navigate("Login");
+   
     } catch (error: any) {
       console.error("Registration error:", error);
       const errorMessage = 

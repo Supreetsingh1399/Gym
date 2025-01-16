@@ -11,10 +11,8 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { NavigationProp } from "@react-navigation/native";
 import { FireBase_Auth } from "../../Backend/firebase";
 import {
-  fetchSignInMethodsForEmail,
   sendPasswordResetEmail,
 } from "firebase/auth";
-import { getFirestore, collection, where, getDocs, query } from "firebase/firestore";
 
 type ForgotPassProps = {
   navigation: NavigationProp<any>;

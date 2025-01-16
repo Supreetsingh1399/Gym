@@ -5,11 +5,11 @@ import cors from "cors";
 import path from "path";
 import Trainer from "../Models/Trainer_model";
 import User from "../Models/User_models";
+import axios from "axios";
 
 dotenv.config({ path: path.resolve(__dirname, "../../.env") });
 
 const app = express();
-const PORT = process.env.PORT || 5000;
 
 // Middleware
 app.use(cors());
@@ -33,7 +33,7 @@ const connectDB = async () => {
 
 connectDB();
 
-// Routes
+// Post Routes to database
 app.post("/Register/Trainers", async (req: Request, res: Response) => {
   try {
     const newTrainer = new Trainer(req.body);
@@ -71,6 +71,22 @@ app.get("/health", (req: Request, res: Response) => {
   res.status(200).send({ status: "Server is healthy" });
 });
 
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+// GET route for trainers
+app.get("/Register/Trainers", async (req: Request, res: Response) => {
+  try {
+    const trainers = await Trainer.find({ status: "pending" });
+    res.status(200).json({
+      success: true,
+      data: trainers,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error instanceof Error ? error.message : "Failed to fetch trainers",
+    });
+  }
+
+});
+
 
 export default app;
