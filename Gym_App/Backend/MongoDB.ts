@@ -74,18 +74,19 @@ app.get("/health", (req: Request, res: Response) => {
 // GET route for trainers
 app.get("/Register/Trainers", async (req: Request, res: Response) => {
   try {
-    const trainers = await Trainer.find({ status: "pending" });
+    const trainers = await Trainer.find();
+    console.log('Fetched trainers:', trainers); // Debug log
     res.status(200).json({
       success: true,
-      data: trainers,
+      data: trainers
     });
   } catch (error) {
+    console.error('Error:', error);
     res.status(500).json({
       success: false,
-      message: error instanceof Error ? error.message : "Failed to fetch trainers",
+      message: error instanceof Error ? error.message : "Failed to fetch trainers"
     });
   }
-
 });
 
 
