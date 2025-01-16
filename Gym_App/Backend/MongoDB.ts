@@ -31,7 +31,10 @@ const connectDB = async () => {
 };
 
 connectDB();
-console.log(`Server is running on port ${Port}`);
+app.listen(Port, () => {
+  console.log(`Server is running on port ${Port}`);
+}
+);
 
 // Post Routes to database
 app.post("/Register/Trainers", async (req: Request, res: Response) => {
