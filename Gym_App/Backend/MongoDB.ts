@@ -91,6 +91,24 @@ app.get("/Register/Trainers", async (req: Request, res: Response) => {
     });
   }
 });
-
+//update trainer  by id
+app.put("/Register/Trainers/:id", async (req: Request, res: Response) => {
+  try {
+    const trainer = await Trainer.findByIdAndUpdate
+      (req
+        .params
+        .id, req.body, { new: true });
+    res.status(200).json({
+      success: true,
+      data: trainer
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error instanceof Error ? error.message : "Failed to update trainer"
+    });
+  }
+}
+);
 
 export default app;
