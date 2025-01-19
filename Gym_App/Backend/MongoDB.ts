@@ -9,7 +9,7 @@ import User from "../Models/User_models";
 dotenv.config({ path: path.resolve(__dirname, "../../.env") });
 
 const app = express();
-const Port = process.env.PORT || 5000;
+const Port = process.env.PORT || 11890;
 // Middleware
 app.use(cors());
 app.use(express.json());
@@ -30,9 +30,13 @@ const connectDB = async () => {
   }
 };
 
-connectDB();
-app.listen(Port, () => {
-  console.log(`Server is running on port ${Port}`);
+// Connect and start server
+connectDB().then(() => {
+  app.listen(Port, () => {
+    console.log(`Server running on port ${Port}`);
+  });
+}).catch(err => {
+  console.error("Server startup failed:", err);
 });
 
 // Post Routes to database
@@ -42,7 +46,7 @@ app.post("/Register/Trainers", async (req: Request, res: Response) => {
     const savedTrainer = await newTrainer.save();
     res.status(201).json({
       success: true,
-      
+
       message: "Trainer registered successfully!",
       data: savedTrainer,
     });
