@@ -1,5 +1,12 @@
 import React, { useState } from "react";
-import { View, Text, TextInput, Button, Alert, KeyboardAvoidingView } from "react-native";
+import {
+  View,
+  Text,
+  TextInput,
+  Button,
+  Alert,
+  KeyboardAvoidingView,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { NavigationProp } from "@react-navigation/native";
 import { FireBase_Auth } from "../../Backend/firebase";
@@ -16,32 +23,37 @@ const US_SignUp: React.FC<UserSignUpProps> = ({ navigation }) => {
     email: "",
     password: "",
     name: "",
-    phone: ""
+    phone: "",
   });
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
   const handleSubmit = async () => {
-    if (!userData.email || !userData.password || !userData.name || !userData.phone) {
+    if (
+      !userData.email ||
+      !userData.password ||
+      !userData.name ||
+      !userData.phone
+    ) {
       Alert.alert("Error", "Please fill in all required fields.");
       return;
     }
-  
+
     setError("");
     setLoading(true);
-  
+
     try {
       // Step 1: Create Firebase Auth user
       const userCredential = await createUserWithEmailAndPassword(
         FireBase_Auth,
         userData.email,
-        userData.password
+        userData.password,
       );
       console.log("Firebase user created:", userCredential.user.uid);
       Alert.alert("Success", "Registration successful!");
       navigation.navigate("UserHome");
-  
+
       // Step 2: Save to Firestore
       const db = getFirestore();
       await setDoc(doc(db, "users", userCredential.user.uid), {
@@ -51,10 +63,10 @@ const US_SignUp: React.FC<UserSignUpProps> = ({ navigation }) => {
         phone: userData.phone,
         type: "user",
         status: "active",
-        createdAt: new Date().toISOString()
+        createdAt: new Date().toISOString(),
       });
       console.log("Firestore data saved");
-  
+
       // Step 3: Save to MongoDB with retry
       try {
         const mongoResponse = await axios.post(
@@ -64,29 +76,29 @@ const US_SignUp: React.FC<UserSignUpProps> = ({ navigation }) => {
             ...userData,
             type: "user",
             status: "active",
-            createdAt: new Date().toISOString()
+            createdAt: new Date().toISOString(),
           },
           {
             timeout: 5000,
             headers: {
-              'Content-Type': 'application/json'
-            }
-          }
+              "Content-Type": "application/json",
+            },
+          },
         );
         console.log("MongoDB response:", mongoResponse.data);
       } catch (mongoError) {
         console.error("MongoDB error:", mongoError);
         // Continue even if MongoDB fails - data is in Firebase
       }
-  
-   
     } catch (error: any) {
       console.error("Registration error:", error);
-      const errorMessage = 
+      const errorMessage =
         error.code === "auth/email-already-in-use"
           ? "Email already registered"
-          : error.response?.data?.message || error.message || "Registration failed";
-      
+          : error.response?.data?.message ||
+            error.message ||
+            "Registration failed";
+
       setError(errorMessage);
       Alert.alert("Error", errorMessage);
     } finally {
@@ -117,7 +129,9 @@ const US_SignUp: React.FC<UserSignUpProps> = ({ navigation }) => {
             className="border-2 border-black p-2 mb-4 rounded"
             placeholder="Enter your Password"
             value={userData.password}
-            onChangeText={(text) => setUserData({ ...userData, password: text })}
+            onChangeText={(text) =>
+              setUserData({ ...userData, password: text })
+            }
             secureTextEntry
           />
           <TextInput
@@ -134,8 +148,8 @@ const US_SignUp: React.FC<UserSignUpProps> = ({ navigation }) => {
             onChangeText={(text) => setUserData({ ...userData, phone: text })}
             keyboardType="phone-pad"
           />
-          <Button 
-            title={loading ? "Loading..." : "Sign Up"} 
+          <Button
+            title={loading ? "Loading..." : "Sign Up"}
             onPress={handleSubmit}
             disabled={loading}
           />

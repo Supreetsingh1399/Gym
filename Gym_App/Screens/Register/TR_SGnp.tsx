@@ -10,10 +10,13 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { FireBase_Auth } from "Gym_App/Backend/firebase";
+import { fetchSignInMethodsForEmail } from "firebase/auth";
 //@ts-ignore
 const TR_SignUp = ({ navigation }) => {
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
   const [TrainerData, setTrainerData] = useState({
     email: "",
     password: "",
@@ -28,40 +31,67 @@ const TR_SignUp = ({ navigation }) => {
     gymWebsite: "",
   });
 
-  const handleNext = () => {
-
+  const handleNext = async () => {
     if (!TrainerData.email || !TrainerData.password || !TrainerData.name) {
       Alert.alert("Error", "Please fill in all required fields.");
       return;
     }
+
+    try {
+      const fetchEmail = await fetchSignInMethodsForEmail(
+        FireBase_Auth,
+        TrainerData.email,
+      );
+      if (fetchEmail.length > 0) {
+        setError("Email already exists.");
+        return;
+      }
+    } catch (error) {
+      setError("Failed to check email.");
+      return;
+    }
+
     setStep(step + 1);
   };
- const handleError = (error: any) => {
-  if(!TrainerData.phone || !TrainerData.gymName || !TrainerData.gymAddress || !TrainerData.gymCity || !TrainerData.gymState || !TrainerData.gymPhone || !TrainerData.gymEmail || !TrainerData.gymWebsite){
-    Alert.alert("Error", "Please fill in all required fields.");
-    return;
-  }
-  else if(!TrainerData.email.includes("@") || !TrainerData.email.includes(".")){
-    Alert.alert("Error", "Please enter a valid email.");
-    return;
-  }
-  else if(TrainerData.phone.length !== 10){
-    Alert.alert("Error", "Please enter a valid phone number.");
-    return;
-  }
-  else if(TrainerData.gymPhone.length !== 10){
-    Alert.alert("Error", "Please enter a valid phone number.");
-    return;
-  }
-  else if(TrainerData.gymEmail.includes("@") || !TrainerData.gymEmail.includes(".")){
-    Alert.alert("Error", "Please enter a valid email.");
-    return;
-  }
-  else if(TrainerData.gymWebsite.includes("http") || !TrainerData.gymWebsite.includes(".")){
-    Alert.alert("Error", "Please enter a valid website.");
-    return;
-  }
- }
+  const handleError = (error: any) => {
+    if (
+      !TrainerData.phone ||
+      !TrainerData.gymName ||
+      !TrainerData.gymAddress ||
+      !TrainerData.gymCity ||
+      !TrainerData.gymState ||
+      !TrainerData.gymPhone ||
+      !TrainerData.gymEmail ||
+      !TrainerData.gymWebsite
+    ) {
+      setError("Error, Please fill in all required fields.");
+      return;
+    } else if (
+      !TrainerData.email.includes("@") ||
+      !TrainerData.email.includes(".")
+    ) {
+      setError("Error, Please enter a valid email.");
+      return;
+    } else if (TrainerData.phone.length !== 10) {
+      setError("Error, Please enter a valid phone number.");
+      return;
+    } else if (TrainerData.gymPhone.length !== 10) {
+      setError("Error,Please enter a valid phone number.");
+      return;
+    } else if (
+      TrainerData.gymEmail.includes("@") ||
+      !TrainerData.gymEmail.includes(".")
+    ) {
+      setError("Error,Please enter a valid email.");
+      return;
+    } else if (
+      TrainerData.gymWebsite.includes("http") ||
+      !TrainerData.gymWebsite.includes(".")
+    ) {
+      setError("Error,Please enter a valid website.");
+      return;
+    }
+  };
   const handleBack = () => setStep(step - 1);
 
   const handleSubmit = async () => {
@@ -78,9 +108,10 @@ const TR_SignUp = ({ navigation }) => {
         },
       );
       console.log("MongoDB response:", response.data);
-      Alert.alert("Success", "Registration successful!");
+      setError(
+        "Success,Registration successful! Wait for approval from Admin.",
+      );
       navigation.navigate("HomeScreen");
-   
     } catch (error: any) {
       handleError(error);
       setLoading(false);

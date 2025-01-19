@@ -31,28 +31,32 @@ const HandleLogin = ({ navigation }) => {
         Alert.alert("Error", "Please enter a valid email");
         return;
       }
-      const userCredential = await signInWithEmailAndPassword(FireBase_Auth, email, password);
-        // Get user data from Firestore
-        const db = getFirestore();
-        const userDoc = await getDoc(doc(db, "users", userCredential.user.uid));
-        
-        if (userDoc.exists()) {
-          const userData = userDoc.data();
-          if (userData.type === "user"||userData.type === "") {
-            navigation.navigate("UserHome");
-          } else if (userData.type === "trainer") {
-            navigation.navigate("TrainerHome");
-          }
-        } else {
-          Alert.alert("Error", "User data not found");
+      const userCredential = await signInWithEmailAndPassword(
+        FireBase_Auth,
+        email,
+        password,
+      );
+      // Get user data from Firestore
+      const db = getFirestore();
+      const userDoc = await getDoc(doc(db, "users", userCredential.user.uid));
+
+      if (userDoc.exists()) {
+        const userData = userDoc.data();
+        if (userData.type === "user" || userData.type === "") {
+          navigation.navigate("UserHome");
+        } else if (userData.type === "trainer") {
+          navigation.navigate("TrainerHome");
         }
-      } catch (error: any) {
-        setError(error.message);
-        Alert.alert("Error", error.message);
-      } finally {
-        setLoading(false);
+      } else {
+        Alert.alert("Error", "User data not found");
       }
-    };
+    } catch (error: any) {
+      setError(error.message);
+      Alert.alert("Error", error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Return the Login Screen
   return (

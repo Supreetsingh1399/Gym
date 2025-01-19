@@ -33,8 +33,7 @@ const connectDB = async () => {
 connectDB();
 app.listen(Port, () => {
   console.log(`Server is running on port ${Port}`);
-}
-);
+});
 
 // Post Routes to database
 app.post("/Register/Trainers", async (req: Request, res: Response) => {
@@ -78,34 +77,51 @@ app.get("/health", (req: Request, res: Response) => {
 app.get("/Register/Trainers", async (req: Request, res: Response) => {
   try {
     const trainers = await Trainer.find();
-    console.log('Fetched trainers:', trainers); // Debug log
+    console.log("Fetched trainers:", trainers); // Debug log
     res.status(200).json({
       success: true,
-      data: trainers
+      data: trainers,
     });
   } catch (error) {
-    console.error('Error:', error);
+    console.error("Error:", error);
     res.status(500).json({
       success: false,
-      message: error instanceof Error ? error.message : "Failed to fetch trainers"
+      message:
+        error instanceof Error ? error.message : "Failed to fetch trainers",
     });
   }
 });
 //update trainer  by id
 app.put("/Register/Trainers/:id", async (req: Request, res: Response) => {
   try {
-    const trainer = await Trainer.findByIdAndUpdate
-      (req
-        .params
-        .id, req.body, { new: true });
+    const trainer = await Trainer.findByIdAndUpdate(req.params.id, req.body, {
+      new: true,
+    });
     res.status(200).json({
       success: true,
-      data: trainer
+      data: trainer,
     });
   } catch (error) {
     res.status(500).json({
       success: false,
-      message: error instanceof Error ? error.message : "Failed to update trainer"
+      message:
+        error instanceof Error ? error.message : "Failed to update trainer",
+    });
+  }
+});
+//Delete trainer by id  
+app.delete("/Register/Trainers/:id", async (req: Request, res: Response) => {
+  try {
+    await Trainer.findByIdAndDelete(req.params.id);
+    res.status(200).json({
+      success: true,
+      message: "Trainer deleted successfully",
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message:
+        error instanceof Error ? error.message : "Failed to delete trainer",
     });
   }
 }

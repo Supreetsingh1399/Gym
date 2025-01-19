@@ -10,9 +10,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { NavigationProp } from "@react-navigation/native";
 import { FireBase_Auth } from "../../Backend/firebase";
-import {
-  sendPasswordResetEmail,
-} from "firebase/auth";
+import { sendPasswordResetEmail } from "firebase/auth";
 
 type ForgotPassProps = {
   navigation: NavigationProp<any>;
@@ -28,7 +26,7 @@ const ForgotPass = ({ navigation }: ForgotPassProps) => {
       setError("Please enter email");
       return;
     }
-  
+
     setError("");
     try {
       // Send password reset email directly through Firebase Auth
@@ -37,9 +35,9 @@ const ForgotPass = ({ navigation }: ForgotPassProps) => {
       navigation.navigate("Login");
     } catch (error: any) {
       console.error("Reset password error:", error);
-      const errorMessage = 
-        error.code === 'auth/user-not-found' 
-          ? "No account exists with this email" 
+      const errorMessage =
+        error.code === "auth/user-not-found"
+          ? "No account exists with this email"
           : "Failed to reset password";
       setError(errorMessage);
       Alert.alert("Error", errorMessage);
