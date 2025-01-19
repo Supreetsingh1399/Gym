@@ -42,6 +42,7 @@ app.post("/Register/Trainers", async (req: Request, res: Response) => {
     const savedTrainer = await newTrainer.save();
     res.status(201).json({
       success: true,
+      
       message: "Trainer registered successfully!",
       data: savedTrainer,
     });
