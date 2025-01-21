@@ -39,7 +39,26 @@ const US_SignUp: React.FC<UserSignUpProps> = ({ navigation }) => {
       Alert.alert("Error", "Please fill in all required fields.");
       return;
     }
-
+    else if (userData.password !== confirmPassword) {
+      setError("Error, Passwords do not match.");
+      return;
+    }
+    else if (userData.password.length < 6) {
+      setError("Error , Password must be at least 6 characters long.");
+      return;
+    }
+    else if (userData.phone.length !== 10) {
+      setError("Error, Phone number must be 10 digits long.");
+      return;
+    } 
+    else{
+      const phone = userData.phone;
+      if (phone[0] === "0") {
+        Alert.alert("Error", "Phone number cannot start with 0.");
+        return;
+      }
+  }
+    // Reset error
     setError("");
     setLoading(true);
 
@@ -109,8 +128,11 @@ const US_SignUp: React.FC<UserSignUpProps> = ({ navigation }) => {
 
   return (
     <SafeAreaView className="flex-1 justify-center items-center">
-      <KeyboardAvoidingView>
-        <View className=" flex-shrink-0 p-4 w-full">
+      <KeyboardAvoidingView className="w-full"> 
+        <View className= "flex-shrink-0 p-4 w-full">
+        {error ? (
+          <Text className="text-red-500 text-center">{error}</Text>
+        ) : null}
           <TextInput
             className="border-2 border-black p-2 mb-4 rounded"
             placeholder="Enter your Name"

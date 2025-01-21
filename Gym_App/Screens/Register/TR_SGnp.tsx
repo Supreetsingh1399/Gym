@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from "axios";
 import {
   View,
@@ -17,6 +18,7 @@ const TR_SignUp = ({ navigation }) => {
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  
   const [TrainerData, setTrainerData] = useState({
     email: "",
     password: "",
@@ -30,28 +32,50 @@ const TR_SignUp = ({ navigation }) => {
     gymEmail: "",
     gymWebsite: "",
   });
+  const initAuth = async () => {
+    try {
+      await AsyncStorage.getItem('@auth_state');
+    } catch (error) {
+      console.error('Storage initialization error:', error);
+    }
+  };
+  initAuth();
+const handleNext = async () => {
 
-  const handleNext = async () => {
-    if (!TrainerData.email || !TrainerData.password || !TrainerData.name) {
+ if (!TrainerData.email || !TrainerData.password || !TrainerData.name) {
       Alert.alert("Error", "Please fill in all required fields.");
       return;
     }
-
-    try {
-      const fetchEmail = await fetchSignInMethodsForEmail(
-        FireBase_Auth,
-        TrainerData.email,
-      );
-      if (fetchEmail.length > 0) {
-        setError("Email already exists.");
-        return;
-      }
-    } catch (error) {
-      setError("Failed to check email.");
+    else if (!TrainerData.email.includes("@") || !TrainerData.email.includes(".")) {
+      setError("Error, Please enter a valid email.");
       return;
     }
+    else if (TrainerData.phone.length !== 10) {
+      setError("Error, Please enter a valid phone number.");
+      return;
+    }
+    else {
+      const phone = TrainerData.phone;
+      if (phone[0] === "0") {
+        Alert.alert("Error", "Phone number cannot start with 0.");
+        return;
+      }
+    }
+    setError("");
 
-    setStep(step + 1);
+    try {
+      const methods = await fetchSignInMethodsForEmail(FireBase_Auth, TrainerData.email);
+      if (methods.length === 0) {
+        setStep(step + 1);
+      } else {
+        setError("Email already exists");
+        Alert.alert("Error", "Email already exists");
+      }
+    } catch (error: any) {
+      console.error("Email check error:", error);
+      setError(error.message || "Failed to check email");
+      Alert.alert("Error", error.message || "Failed to check email");
+    }
   };
   const handleError = (error: any) => {
     if (
@@ -91,6 +115,14 @@ const TR_SignUp = ({ navigation }) => {
       setError("Error,Please enter a valid website.");
       return;
     }
+    else{
+      const phone = TrainerData.phone;
+      if (phone[0] === "0") {
+        Alert.alert("Error", "Phone number cannot start with 0.");
+        return;
+      }
+    }
+    setError("");
   };
   const handleBack = () => setStep(step - 1);
 
@@ -122,6 +154,9 @@ const TR_SignUp = ({ navigation }) => {
     <SafeAreaView className="flex-1 justify-center items-center">
       <KeyboardAvoidingView className="justify-center p-4 w-full h-full">
         <View>
+            {error ? (
+                    <Text className="text-red-500 text-center">{error}</Text>
+                  ) : null}
           {step === 1 && (
             <View>
               <Text className="text-center text-2xl">Personal Details</Text>
