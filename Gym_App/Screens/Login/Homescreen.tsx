@@ -20,6 +20,10 @@ const HandleLogin = ({ navigation }) => {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const togglePasswordVisibility = () => {
+    setShowPassword(!showPassword);
+  };
   const handleSignIn = async () => {
     try {
       if (!email || !password) {
@@ -70,13 +74,21 @@ const HandleLogin = ({ navigation }) => {
             value={email}
             onChangeText={(text) => setEmail(text)}
           />
-          <TextInput
-            className="w-full border-2 border-black rounded-lg p-2 mb-4"
-            placeholder="Enter your Password"
-            value={password}
-            onChangeText={(text) => setPassword(text)}
-            secureTextEntry
-          />
+          <View className="relative flex-row items-center mb-6">
+            <TextInput
+              className="flex-1 border-2 border-black p-2 rounded pr-12"
+              placeholder="Enter your Password"
+              value={password}
+              onChangeText={(text) => setPassword(text)}
+              secureTextEntry={!showPassword}
+            />
+            <TouchableOpacity
+              onPress={togglePasswordVisibility}
+              className="absolute right-3"
+            >
+              <Text>{showPassword ? "Hide Password" : "Show Password"}</Text>
+            </TouchableOpacity>
+          </View>
           <TouchableOpacity
             className="bg-blue-500 text-white p-2 rounded-lg mb-2 w-40"
             onPress={() => {

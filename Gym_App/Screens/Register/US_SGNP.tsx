@@ -6,11 +6,15 @@ import {
   Button,
   Alert,
   KeyboardAvoidingView,
+  TouchableOpacity,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { NavigationProp } from "@react-navigation/native";
 import { FireBase_Auth } from "../../Backend/firebase";
-import { createUserWithEmailAndPassword, sendEmailVerification } from "firebase/auth";
+import {
+  createUserWithEmailAndPassword,
+  sendEmailVerification,
+} from "firebase/auth";
 import axios from "axios";
 import { getFirestore, setDoc, doc } from "firebase/firestore";
 
@@ -28,6 +32,10 @@ const US_SignUp = ({ navigation }: UserSignUpProps) => {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const togglePasswordVisibility = () => {
+    setShowPassword(!showPassword);
+  };
 
   const handleSubmit = async () => {
     if (
@@ -38,29 +46,22 @@ const US_SignUp = ({ navigation }: UserSignUpProps) => {
     ) {
       Alert.alert("Error", "Please fill in all required fields.");
       return;
-    }
-    else if (
-      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(userData.email)
-    ) {
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(userData.email)) {
       setError("Error, Please enter a valid email.");
       return;
-    }
-    else if (userData.password !== confirmPassword) {
+    } else if (userData.password !== confirmPassword) {
       setError("Error, Passwords do not match.");
       return;
-    }
-    else if (userData.password.length < 6) {
+    } else if (userData.password.length < 6) {
       setError("Error , Password must be at least 6 characters long.");
       return;
-    }
-    else if(userData.phone.length !== 10 || userData.phone[0] === "0") {
+    } else if (userData.phone.length !== 10 || userData.phone[0] === "0") {
       setError("Error, Phone number must be 10 digits long.");
       return;
-    } 
-    else{
+    } else {
       setError("ERROR");
     }
-  
+
     // Reset error
     setError("");
     setLoading(true);
@@ -72,7 +73,7 @@ const US_SignUp = ({ navigation }: UserSignUpProps) => {
         userData.email,
         userData.password,
       );
-       // Send verification email
+      // Send verification email
       await sendEmailVerification(userCredential.user);
       console.log("Firebase user created:", userCredential.user.uid);
       Alert.alert("Success", "Registration successful!");
@@ -133,11 +134,11 @@ const US_SignUp = ({ navigation }: UserSignUpProps) => {
 
   return (
     <SafeAreaView className="flex-1 justify-center items-center">
-      <KeyboardAvoidingView className="w-full"> 
-        <View className= "flex-shrink-0 p-4 w-full">
-        {error ? (
-          <Text className="text-red-500 text-center">{error}</Text>
-        ) : null}
+      <KeyboardAvoidingView className="w-full">
+        <View className="flex-shrink-0 p-4 w-full relative">
+          {error ? (
+            <Text className="text-red-500 text-center">{error}</Text>
+          ) : null}
           <TextInput
             className="border-2 border-black p-2 mb-4 rounded"
             placeholder="Enter your Name"
@@ -152,21 +153,29 @@ const US_SignUp = ({ navigation }: UserSignUpProps) => {
             keyboardType="email-address"
             autoCapitalize="none"
           />
-          <TextInput
-            className="border-2 border-black p-2 mb-4 rounded"
-            placeholder="Enter your Password"
-            value={userData.password}
-            onChangeText={(text) =>
-              setUserData({ ...userData, password: text })
-            }
-            secureTextEntry
-          />
+          <View className="relative flex-row items-center mb-4">
+            <TextInput
+              className="flex-1 border-2 border-black p-2 rounded pr-12"
+              placeholder="Enter your Password"
+              value={userData.password}
+              onChangeText={(text) =>
+                setUserData({ ...userData, password: text })
+              }
+              secureTextEntry={!showPassword}
+            />
+            <TouchableOpacity
+              onPress={togglePasswordVisibility}
+              className="absolute right-3"
+            >
+              <Text>{showPassword ? "Hide Password" : "Show Password"}</Text>
+            </TouchableOpacity>
+          </View>
           <TextInput
             className="border-2 border-black p-2 mb-4 rounded"
             placeholder="Confirm Password"
             value={confirmPassword}
             onChangeText={setConfirmPassword}
-            secureTextEntry
+            secureTextEntry={!showPassword}
           />
           <TextInput
             className="border-2 border-black p-2  mb-4 rounded"

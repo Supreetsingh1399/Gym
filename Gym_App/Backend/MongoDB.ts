@@ -31,13 +31,15 @@ const connectDB = async () => {
 };
 
 // Connect and start server
-connectDB().then(() => {
-  app.listen(Port, () => {
-    console.log(`Server running on port ${Port}`);
+connectDB()
+  .then(() => {
+    app.listen(Port, () => {
+      console.log(`Server running on port ${Port}`);
+    });
+  })
+  .catch((err) => {
+    console.error("Server startup failed:", err);
   });
-}).catch(err => {
-  console.error("Server startup failed:", err);
-});
 
 // Post Routes to database
 app.post("/Register/Trainers", async (req: Request, res: Response) => {
@@ -114,7 +116,7 @@ app.put("/Register/Trainers/:id", async (req: Request, res: Response) => {
     });
   }
 });
-//Delete trainer by id  
+//Delete trainer by id
 app.delete("/Register/Trainers/:id", async (req: Request, res: Response) => {
   try {
     await Trainer.findByIdAndDelete(req.params.id);
@@ -129,9 +131,8 @@ app.delete("/Register/Trainers/:id", async (req: Request, res: Response) => {
         error instanceof Error ? error.message : "Failed to delete trainer",
     });
   }
-}
-);
-//get routes from users 
+});
+//get routes from users
 app.get("/Register/Users", async (req: Request, res: Response) => {
   try {
     const users = await User.find();
@@ -144,8 +145,7 @@ app.get("/Register/Users", async (req: Request, res: Response) => {
     console.error("Error:", error);
     res.status(500).json({
       success: false,
-      message:
-        error instanceof Error ? error.message : "Failed to fetch users",
+      message: error instanceof Error ? error.message : "Failed to fetch users",
     });
   }
 });
