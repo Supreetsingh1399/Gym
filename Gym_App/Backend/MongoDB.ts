@@ -131,5 +131,23 @@ app.delete("/Register/Trainers/:id", async (req: Request, res: Response) => {
   }
 }
 );
+//get routes from users 
+app.get("/Register/Users", async (req: Request, res: Response) => {
+  try {
+    const users = await User.find();
+    console.log("Fetched users:", users); // Debug log
+    res.status(200).json({
+      success: true,
+      data: users,
+    });
+  } catch (error) {
+    console.error("Error:", error);
+    res.status(500).json({
+      success: false,
+      message:
+        error instanceof Error ? error.message : "Failed to fetch users",
+    });
+  }
+});
 
 export default app;
