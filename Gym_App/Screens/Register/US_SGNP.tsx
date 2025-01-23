@@ -18,7 +18,7 @@ type UserSignUpProps = {
   navigation: NavigationProp<any>;
 };
 
-const US_SignUp: React.FC<UserSignUpProps> = ({ navigation }) => {
+const US_SignUp = ({ navigation }: UserSignUpProps) => {
   const [userData, setUserData] = useState({
     email: "",
     password: "",
@@ -39,6 +39,12 @@ const US_SignUp: React.FC<UserSignUpProps> = ({ navigation }) => {
       Alert.alert("Error", "Please fill in all required fields.");
       return;
     }
+    else if (
+      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(userData.email)
+    ) {
+      setError("Error, Please enter a valid email.");
+      return;
+    }
     else if (userData.password !== confirmPassword) {
       setError("Error, Passwords do not match.");
       return;
@@ -47,17 +53,14 @@ const US_SignUp: React.FC<UserSignUpProps> = ({ navigation }) => {
       setError("Error , Password must be at least 6 characters long.");
       return;
     }
-    else if (userData.phone.length !== 10) {
+    else if(userData.phone.length !== 10 || userData.phone[0] === "0") {
       setError("Error, Phone number must be 10 digits long.");
       return;
     } 
     else{
-      const phone = userData.phone;
-      if (phone[0] === "0") {
-        Alert.alert("Error", "Phone number cannot start with 0.");
-        return;
-      }
-  }
+      setError("ERROR");
+    }
+  
     // Reset error
     setError("");
     setLoading(true);
