@@ -1,11 +1,9 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   View, TextInput, Button, Text, Alert, ActivityIndicator,
   KeyboardAvoidingView, Platform
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { FireBase_Auth } from "Gym_App/Backend/firebase";
-import { fetchSignInMethodsForEmail } from "firebase/auth";
 import axios from "axios";
 //@ts-ignore
 const TR_SignUp = ({ navigation }) => {
@@ -23,7 +21,7 @@ const TR_SignUp = ({ navigation }) => {
     if (!TrainerData.email || !TrainerData.password || !TrainerData.name) {
       return "Please fill in all required fields";
     }
-
+  
     // Email & Phone validations
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(TrainerData.email)) {
       return "Please enter a valid email";
@@ -31,19 +29,26 @@ const TR_SignUp = ({ navigation }) => {
     if (!/^[1-9]\d{9}$/.test(TrainerData.phone)) {
       return "Please enter a valid 10-digit phone number not starting with 0";
     }
-
-    // Email existence check
+  
     try {
-      const checkDb = await axios.get("https://gym-dhlm.onrender.com/Register/Users");
-      const users = checkDb.data;
-      if (users.find((user: { email: string }) => user.email === TrainerData.email)) {
-        return "Email already exists";
+      // Check MongoDB
+      const checkDb = await axios.get("https://gym-dhlm.onrender.com/Register/Trainers");
+      const trainers = checkDb.data.data;
+      if (trainers.some((trainer: { email: string }) => trainer.email === TrainerData.email)) {
+        return "Email already exists in trainers";
       }
+  
+      // Check Users collection
+      const checkUsers = await axios.get("https://gym-dhlm.onrender.com/Register/Users");
+      const users = checkUsers.data.data;
+      if (users.some((user: { email: string }) => user.email === TrainerData.email)) {
+        return "Email already exists in users";
+      }
+      return null;
     } catch (error) {
+      console.error("Validation error:", error);
       return "Error checking email";
     }
-
-    return null;
   };
 
   const handleNext = async () => {

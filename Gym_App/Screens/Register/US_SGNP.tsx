@@ -10,7 +10,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { NavigationProp } from "@react-navigation/native";
 import { FireBase_Auth } from "../../Backend/firebase";
-import { createUserWithEmailAndPassword } from "firebase/auth";
+import { createUserWithEmailAndPassword, sendEmailVerification } from "firebase/auth";
 import axios from "axios";
 import { getFirestore, setDoc, doc } from "firebase/firestore";
 
@@ -72,6 +72,8 @@ const US_SignUp = ({ navigation }: UserSignUpProps) => {
         userData.email,
         userData.password,
       );
+       // Send verification email
+      await sendEmailVerification(userCredential.user);
       console.log("Firebase user created:", userCredential.user.uid);
       Alert.alert("Success", "Registration successful!");
       navigation.navigate("UserHome");
