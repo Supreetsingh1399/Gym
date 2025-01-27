@@ -32,7 +32,7 @@ const ForgotPass = ({ navigation }: ForgotPassProps) => {
       // Send password reset email directly through Firebase Auth
       await sendPasswordResetEmail(FireBase_Auth, email);
       Alert.alert("Success", "Password reset email sent!");
-      navigation.navigate("Login");
+      navigation.navigate("HomeScreen");
     } catch (error: any) {
       console.error("Reset password error:", error);
       const errorMessage =

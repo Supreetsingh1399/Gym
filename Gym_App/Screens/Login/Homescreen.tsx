@@ -40,28 +40,39 @@ const HandleLogin = ({ navigation }) => {
         email,
         password,
       );
-      // Get user data from Firestore
+      console.log("Auth successful, UID:", userCredential.user.uid);
+
       const db = getFirestore();
       const userDoc = await getDoc(doc(db, "users", userCredential.user.uid));
+      const trainerDoc = await getDoc(
+        doc(db, "Trainers", userCredential.user.uid),
+      );
+
+      console.log("User data:", userDoc.data());
+      console.log("Trainer data:", trainerDoc.data());
+
+      if (trainerDoc.exists()) {
+        const trainerData = trainerDoc.data();
+        if (trainerData?.type === "trainer") {
+          navigation.navigate("TrainerHome");
+          return;
+        }
+      }
 
       if (userDoc.exists()) {
         const userData = userDoc.data();
-        if (userData.type === "user" || userData.type === "") {
+        if (userData?.type === "user") {
           navigation.navigate("UserHome");
-        } else if (userData.type === "trainer") {
-          navigation.navigate("TrainerHome");
+          return;
         }
-      } else {
-        Alert.alert("Error", "User data not found");
       }
+
+      Alert.alert("Error", "Account type not found. Please register first.");
     } catch (error: any) {
-      setError(error.message);
+      console.error("Login error:", error);
       Alert.alert("Error", error.message);
-    } finally {
-      setLoading(false);
     }
   };
-
   // Return the Login Screen
   return (
     <SafeAreaView className="flex-1">
@@ -124,5 +135,4 @@ const HandleLogin = ({ navigation }) => {
     </SafeAreaView>
   );
 };
-
 export default HandleLogin;
