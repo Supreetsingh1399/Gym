@@ -54,7 +54,7 @@ const HandleLogin = ({ navigation }) => {
       if (trainerDoc.exists()) {
         const trainerData = trainerDoc.data();
         if (trainerData?.type === "trainer") {
-          navigation.navigate("TrainerHome");
+          navigation.replace("TrainerHome");
           return;
         }
       }
@@ -62,7 +62,7 @@ const HandleLogin = ({ navigation }) => {
       if (userDoc.exists()) {
         const userData = userDoc.data();
         if (userData?.type === "user") {
-          navigation.navigate("UserHome");
+          navigation.replace("UserHome");
           return;
         }
       }
