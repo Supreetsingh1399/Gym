@@ -5,7 +5,6 @@ import {
   View,
   Text,
   TextInput,
-  Button,
   KeyboardAvoidingView,
   TouchableOpacity,
   Alert,
@@ -62,7 +61,7 @@ const HandleLogin = ({ navigation }) => {
       if (userDoc.exists()) {
         const userData = userDoc.data();
         if (userData?.type === "user") {
-          navigation.replace("UserHome");
+          navigation.replace("UserTabs");
           return;
         }
       }

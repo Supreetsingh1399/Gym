@@ -6,12 +6,10 @@ import handleLogin from "./Gym_App/Screens/Login/Homescreen";
 import ForgotPass from "Gym_App/Screens/Login/ForgotPass";
 import TR_SignUp from "Gym_App/Screens/Register/TR_SGnp";
 import US_SignUp from "Gym_App/Screens/Register/US_SGNP";
-import UserHome from "Gym_App/Screens/UserDashboard/UserHome";
 import TrainerHome from "Gym_App/Screens/TrainerDashboard/TrainerHome";
+import TabNavigator from "Gym_App/TabNavigator/user_tab-navigator";
 
 const Stack = createNativeStackNavigator();
-
-
 
 const StackNavigator = () => {
   return (
@@ -20,7 +18,11 @@ const StackNavigator = () => {
       <Stack.Screen name="Trainer_SignUp" component={TR_SignUp} />
       <Stack.Screen name="User_SignUp" component={US_SignUp} />
       <Stack.Screen name="Forgot_Password" component={ForgotPass} />
-      <Stack.Screen name="UserHome" component={UserHome} />
+      <Stack.Screen 
+        name="UserTabs" 
+        component={TabNavigator}
+        options={{ headerShown: false }}
+      />
       <Stack.Screen name="TrainerHome" component={TrainerHome} />
     </Stack.Navigator>
   );
@@ -33,4 +35,5 @@ const App = () => {
     </NavigationContainer>
   );
 };
+
 export default App;
