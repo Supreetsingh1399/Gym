@@ -1,88 +1,44 @@
-import { View, Text, FlatList, ActivityIndicator, RefreshControl, StyleSheet } from "react-native";
-import { NavigationProp } from '@react-navigation/native';
-import { SafeAreaView } from "react-native-safe-area-context";
-import axios from 'axios';
-import { useEffect, useState, useCallback } from 'react';
-import { TouchableOpacity } from "react-native";
+import React, { useState } from "react";
+import { View, Text } from "react-native";
+import { SearchBar } from "react-native-elements";
 
-interface Trainer {
-  name: string;
-  email: string;
-  phone: string;
-  price: number;
-  gymName: string;
-  status: string;
-}
+const UserHome = () => {
+  const [search, setSearch] = useState("");
+  const [text, setText] = useState("");
 
-const UserHome = ({ navigation }: { navigation: NavigationProp<any> }) => {
-  const [trainers, setTrainers] = useState<Trainer[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [refreshing, setRefreshing] = useState(false);
-
-  const fetchTrainers = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const response = await axios.get("https://gym-dhlm.onrender.com/Register/Trainers");
-      setTrainers(response.data.data.filter((trainer: Trainer) => trainer.status === 'approved'));
-    } catch (error) {
-      setError('Failed to fetch trainers');
-      console.error(error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const onRefresh = useCallback(() => {
-    setRefreshing(true);
-    fetchTrainers().finally(() => setRefreshing(false));
-  }, []);
-
-  useEffect(() => {
-    fetchTrainers();
-  }, []);
-
-  const renderItem = ({ item }: { item: Trainer }) => (
-    <TouchableOpacity className="bg-white p-4 mx-2 my-1 rounded-lg shadow-md h-60">
-      <Text className="text-lg font-bold mb-1">{item.name}</Text>
-      <Text className="text-gray-600 text-base mb-1">{item.gymName}</Text>
-      <Text className="text-gray-600 text-sm">Email: {item.email}</Text>
-      <Text className="text-gray-600 text-sm">Phone: {item.phone}</Text>
-      <Text className="text-blue-500 font-semibold mt-2">₹{item.price}/month</Text>
-    </TouchableOpacity>
-  );
-
-  if (loading && !refreshing) {
-    return (
-      <View className="flex-1 justify-center items-center">
-        <ActivityIndicator size="large" color="#0000ff" />
-      </View>
-    );
-  }
-
-  return (  
-    <SafeAreaView className="flex-1 bg-gray-100 h-full w-full">
-      {error ? (
-        <Text className="text-red-500 text-center m-5">{error}</Text>
-      ) : (
-        <FlatList
-          data={trainers}
-          renderItem={renderItem}
-          horizontal={true}
-          keyExtractor={(item) => item.email}
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-          }
-          contentContainerStyle={{ padding: 10 }}
-          ListEmptyComponent={
-            <Text className="text-gray-500 text-center mt-12">
-              No trainers available
-            </Text>
-          }
-        />
-      )}
-    </SafeAreaView>
+  return (
+    <View className="flex-1 w-full h-full  p-4 bg-amber-100">
+      <SearchBar
+        placeholder="Search for Gyms, Trainers"
+        placeholderTextColor="#281c1c"
+        value={search}
+        onChangeText={setSearch}
+        lightTheme
+        round
+        clearIcon={{ name: "clear", color: "gray" }}
+        searchIcon={{
+          name: "search",
+          color: "black",
+          size: 30,
+          style: { paddingLeft: 10 },
+        }}
+        inputStyle={{
+          color: "#000",
+          fontSize: 16,
+          fontStyle: "italic",
+        }}
+        containerStyle={{
+          backgroundColor: "transparent",
+          borderBottomWidth: 0,
+          borderTopWidth: 0,
+        }}
+        inputContainerStyle={{
+          backgroundColor: "#eebbbb",
+          borderRadius: 10,
+          borderWidth: 0,
+        }}
+      />
+    </View>
   );
 };
 

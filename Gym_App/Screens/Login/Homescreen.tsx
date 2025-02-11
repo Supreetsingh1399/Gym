@@ -107,6 +107,7 @@ const HandleLogin = ({ navigation }) => {
           >
             <Text className=" text-white  text-center">LOGIN</Text>
           </TouchableOpacity>
+          {/* {loading && <Text className="text-blue-500">Logging...</Text>} */}
           <TouchableOpacity
             className="bg-blue-500 text-white p-2 rounded-lg mb-2 w-40"
             onPress={() => navigation.navigate("Forgot_Password")}

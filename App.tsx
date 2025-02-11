@@ -18,8 +18,8 @@ const StackNavigator = () => {
       <Stack.Screen name="Trainer_SignUp" component={TR_SignUp} />
       <Stack.Screen name="User_SignUp" component={US_SignUp} />
       <Stack.Screen name="Forgot_Password" component={ForgotPass} />
-      <Stack.Screen 
-        name="UserTabs" 
+      <Stack.Screen
+        name="UserTabs"
         component={TabNavigator}
         options={{ headerShown: false }}
       />

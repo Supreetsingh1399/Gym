@@ -51,7 +51,6 @@ const ForgotPass = ({ navigation }: ForgotPassProps) => {
         <View className="text-center border-2 border-black bg-blue-100 p-4 m-4">
           <Text className="text-black text-center text-2xl mb-3">
             Forgot Password
-            enter your mail
           </Text>
           <TextInput
             className="text-sm border-2 border-black rounded-lg p-2 mb-4"
