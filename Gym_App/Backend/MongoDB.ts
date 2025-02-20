@@ -3,8 +3,8 @@ import mongoose from "mongoose";
 import dotenv from "dotenv";
 import cors from "cors";
 import path from "path";
-import Trainer from "../Models/Trainer_model";
-import User from "../Models/User_models";
+import Trainer from "./Models/Trainer_model";
+import User from "./Models/User_models";
 
 dotenv.config({ path: path.resolve(__dirname, "../../.env") });
 
