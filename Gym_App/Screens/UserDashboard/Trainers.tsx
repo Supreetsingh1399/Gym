@@ -32,22 +32,30 @@ const Trainer_Available = ({
   const [refreshing, setRefreshing] = useState(false);
 
   const fetchTrainers = async () => {
+    setLoading(true);
+    setError(null);
     try {
-      setLoading(true);
-      setError(null);
       const response = await axios.get(
         "https://gym-dhlm.onrender.com/Register/Trainers",
       );
-      setTrainers(
-        response.data.data.filter(
-          (trainer: Trainer) => trainer.status === "approved",
-        ),
+
+      // Get approved trainers
+      const approvedTrainers = response.data.data.filter(
+        (trainer: Trainer) => trainer.status === "approved",
       );
+
+      // Shuffle approved trainers
+      const shuffledTrainers = [...approvedTrainers].sort(
+        () => Math.random() - 0.5,
+      );
+
+      setTrainers(shuffledTrainers);
     } catch (error) {
-      setError("Failed to fetch trainers");
+      setError("Failed to load trainers");
       console.error(error);
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   };
 

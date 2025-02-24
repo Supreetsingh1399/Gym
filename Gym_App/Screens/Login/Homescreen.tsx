@@ -1,10 +1,18 @@
 import React, { useState } from "react";
-import { View, Text, TextInput, KeyboardAvoidingView, TouchableOpacity, Alert, ActivityIndicator } from "react-native";
+import {
+  View,
+  Text,
+  TextInput,
+  KeyboardAvoidingView,
+  TouchableOpacity,
+  Alert,
+  ActivityIndicator,
+} from "react-native";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { getFirestore, doc, getDoc } from "firebase/firestore";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { FireBase_Auth } from "Gym_App/Backend/firebase";
-
+//@ts-ignore
 const HandleLogin = ({ navigation }) => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -15,12 +23,18 @@ const HandleLogin = ({ navigation }) => {
 
   const handleSignIn = async () => {
     if (loading) return; // Prevent multiple login attempts
-    if (!email || !password) return Alert.alert("Error", "Enter email and password");
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return Alert.alert("Error", "Invalid email format");
+    if (!email || !password)
+      return Alert.alert("Error", "Enter email and password");
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
+      return Alert.alert("Error", "Invalid email format");
 
     try {
       setLoading(true);
-      const userCredential = await signInWithEmailAndPassword(FireBase_Auth, email, password);
+      const userCredential = await signInWithEmailAndPassword(
+        FireBase_Auth,
+        email,
+        password,
+      );
       const userId = userCredential.user.uid;
       console.log("Auth successful, UID:", userId);
 
@@ -68,8 +82,13 @@ const HandleLogin = ({ navigation }) => {
               onChangeText={setPassword}
               secureTextEntry={!showPassword}
             />
-            <TouchableOpacity onPress={togglePasswordVisibility} className="absolute right-4 top-4">
-              <Text className="text-blue-500">{showPassword ? "Hide" : "Show"}</Text>
+            <TouchableOpacity
+              onPress={togglePasswordVisibility}
+              className="absolute right-4 top-4"
+            >
+              <Text className="text-blue-500">
+                {showPassword ? "Hide" : "Show"}
+              </Text>
             </TouchableOpacity>
           </View>
 
@@ -78,10 +97,16 @@ const HandleLogin = ({ navigation }) => {
             onPress={handleSignIn}
             disabled={loading}
           >
-            {loading ? <ActivityIndicator color="white" /> : <Text className="text-white text-lg text-center">LOGIN</Text>}
+            {loading ? (
+              <ActivityIndicator color="white" />
+            ) : (
+              <Text className="text-white text-lg text-center">LOGIN</Text>
+            )}
           </TouchableOpacity>
 
-          <TouchableOpacity onPress={() => navigation.navigate("Forgot_Password")}>
+          <TouchableOpacity
+            onPress={() => navigation.navigate("Forgot_Password")}
+          >
             <Text className="text-blue-500 text-lg mb-3">Forgot Password?</Text>
           </TouchableOpacity>
 
@@ -89,14 +114,18 @@ const HandleLogin = ({ navigation }) => {
             className="w-full bg-gray-200 py-3 rounded-lg mb-3"
             onPress={() => navigation.navigate("User_SignUp")}
           >
-            <Text className="text-black text-lg text-center">Create User Account</Text>
+            <Text className="text-black text-lg text-center">
+              Create User Account
+            </Text>
           </TouchableOpacity>
 
           <TouchableOpacity
             className="w-full bg-gray-200 py-3 rounded-lg"
             onPress={() => navigation.navigate("Trainer_SignUp")}
           >
-            <Text className="text-black text-lg text-center">Create Trainer Account</Text>
+            <Text className="text-black text-lg text-center">
+              Create Trainer Account
+            </Text>
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>

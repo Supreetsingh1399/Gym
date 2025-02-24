@@ -1,9 +1,9 @@
 import { View, Text, SafeAreaView } from "react-native";
-export default function UserHome() {
+export default function UserProfile() {
   return (
     <SafeAreaView>
       <View>
-        <Text>user Dashboard</Text>
+        <Text>user profile</Text>
       </View>
     </SafeAreaView>
   );

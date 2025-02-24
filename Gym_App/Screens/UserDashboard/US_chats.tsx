@@ -1,9 +1,9 @@
 import { View, Text, SafeAreaView } from "react-native";
-export default function UserHome() {
+export default function UserChats() {
   return (
     <SafeAreaView>
       <View>
-        <Text>user Dashboard</Text>
+        <Text>user chatting!!!!!</Text>
       </View>
     </SafeAreaView>
   );
