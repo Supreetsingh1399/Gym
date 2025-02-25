@@ -26,6 +26,7 @@ connectDB()
 // Routes
 // app.use("/api/trainers", trainerRoutes);
 app.use("/users", userRoutes);
+app.use('/api/users', require('./routes/userRoutes'));
 
 // Health Check Route
 app.get("/health", (req: Request, res: Response) => {
