@@ -12,6 +12,15 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Routes - use only one route registration
+app.get("/", (req, res) => {
+  res.send("API is running");
+});
+
+// Log all incoming requests
+app.use((req, res, next) => {
+  console.log(`${req.method} ${req.url}`);
+  next();
+});
 app.use("/api/users", userRoutes);
 
 // Health Check Route
