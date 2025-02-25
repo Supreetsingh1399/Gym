@@ -4,11 +4,11 @@
   "version": "1.0.0",
   "main": "index.ts",
   "scripts": {
-    "start": "ts-node Gym_App/Backend/MongoDB.ts",
+    "start": "ts-node Gym_App/Backend/config/server.ts",
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
-    "dev": "nodemon --exec ts-node Gym_App/Backend/MongoDB.ts"
+    "dev": "nodemon --exec ts-node Gym_App/Backend/config/server.ts"
   },
   "dependencies": {
     "@babel/core": "^7.20.0",
