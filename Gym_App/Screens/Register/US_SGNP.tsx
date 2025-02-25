@@ -17,6 +17,7 @@ import {
 } from "firebase/auth";
 import axios from "axios";
 import { getFirestore, setDoc, doc } from "firebase/firestore";
+import { registerUser } from "../../Backend/controllers/User_controls";
 
 type UserSignUpProps = {
   navigation: NavigationProp<any>;
@@ -67,65 +68,11 @@ const US_SignUp = ({ navigation }: UserSignUpProps) => {
     setLoading(true);
 
     try {
-      // Step 1: Create Firebase Auth user
-      const userCredential = await createUserWithEmailAndPassword(
-        FireBase_Auth,
-        userData.email,
-        userData.password,
-      );
-      // Send verification email
-      await sendEmailVerification(userCredential.user);
-      console.log("Firebase user created:", userCredential.user.uid);
+      await registerUser(userData);
       Alert.alert("Success", "Registration successful!");
       navigation.navigate("UserHome");
-
-      // Step 2: Save to Firestore
-      const db = getFirestore();
-      await setDoc(doc(db, "users", userCredential.user.uid), {
-        uid: userCredential.user.uid,
-        email: userData.email,
-        name: userData.name,
-        phone: userData.phone,
-        type: "user",
-        status: "active",
-        createdAt: new Date().toISOString(),
-      });
-      console.log("Firestore data saved");
-
-      // Step 3: Save to MongoDB with retry
-      try {
-        const mongoResponse = await axios.post(
-          "https://gym-dhlm.onrender.com/Register/Users",
-          {
-            uid: userCredential.user.uid,
-            ...userData,
-            type: "user",
-            status: "active",
-            createdAt: new Date().toISOString(),
-          },
-          {
-            timeout: 5000,
-            headers: {
-              "Content-Type": "application/json",
-            },
-          },
-        );
-        console.log("MongoDB response:", mongoResponse.data);
-      } catch (mongoError) {
-        console.error("MongoDB error:", mongoError);
-        // Continue even if MongoDB fails - data is in Firebase
-      }
-    } catch (error: any) {
-      console.error("Registration error:", error);
-      const errorMessage =
-        error.code === "auth/email-already-in-use"
-          ? "Email already registered"
-          : error.response?.data?.message ||
-            error.message ||
-            "Registration failed";
-
-      setError(errorMessage);
-      Alert.alert("Error", errorMessage);
+    } catch (error) {
+      setError((error as any).message);
     } finally {
       setLoading(false);
     }

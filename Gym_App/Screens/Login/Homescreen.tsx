@@ -124,7 +124,7 @@ const HandleLogin = ({ navigation }) => {
             onPress={() => navigation.navigate("Trainer_SignUp")}
           >
             <Text className="text-black text-lg text-center">
-              Create Trainer Account
+              Create Gym Account
             </Text>
           </TouchableOpacity>
         </View>

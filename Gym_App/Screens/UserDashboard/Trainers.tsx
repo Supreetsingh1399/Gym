@@ -4,7 +4,6 @@ import {
   FlatList,
   ActivityIndicator,
   RefreshControl,
-  StyleSheet,
 } from "react-native";
 import { NavigationProp } from "@react-navigation/native";
 import { SafeAreaView } from "react-native-safe-area-context";
