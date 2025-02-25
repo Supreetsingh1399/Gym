@@ -1,8 +1,8 @@
 import express, { Request, Response } from "express";
 import cors from "cors";
-import connectDB from "../config/db"; // Import MongoDB connection file
+import connectDB from "./db"; // Import MongoDB connection file
 // import trainerRoutes from "../routes/trainerRoutes"; // Trainer Routes
-import userRoutes from "../Routes/User_routes"; // User Routes
+import userRoutes from "./Backend/Routes/User_routes"; // User Routes
 
 const app = express();
 const PORT = process.env.PORT || 11890;
@@ -25,7 +25,7 @@ connectDB()
 
 // Routes
 // app.use("/api/trainers", trainerRoutes);
-app.use("/api/users", userRoutes);
+app.use("/users", userRoutes);
 
 // Health Check Route
 app.get("/health", (req: Request, res: Response) => {

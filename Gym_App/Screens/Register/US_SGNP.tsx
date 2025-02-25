@@ -70,7 +70,7 @@ const US_SignUp = ({ navigation }: UserSignUpProps) => {
     try {
       await registerUser(userData);
       Alert.alert("Success", "Registration successful!");
-      navigation.navigate("UserHome");
+      navigation.navigate("UserTabs");
     } catch (error) {
       setError((error as any).message);
     } finally {
