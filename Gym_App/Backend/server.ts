@@ -4,6 +4,7 @@ import dotenv from "dotenv";
 import cors from "cors";
 import path from "path";
 import { registerUser, getAllUsers, healthCheck } from "./controllers/User_controls";
+import { getAllGyms, registerGym } from "./controllers/Gym_controls";
 
 dotenv.config({ path: path.resolve(__dirname, "../../.env") });
 
@@ -32,6 +33,8 @@ const connectDB = async () => {
 // Routes using controllers
 app.post("/Register/Users", registerUser);
 app.get("/Register/Users", getAllUsers);
+app.post("Register/Gym",registerGym)
+app.get("Register/Gym",getAllGyms)
 app.get("/health", healthCheck);
 
 // Start Server

@@ -121,7 +121,7 @@ const HandleLogin = ({ navigation }) => {
 
           <TouchableOpacity
             className="w-full bg-gray-200 py-3 rounded-lg"
-            onPress={() => navigation.navigate("Trainer_SignUp")}
+            onPress={() => navigation.navigate("Gym_rgn")}
           >
             <Text className="text-black text-lg text-center">
               Create Gym Account
