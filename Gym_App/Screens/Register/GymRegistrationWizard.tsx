@@ -23,14 +23,16 @@ const GymRegistrationWizard = ({ navigation }) => {
 
   const handleSubmit = async () => {
     try {
-      const response = await axios.post("https://gym-dhlm.onrender.com/Register/Gym", {
+      const response = await axios.post("https://gym-dhlm.onrender.com/Register/Gyms", {
         ...gymData,
         status: "pending",
       });
+      console.log(response);
       Alert.alert("Success", "Gym registration submitted for approval.");
       navigation.navigate("HomeScreen");
     } catch (error) {
       Alert.alert("Error", "Failed to register gym. Try again.");
+      console.log(error);
     }
   };
 

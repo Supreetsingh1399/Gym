@@ -33,8 +33,8 @@ const connectDB = async () => {
 // Routes using controllers
 app.post("/Register/Users", registerUser);
 app.get("/Register/Users", getAllUsers);
-app.post("Register/Gym",registerGym)
-app.get("Register/Gym",getAllGyms)
+app.post("/Register/Gyms",registerGym)
+app.get("/Register/Gyms",getAllGyms)
 app.get("/health", healthCheck);
 
 // Start Server
