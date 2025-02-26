@@ -1,49 +1,36 @@
-import axios from "axios";
-import { FireBase_Auth } from "../firebase";
-import { getFirestore, setDoc, doc } from "firebase/firestore";
-import { createUserWithEmailAndPassword } from "firebase/auth";
+import { Request, Response } from "express";
+import User from "../Models/User_models";
 
-export const registerUser = async (userData: any) => {
-    try {
-      // Check if email exists first
-      const emailCheck = await axios.get(`https://gym-dhlm.onrender.com/api/users/check-email/${userData.email}`);
-      if (emailCheck.data.exists) {
-        throw new Error('Email already exists');
-      }
-  
-      const userCredential = await createUserWithEmailAndPassword(
-        FireBase_Auth,
-        userData.email,
-        userData.password
-      );
-  
-      const userObject = {
-        uid: userCredential.user.uid,
-        email: userData.email,
-        name: userData.name,
-        phone: userData.phone,
-        type: "user",
-        status: "active",
-        createdAt: new Date().toISOString()
-      };
-  
-      // Save to Firestore and MongoDB in parallel
-      await Promise.all([
-        setDoc(doc(getFirestore(), "users", userCredential.user.uid), userObject),
-        axios.post(
-          "https://gym-dhlm.onrender.com/api/users/register",
-          userObject,
-          {
-            headers: { 
-              'Content-Type': 'application/json'
-            }
-          }
-        )
-      ]);
-  
-      return userCredential.user;
-    } catch (error: any) {
-      console.error("Registration failed:", error);
-      throw error;
-    }
-  };
+// Register User
+export const registerUser = async (req: Request, res: Response) => {
+  try {
+    const newUser = new User(req.body);
+    const savedUser = await newUser.save();
+    res.status(201).json({
+      success: true,
+      message: "User registered successfully!",
+      data: savedUser,
+    });
+  } catch (error) {
+    res.status(400).json({
+      success: false,
+      message: error instanceof Error ? error.message : "Registration failed.",
+    });
+  }
+};
+
+// Get All Users
+export const getUsers = async (req: Request, res: Response) => {
+  try {
+    const users = await User.find();
+    res.status(200).json({
+      success: true,
+      data: users,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error instanceof Error ? error.message : "Failed to fetch users",
+    });
+  }
+};

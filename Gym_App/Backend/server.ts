@@ -1,41 +1,50 @@
 import express, { Request, Response } from "express";
+import mongoose from "mongoose";
+import dotenv from "dotenv";
 import cors from "cors";
-import connectDB from "./db";
-import userRoutes from "./Routes/User_routes";
+import path from "path";
+import userRoutes from "./user_routes";
+
+dotenv.config({ path: path.resolve(__dirname, "../../.env") });
 
 const app = express();
-const PORT = process.env.PORT || 11890;
+const Port = process.env.PORT || 11890;
 
 // Middleware
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Routes - use only one route registration
-app.get("/", (req, res) => {
-  res.send("API is running");
-});
+// MongoDB Connection
+const connectDB = async () => {
+  try {
+    const uri = process.env.MONGODB_URI;
+    if (!uri) throw new Error("MongoDB URI is missing in environment variables");
 
-// Log all incoming requests
-app.use((req, res, next) => {
-  console.log(`${req.method} ${req.url}`);
-  next();
-});
-app.use("/api/users", userRoutes);
+    await mongoose.connect(uri);
+    console.log("MongoDB connected successfully!");
+  } catch (error) {
+    console.error("Error connecting to MongoDB:", error);
+    process.exit(1);
+  }
+};
 
-// Health Check Route
+// Routes
+app.use("/Register/Users", userRoutes);
+
+// Health Check
 app.get("/health", (req: Request, res: Response) => {
   res.status(200).send({ status: "Server is healthy" });
 });
 
-// Connect to MongoDB before starting the server
+// Connect and start server
 connectDB()
   .then(() => {
-    app.listen(PORT, () => {
-      console.log(`Server running on port ${PORT}`);
+    app.listen(Port, () => {
+      console.log(`Server running on port ${Port}`);
     });
   })
-  .catch((err: unknown) => {
+  .catch((err) => {
     console.error("Server startup failed:", err);
   });
 
