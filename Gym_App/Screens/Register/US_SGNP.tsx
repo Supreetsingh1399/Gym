@@ -77,7 +77,7 @@ const US_SignUp = ({ navigation }: UserSignUpProps) => {
       await sendEmailVerification(userCredential.user);
       console.log("Firebase user created:", userCredential.user.uid);
       Alert.alert("Success", "Registration successful!");
-      navigation.navigate("UserHome");
+      navigation.navigate("UserTabs");
 
       // Step 2: Save to Firestore
       const db = getFirestore();

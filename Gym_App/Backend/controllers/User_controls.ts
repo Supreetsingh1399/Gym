@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import User from "../Models/User_models";
 
-// Register User
+// Register a new user
 export const registerUser = async (req: Request, res: Response) => {
   try {
     const newUser = new User(req.body);
@@ -19,8 +19,8 @@ export const registerUser = async (req: Request, res: Response) => {
   }
 };
 
-// Get All Users
-export const getUsers = async (req: Request, res: Response) => {
+// Get all users
+export const getAllUsers = async (req: Request, res: Response) => {
   try {
     const users = await User.find();
     res.status(200).json({
@@ -33,4 +33,9 @@ export const getUsers = async (req: Request, res: Response) => {
       message: error instanceof Error ? error.message : "Failed to fetch users",
     });
   }
+};
+
+// Health check
+export const healthCheck = (req: Request, res: Response) => {
+  res.status(200).send({ status: "Server is healthy" });
 };

@@ -1,9 +1,9 @@
-import express, { Request, Response } from "express";
+import express from "express";
 import mongoose from "mongoose";
 import dotenv from "dotenv";
 import cors from "cors";
 import path from "path";
-import userRoutes from "./user_routes";
+import { registerUser, getAllUsers, healthCheck } from "./controllers/User_controls";
 
 dotenv.config({ path: path.resolve(__dirname, "../../.env") });
 
@@ -29,15 +29,12 @@ const connectDB = async () => {
   }
 };
 
-// Routes
-app.use("/Register/Users", userRoutes);
+// Routes using controllers
+app.post("/Register/Users", registerUser);
+app.get("/Register/Users", getAllUsers);
+app.get("/health", healthCheck);
 
-// Health Check
-app.get("/health", (req: Request, res: Response) => {
-  res.status(200).send({ status: "Server is healthy" });
-});
-
-// Connect and start server
+// Start Server
 connectDB()
   .then(() => {
     app.listen(Port, () => {
