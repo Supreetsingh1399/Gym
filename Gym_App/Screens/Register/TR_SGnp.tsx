@@ -12,7 +12,6 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import axios from "axios";
-import { styleText } from "util";
 //@ts-ignore
 const TR_SignUp = ({ navigation }) => {
   const [step, setStep] = useState(1);

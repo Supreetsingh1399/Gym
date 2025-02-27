@@ -17,7 +17,6 @@ import {
 } from "firebase/auth";
 import axios from "axios";
 import { getFirestore, setDoc, doc } from "firebase/firestore";
-import { registerUser } from "../../Backend/controllers/User_controls";
 
 type UserSignUpProps = {
   navigation: NavigationProp<any>;

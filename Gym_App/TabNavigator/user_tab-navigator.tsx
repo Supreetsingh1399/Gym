@@ -1,6 +1,6 @@
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import UserHome from "Gym_App/Screens/UserDashboard/UserHome";
-import Trainer_Available from "Gym_App/Screens/UserDashboard/Trainers";
+// import Trainer_Available from "Gym_App/Screens/UserDashboard/Trainers";
 import { Ionicons } from "@expo/vector-icons";
 import UserProfile from "Gym_App/Screens/UserDashboard/US_profile";
 import UserChats from "Gym_App/Screens/UserDashboard/US_chats";
@@ -18,6 +18,7 @@ const TabNavigator = () => {
           paddingBottom: 5,
           height: 60,
         },
+        // headerShown: false,
       }}
     >
       <Tab.Screen
@@ -30,7 +31,7 @@ const TabNavigator = () => {
           ),
         }}
       />
-      <Tab.Screen
+      {/* <Tab.Screen
         name="Trainers"
         component={Trainer_Available}
         options={{
@@ -39,7 +40,7 @@ const TabNavigator = () => {
             <Ionicons name="fitness" size={size} color={color} />
           ),
         }}
-      />
+      /> */}
       <Tab.Screen
         name="UserChats"
         component={UserChats}

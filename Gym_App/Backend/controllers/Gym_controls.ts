@@ -1,13 +1,13 @@
 import { Request, Response } from "express";
 import Gym from "../Models/Gym_Register";
-//Resgister new Gym
+//Register new Gym
 export const registerGym = async (req: Request, res: Response) => {
   try {
     const newGym = new Gym(req.body);
     const savedGym = await newGym.save();
     res.status(201).json({
       success: true,
-      message: "User registered successfully!",
+      message: "Gym registered successfully! Wait for admin approval",
       data: savedGym,
     });
   } catch (error) {
