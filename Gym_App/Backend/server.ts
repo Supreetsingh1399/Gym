@@ -1,4 +1,4 @@
-import express from "express";
+import express, { Request, Response } from "express";
 import mongoose from "mongoose";
 import dotenv from "dotenv";
 import cors from "cors";
@@ -12,7 +12,7 @@ import {
 import { approveGym, deleteGym, getAllGyms, registerGym } from "./controllers/Gym_controls";
 
 dotenv.config({ path: path.resolve(__dirname, "../../.env") });
-
+const router = express.Router();
 const app = express();
 const Port = process.env.PORT || 11890;
 
@@ -37,14 +37,30 @@ const connectDB = async () => {
   }
 };
 
-// Routes using controllers
-app.post("/Register/Users", registerUser);
-app.get("/Register/Users", getAllUsers);
-app.post("/Register/Gyms", registerGym);
-app.get("/Register/Gyms", getAllGyms);
-app.get("/health", healthCheck);
-app.put("/Register/Gyms/:id/approve", approveGym);
-app.delete("/Register/Gyms/:id", deleteGym);
+// Define routes with proper request/response typing
+router.post("/Register/Users", (req: Request, res: Response) => registerUser(req, res));
+router.get("/Register/Users", (req: Request, res: Response) => getAllUsers(req, res));
+router.post("/Register/Gyms", (req: Request, res: Response) => registerGym(req, res));
+router.get("/Register/Gyms", (req: Request, res: Response) => getAllGyms(req, res));
+router.put("/Register/Gyms/:id/approve", async (req: Request, res: Response) => {
+  try {
+    await approveGym(req, res);
+  } catch (error) {
+    res.status(500).send({ error: "Internal Server Error" });
+  }
+});
+router.delete("/Register/Gyms/:id", async (req: Request, res: Response) => {
+  try {
+    await deleteGym(req, res);
+  } catch (error) {
+    res.status(500).send({ error: "Internal Server Error" });
+  }
+});
+
+// Use router
+app.use('/', router);
+
+// ...existing connection and server code...
 // Start Server
 connectDB()
   .then(() => {
