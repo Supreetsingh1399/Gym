@@ -8,8 +8,8 @@ const gymSchema = new mongoose.Schema({
     required: true,
     validate: {
       validator: (v: string) => /^\d{10}$/.test(v),
-      message: "Phone number must be 10 digits"
-    }
+      message: "Phone number must be 10 digits",
+    },
   },
   email: { type: String, required: true, unique: true },
   businessRegistrationNumber: String,
@@ -22,7 +22,7 @@ const gymSchema = new mongoose.Schema({
     zipCode: { type: String, required: true },
     latitude: Number,
     longitude: Number,
-    placeId: String
+    placeId: String,
   },
 
   facilities: {
@@ -31,44 +31,48 @@ const gymSchema = new mongoose.Schema({
     specialFeatures: [String],
     operatingHours: {
       weekdays: { type: String, required: true },
-      weekends: { type: String, required: true }
+      weekends: { type: String, required: true },
     },
-    parkingAvailable: { type: Boolean, default: false }
+    parkingAvailable: { type: Boolean, default: false },
   },
 
   pricing: {
-    membershipPlans: [{
-      planName: { type: String, required: true },
-      price: { type: Number, required: true },
-      duration: { type: String, required: true }
-    }],
+    membershipPlans: [
+      {
+        planName: { type: String, required: true },
+        price: { type: Number, required: true },
+        duration: { type: String, required: true },
+      },
+    ],
     personalTraining: {
       available: { type: Boolean, default: false },
-      cost: Number
+      cost: Number,
     },
-    trialClassAvailable: { type: Boolean, default: false }
+    trialClassAvailable: { type: Boolean, default: false },
   },
 
-  trainers: [{
-    name: { type: String, required: true },
-    specialization: [String],
-    certifications: [String]
-  }],
+  trainers: [
+    {
+      name: { type: String, required: true },
+      specialization: [String],
+      certifications: [String],
+    },
+  ],
 
   media: {
     logoUrl: String,
     coverImageUrl: String,
-    gallery: [String]
+    gallery: [String],
   },
 
   policies: {
     cancellationPolicy: String,
     liabilityWaiver: String,
-    termsOfService: String
+    termsOfService: String,
   },
 
   status: { type: String, default: "pending" },
-  createdAt: { type: Date, default: Date.now }
+  createdAt: { type: Date, default: Date.now },
 });
 
 export default mongoose.model("Gym", gymSchema);

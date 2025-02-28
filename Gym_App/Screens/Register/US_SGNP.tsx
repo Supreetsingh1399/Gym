@@ -71,7 +71,7 @@ const US_SignUp = ({ navigation }: UserSignUpProps) => {
       const userCredential = await createUserWithEmailAndPassword(
         FireBase_Auth,
         userData.email,
-        userData.password
+        userData.password,
       );
       await sendEmailVerification(userCredential.user);
       console.log("Firebase user created:", userCredential.user.uid);
@@ -104,7 +104,7 @@ const US_SignUp = ({ navigation }: UserSignUpProps) => {
           {
             timeout: 5000,
             headers: { "Content-Type": "application/json" },
-          }
+          },
         );
         console.log("MongoDB response:", mongoResponse.data);
       } catch (mongoError) {

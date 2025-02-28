@@ -3,7 +3,11 @@ import mongoose from "mongoose";
 import dotenv from "dotenv";
 import cors from "cors";
 import path from "path";
-import { registerUser, getAllUsers, healthCheck } from "./controllers/User_controls";
+import {
+  registerUser,
+  getAllUsers,
+  healthCheck,
+} from "./controllers/User_controls";
 import { getAllGyms, registerGym } from "./controllers/Gym_controls";
 
 dotenv.config({ path: path.resolve(__dirname, "../../.env") });
@@ -20,7 +24,8 @@ app.use(express.urlencoded({ extended: true }));
 const connectDB = async () => {
   try {
     const uri = process.env.MONGODB_URI;
-    if (!uri) throw new Error("MongoDB URI is missing in environment variables");
+    if (!uri)
+      throw new Error("MongoDB URI is missing in environment variables");
 
     await mongoose.connect(uri);
     console.log("MongoDB connected successfully!");
@@ -33,8 +38,8 @@ const connectDB = async () => {
 // Routes using controllers
 app.post("/Register/Users", registerUser);
 app.get("/Register/Users", getAllUsers);
-app.post("/Register/Gyms",registerGym)
-app.get("/Register/Gyms",getAllGyms)
+app.post("/Register/Gyms", registerGym);
+app.get("/Register/Gyms", getAllGyms);
 app.get("/health", healthCheck);
 
 // Start Server

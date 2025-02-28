@@ -1,6 +1,6 @@
-import { FireBase_Auth } from 'Gym_App/Backend/firebase';
-import { View, Text, Image, TouchableOpacity, Alert } from 'react-native';
-import { NavigationProp } from '@react-navigation/native';
+import { FireBase_Auth } from "Gym_App/Backend/firebase";
+import { View, Text, Image, TouchableOpacity, Alert } from "react-native";
+import { NavigationProp } from "@react-navigation/native";
 // Define interfaces for our data structure
 interface Props {
   navigation: NavigationProp<any>;
@@ -26,7 +26,7 @@ interface UserData {
   trainer: UserTrainer;
 }
 
-export default function UserProfile({ navigation }: Props){
+export default function UserProfile({ navigation }: Props) {
   const user: UserData = {
     name: "John Doe",
     email: "johndoe@example.com",
@@ -46,9 +46,9 @@ export default function UserProfile({ navigation }: Props){
   const handleLogout = async () => {
     try {
       await FireBase_Auth.signOut();
-      navigation.navigate('HomeScreen');
+      navigation.navigate("HomeScreen");
     } catch (error) {
-      Alert.alert('Error', 'Failed to logout');
+      Alert.alert("Error", "Failed to logout");
     }
   };
   return (
@@ -102,9 +102,12 @@ export default function UserProfile({ navigation }: Props){
       >
         <Text className="text-center font-semibold">Settings</Text>
       </TouchableOpacity>
-      <TouchableOpacity className="mt-2 p-4 border rounded-lg bg-red-100" onPress={handleLogout}>
+      <TouchableOpacity
+        className="mt-2 p-4 border rounded-lg bg-red-100"
+        onPress={handleLogout}
+      >
         <Text className="text-center font-semibold text-red-500">Logout</Text>
       </TouchableOpacity>
     </View>
   );
-};
+}

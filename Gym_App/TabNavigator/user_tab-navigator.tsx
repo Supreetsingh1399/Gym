@@ -11,6 +11,7 @@ const Tab = createBottomTabNavigator();
 const TabNavigator = () => {
   return (
     <Tab.Navigator
+      initialRouteName="UserHome"
       screenOptions={{
         tabBarActiveTintColor: "#0091EA",
         tabBarInactiveTintColor: "gray",
@@ -31,6 +32,7 @@ const TabNavigator = () => {
           ),
         }}
       />
+
       {/* <Tab.Screen
         name="Trainers"
         component={Trainer_Available}
