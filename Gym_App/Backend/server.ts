@@ -41,6 +41,8 @@ app.get("/Register/Users", getAllUsers);
 app.post("/Register/Gyms", registerGym);
 app.get("/Register/Gyms", getAllGyms);
 app.get("/health", healthCheck);
+app.put("/Register/Gyms/:id", registerGym);
+app.delete("/Register/Gyms/:id", registerGym);
 
 // Start Server
 connectDB()
