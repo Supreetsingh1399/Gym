@@ -3,12 +3,13 @@ import mongoose from "mongoose";
 import dotenv from "dotenv";
 import cors from "cors";
 import path from "path";
+import helmet from 'helmet';
 import {
   registerUser,
   getAllUsers,
   healthCheck,
 } from "./controllers/User_controls";
-import { getAllGyms, registerGym } from "./controllers/Gym_controls";
+import { approveGym, deleteGym, getAllGyms, registerGym } from "./controllers/Gym_controls";
 
 dotenv.config({ path: path.resolve(__dirname, "../../.env") });
 
@@ -19,6 +20,7 @@ const Port = process.env.PORT || 11890;
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use(helmet());
 
 // MongoDB Connection
 const connectDB = async () => {
@@ -41,9 +43,8 @@ app.get("/Register/Users", getAllUsers);
 app.post("/Register/Gyms", registerGym);
 app.get("/Register/Gyms", getAllGyms);
 app.get("/health", healthCheck);
-app.put("/Register/Gyms/:id", registerGym);
-app.delete("/Register/Gyms/:id", registerGym);
-
+app.put("/Register/Gyms/:id/approve", approveGym);
+app.delete("/Register/Gyms/:id", deleteGym);
 // Start Server
 connectDB()
   .then(() => {

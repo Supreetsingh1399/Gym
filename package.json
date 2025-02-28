@@ -33,6 +33,7 @@
     "express": "^4.21.2",
     "firebase": "^11.1.0",
     "formik": "^2.4.6",
+    "helmet": "^8.0.0",
     "mongoose": "^7.0.0",
     "mongosh": "^2.3.8",
     "nativewind": "2.0.11",

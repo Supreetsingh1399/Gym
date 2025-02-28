@@ -32,3 +32,79 @@ export const getAllGyms = async (req: Request, res: Response) => {
     });
   }
 };
+//Approve Gym
+export const approveGym = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const updatedGym = await Gym.findByIdAndUpdate(
+      id,
+      { status: "approved" },
+      { new: true }
+    );
+
+    if (!updatedGym) {
+      return res.status(404).json({
+        success: false,
+        message: "Gym not found"
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: updatedGym
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error instanceof Error ? error.message : "Failed to approve gym"
+    });
+  }
+};
+//Delete Gym
+export const deleteGym = async (req: Request, res: Response) => {
+  try {
+    const gymId = req.params.id;
+    const gym = await Gym.findById(gymId);
+    if (!gym) {
+      return res.status(404).json({
+        success: false,
+        message: "Gym not found",
+      });
+    }
+    await Gym.findByIdAndDelete(gymId);
+    res.status(200).json({
+      success: true,
+      message: "Gym deleted successfully",
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error instanceof Error ? error.message : "Failed to delete gym",
+    });
+  }
+}
+//Update Gym
+export const updateGym = async (req: Request, res: Response) => {
+  try {
+    const gymId = req.params.id;
+    const gym = await Gym.findById(gymId);
+    if (!gym) {
+      return res.status(404).json({
+        success: false,
+        message: "Gym not found",
+      });
+    }
+    const updatedGym = await Gym.findByIdAndUpdate
+    (gymId, req.body, { new: true, runValidators: true });
+    res.status(200).json({
+      success: true,
+      message: "Gym updated successfully",
+      data: updatedGym,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error instanceof Error ? error.message : "Failed to update gym",
+    });
+  }
+}
