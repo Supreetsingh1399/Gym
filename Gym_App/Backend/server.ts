@@ -3,13 +3,18 @@ import mongoose from "mongoose";
 import dotenv from "dotenv";
 import cors from "cors";
 import path from "path";
-import helmet from 'helmet';
+import helmet from "helmet";
 import {
   registerUser,
   getAllUsers,
   healthCheck,
 } from "./controllers/User_controls";
-import { approveGym, deleteGym, getAllGyms, registerGym } from "./controllers/Gym_controls";
+import {
+  approveGym,
+  deleteGym,
+  getAllGyms,
+  registerGym,
+} from "./controllers/Gym_controls";
 
 dotenv.config({ path: path.resolve(__dirname, "../../.env") });
 const router = express.Router();
@@ -38,17 +43,28 @@ const connectDB = async () => {
 };
 
 // Define routes with proper request/response typing
-router.post("/Register/Users", (req: Request, res: Response) => registerUser(req, res));
-router.get("/Register/Users", (req: Request, res: Response) => getAllUsers(req, res));
-router.post("/Register/Gyms", (req: Request, res: Response) => registerGym(req, res));
-router.get("/Register/Gyms", (req: Request, res: Response) => getAllGyms(req, res));
-router.put("/Register/Gyms/:id/approve", async (req: Request, res: Response) => {
-  try {
-    await approveGym(req, res);
-  } catch (error) {
-    res.status(500).send({ error: "Internal Server Error" });
-  }
-});
+router.post("/Register/Users", (req: Request, res: Response) =>
+  registerUser(req, res),
+);
+router.get("/Register/Users", (req: Request, res: Response) =>
+  getAllUsers(req, res),
+);
+router.post("/Register/Gyms", (req: Request, res: Response) =>
+  registerGym(req, res),
+);
+router.get("/Register/Gyms", (req: Request, res: Response) =>
+  getAllGyms(req, res),
+);
+router.put(
+  "/Register/Gyms/:id/approve",
+  async (req: Request, res: Response) => {
+    try {
+      await approveGym(req, res);
+    } catch (error) {
+      res.status(500).send({ error: "Internal Server Error" });
+    }
+  },
+);
 router.delete("/Register/Gyms/:id", async (req: Request, res: Response) => {
   try {
     await deleteGym(req, res);
@@ -58,7 +74,7 @@ router.delete("/Register/Gyms/:id", async (req: Request, res: Response) => {
 });
 
 // Use router
-app.use('/', router);
+app.use("/", router);
 
 // ...existing connection and server code...
 // Start Server

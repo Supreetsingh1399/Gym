@@ -1,7 +1,8 @@
-import { initializeApp } from "firebase/app";
-import { initializeAuth } from "firebase/auth";
-// import AsyncStorage from "@react-native-async-storage/async-storage";
-import { getFirestore } from "firebase/firestore";
+import { initializeApp } from 'firebase/app';
+import { getAuth } from 'firebase/auth';
+import { getFirestore } from 'firebase/firestore';
+import { getStorage } from 'firebase/storage';
+
 const firebaseConfig = {
   apiKey: "AIzaSyCu6N6VDckGCrS_VfR0b3e2c8mi5uZSzhc",
   authDomain: "gymbuddy-7db1e.firebaseapp.com",
@@ -13,19 +14,6 @@ const firebaseConfig = {
 };
 
 const app = initializeApp(firebaseConfig);
-export const FireBase_Auth = initializeAuth(app);
+export const FireBase_Auth = getAuth(app);
 export const FireBase_DB = getFirestore(app);
-
-// Auth settings
-export const actionCodeSettings = {
-  url: "https://gymbuddy-7db1e.firebaseapp.com",
-  handleCodeInApp: true,
-  iOS: {
-    bundleId: "com.gymbuddy.app",
-  },
-  android: {
-    packageName: "com.gymbuddy.app",
-    installApp: true,
-  },
-  dynamicLinkDomain: "gymbuddy.page.link",
-};
+export const FireBase_Storage = getStorage(app);

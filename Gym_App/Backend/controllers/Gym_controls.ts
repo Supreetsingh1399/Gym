@@ -39,24 +39,24 @@ export const approveGym = async (req: Request, res: Response) => {
     const updatedGym = await Gym.findByIdAndUpdate(
       id,
       { status: "approved" },
-      { new: true }
+      { new: true },
     );
 
     if (!updatedGym) {
       return res.status(404).json({
         success: false,
-        message: "Gym not found"
+        message: "Gym not found",
       });
     }
 
     res.status(200).json({
       success: true,
-      data: updatedGym
+      data: updatedGym,
     });
   } catch (error) {
     res.status(500).json({
       success: false,
-      message: error instanceof Error ? error.message : "Failed to approve gym"
+      message: error instanceof Error ? error.message : "Failed to approve gym",
     });
   }
 };
@@ -82,7 +82,7 @@ export const deleteGym = async (req: Request, res: Response) => {
       message: error instanceof Error ? error.message : "Failed to delete gym",
     });
   }
-}
+};
 //Update Gym
 export const updateGym = async (req: Request, res: Response) => {
   try {
@@ -94,8 +94,10 @@ export const updateGym = async (req: Request, res: Response) => {
         message: "Gym not found",
       });
     }
-    const updatedGym = await Gym.findByIdAndUpdate
-    (gymId, req.body, { new: true, runValidators: true });
+    const updatedGym = await Gym.findByIdAndUpdate(gymId, req.body, {
+      new: true,
+      runValidators: true,
+    });
     res.status(200).json({
       success: true,
       message: "Gym updated successfully",
@@ -107,4 +109,4 @@ export const updateGym = async (req: Request, res: Response) => {
       message: error instanceof Error ? error.message : "Failed to update gym",
     });
   }
-}
+};

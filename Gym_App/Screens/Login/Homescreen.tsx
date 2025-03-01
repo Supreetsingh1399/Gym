@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useContext, useState } from "react";
 import {
   View,
   Text,
@@ -12,12 +12,17 @@ import { signInWithEmailAndPassword } from "firebase/auth";
 import { getFirestore, doc, getDoc } from "firebase/firestore";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { FireBase_Auth } from "Gym_App/Backend/firebase";
+import { AuthContext } from "../../Backend/AuthProvider";
+
 //@ts-ignore
 const HandleLogin = ({ navigation }) => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+
+  const authContext = useContext(AuthContext);
+  const setUser = authContext?.setUser;
 
   const togglePasswordVisibility = () => setShowPassword(!showPassword);
 
@@ -43,10 +48,15 @@ const HandleLogin = ({ navigation }) => {
         getDoc(doc(db, "users", userId)),
         getDoc(doc(db, "Trainers", userId)),
       ]);
+       
 
       if (trainerDoc.exists() && trainerDoc.data()?.type === "trainer") {
+         // Update global auth state
+         setUser?.(userCredential.user);
         navigation.replace("TrainerHome");
       } else if (userDoc.exists() && userDoc.data()?.type === "user") {
+         // Update global auth state
+         setUser?.(userCredential.user);
         navigation.replace("UserTabs");
       } else {
         Alert.alert("Error", "Account type not found. Please register first.");
