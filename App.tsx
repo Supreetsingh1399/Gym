@@ -1,5 +1,4 @@
 import React from "react";
-import { AuthProvider } from "Gym_App/Backend/AuthProvider";
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import handleLogin from "./Gym_App/Screens/Login/Homescreen";
@@ -33,11 +32,9 @@ const StackNavigator = () => {
 
 const App = () => {
   return (
-  <AuthProvider>
     <NavigationContainer>
       <StackNavigator />
     </NavigationContainer>
-    </AuthProvider>
   );
 };
 

@@ -12,7 +12,6 @@ import { signInWithEmailAndPassword } from "firebase/auth";
 import { getFirestore, doc, getDoc } from "firebase/firestore";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { FireBase_Auth } from "Gym_App/Backend/firebase";
-import { AuthContext } from "../../Backend/AuthProvider";
 
 //@ts-ignore
 const HandleLogin = ({ navigation }) => {
@@ -21,8 +20,6 @@ const HandleLogin = ({ navigation }) => {
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
-  const authContext = useContext(AuthContext);
-  const setUser = authContext?.setUser;
 
   const togglePasswordVisibility = () => setShowPassword(!showPassword);
 
@@ -51,12 +48,10 @@ const HandleLogin = ({ navigation }) => {
        
 
       if (trainerDoc.exists() && trainerDoc.data()?.type === "trainer") {
-         // Update global auth state
-         setUser?.(userCredential.user);
+      
         navigation.replace("TrainerHome");
       } else if (userDoc.exists() && userDoc.data()?.type === "user") {
-         // Update global auth state
-         setUser?.(userCredential.user);
+         
         navigation.replace("UserTabs");
       } else {
         Alert.alert("Error", "Account type not found. Please register first.");
