@@ -46,7 +46,7 @@ export default function UserProfile({ navigation }: Props) {
   const handleLogout = async () => {
     try {
       await FireBase_Auth.signOut();
-      navigation.navigate("HomeScreen");
+      navigation.navigate("LoginScreen");
     } catch (error) {
       Alert.alert("Error", "Failed to logout");
     }
