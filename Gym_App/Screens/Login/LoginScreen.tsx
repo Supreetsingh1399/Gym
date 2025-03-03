@@ -20,7 +20,6 @@ const HandleLogin = ({ navigation }) => {
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
-
   const togglePasswordVisibility = () => setShowPassword(!showPassword);
 
   const handleSignIn = async () => {
@@ -45,13 +44,10 @@ const HandleLogin = ({ navigation }) => {
         getDoc(doc(db, "users", userId)),
         getDoc(doc(db, "Trainers", userId)),
       ]);
-       
 
       if (trainerDoc.exists() && trainerDoc.data()?.type === "trainer") {
-      
         navigation.replace("TrainerHome");
       } else if (userDoc.exists() && userDoc.data()?.type === "user") {
-         
         navigation.replace("UserTabs");
       } else {
         Alert.alert("Error", "Account type not found. Please register first.");

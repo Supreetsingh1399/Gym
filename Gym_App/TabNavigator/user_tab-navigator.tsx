@@ -4,7 +4,7 @@ import UserHome from "Gym_App/Screens/UserDashboard/UserHome";
 import { Ionicons } from "@expo/vector-icons";
 import UserProfile from "Gym_App/Screens/UserDashboard/US_profile";
 import UserChats from "Gym_App/Screens/UserDashboard/US_chats";
-import UserNews from "Gym_App/Screens/UserDashboard/Gym_related_news";
+import NewsScreen from "Gym_App/Screens/UserDashboard/Gym_related_news";
 
 const Tab = createBottomTabNavigator();
 
@@ -55,7 +55,7 @@ const TabNavigator = () => {
       />
       <Tab.Screen
         name="UserNews"
-        component={UserNews}
+        component={NewsScreen}
         options={{
           tabBarLabel: "News",
           tabBarIcon: ({ color, size }) => (
