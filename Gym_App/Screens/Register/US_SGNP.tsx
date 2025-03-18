@@ -7,6 +7,7 @@ import {
   Alert,
   KeyboardAvoidingView,
   TouchableOpacity,
+  ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { NavigationProp } from "@react-navigation/native";
@@ -17,6 +18,7 @@ import {
 } from "firebase/auth";
 import axios from "axios";
 import { getFirestore, setDoc, doc } from "firebase/firestore";
+import { Ionicons } from "@expo/vector-icons";
 
 type UserSignUpProps = {
   navigation: NavigationProp<any>;
@@ -49,142 +51,193 @@ const US_SignUp = ({ navigation }: UserSignUpProps) => {
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(userData.email)) {
       setError("Error, Please enter a valid email.");
       return;
+    } else if (userData.password.length < 6) {
+      setError("Error, Password must be at least 6 characters.");
+      return;
     } else if (userData.password !== confirmPassword) {
       setError("Error, Passwords do not match.");
       return;
-    } else if (userData.password.length < 6) {
-      setError("Error , Password must be at least 6 characters long.");
-      return;
-    } else if (userData.phone.length !== 10 || userData.phone[0] === "0") {
-      setError("Error, Phone number must be 10 digits long.");
-      return;
-    } else {
-      setError("ERROR");
     }
 
-    // Reset error
+    // Clear any previous errors
     setError("");
     setLoading(true);
 
     try {
-      // Step 1: Create Firebase Auth user
+      // Create user account with Firebase Authentication
       const userCredential = await createUserWithEmailAndPassword(
         FireBase_Auth,
         userData.email,
-        userData.password,
+        userData.password
       );
-      await sendEmailVerification(userCredential.user);
-      console.log("Firebase user created:", userCredential.user.uid);
-      Alert.alert("Success", "Registration successful!");
-      navigation.navigate("UserTabs");
 
-      // Step 2: Save to Firestore
+      const user = userCredential.user;
+
+      // Send email verification
+      await sendEmailVerification(user);
+
+      // Save user profile in Firestore
       const db = getFirestore();
-      await setDoc(doc(db, "users", userCredential.user.uid), {
-        uid: userCredential.user.uid,
-        email: userData.email,
+      await setDoc(doc(db, "users", user.uid), {
         name: userData.name,
+        email: userData.email,
         phone: userData.phone,
-        type: "user",
-        status: "active",
+        type: "user", // Specify this is a user account
         createdAt: new Date().toISOString(),
       });
 
-      // Step 3: Save to MongoDB
-      try {
-        const mongoResponse = await axios.post(
-          "https://gym-dhlm.onrender.com/Register/Users",
+      // Sign up success
+      Alert.alert(
+        "Success",
+        "Account created! Please verify your email before logging in.",
+        [
           {
-            uid: userCredential.user.uid,
-            ...userData,
-            type: "user",
-            status: "active",
-            createdAt: new Date().toISOString(),
+            text: "OK",
+            onPress: () => navigation.navigate("LoginScreen"),
           },
-          {
-            timeout: 5000,
-            headers: { "Content-Type": "application/json" },
-          },
-        );
-        console.log("MongoDB response:", mongoResponse.data);
-      } catch (mongoError) {
-        console.error("MongoDB error:", mongoError);
-      }
+        ]
+      );
     } catch (error: any) {
-      console.error("Registration error:", error);
-      const errorMessage =
-        error.code === "auth/email-already-in-use"
-          ? "Email already registered"
-          : error.response?.data?.message ||
-            error.message ||
-            "Registration failed";
-
-      setError(errorMessage);
-      Alert.alert("Error", errorMessage);
+      console.error("Signup error:", error);
+      if (error.code === "auth/email-already-in-use") {
+        setError("This email is already registered. Please login instead.");
+      } else {
+        setError("Failed to create account. Please try again.");
+      }
     } finally {
       setLoading(false);
     }
   };
 
-  //continue from sign up page
-
   return (
-    <SafeAreaView className="flex-1 justify-center items-center">
-      <KeyboardAvoidingView className="w-full">
-        <View className="flex-shrink-0 p-4 w-full relative">
+    <SafeAreaView className="flex-1 bg-white">
+      <KeyboardAvoidingView className="flex-1 p-6 justify-center">
+        <View>
+          <Text className="text-2xl font-bold text-center text-gray-800 mb-6">
+            Create Account
+          </Text>
+
+          {/* Error message display */}
           {error ? (
-            <Text className="text-red-500 text-center">{error}</Text>
+            <Text className="text-red-500 text-center mb-4">{error}</Text>
           ) : null}
-          <TextInput
-            className="border-2 border-black p-2 mb-4 rounded"
-            placeholder="Enter your Name"
-            value={userData.name}
-            onChangeText={(text) => setUserData({ ...userData, name: text })}
-          />
-          <TextInput
-            className="border-2 border-black p-2  mb-4 rounded"
-            placeholder="Enter your Email"
-            value={userData.email}
-            onChangeText={(text) => setUserData({ ...userData, email: text })}
-            keyboardType="email-address"
-            autoCapitalize="none"
-          />
-          <View className="relative flex-row items-center mb-4">
-            <TextInput
-              className="flex-1 border-2 border-black p-2 rounded pr-12"
-              placeholder="Enter your Password"
-              value={userData.password}
-              onChangeText={(text) =>
-                setUserData({ ...userData, password: text })
-              }
-              secureTextEntry={!showPassword}
-            />
-            <TouchableOpacity
-              onPress={togglePasswordVisibility}
-              className="absolute right-3"
-            >
-              <Text>{showPassword ? "Hide Password" : "Show Password"}</Text>
-            </TouchableOpacity>
+
+          {/* Name Input */}
+          <View className="mb-4">
+            <Text className="text-gray-700 mb-2 font-medium">Full Name</Text>
+            <View className="flex-row items-center border border-gray-300 rounded-lg bg-gray-50 px-3">
+              <Ionicons name="person-outline" size={20} color="#555" />
+              <TextInput
+                className="flex-1 py-3 px-2 text-gray-700"
+                placeholder="Enter your name"
+                value={userData.name}
+                onChangeText={(text) =>
+                  setUserData({ ...userData, name: text })
+                }
+              />
+            </View>
           </View>
-          <TextInput
-            className="border-2 border-black p-2 mb-4 rounded"
-            placeholder="Confirm Password"
-            value={confirmPassword}
-            onChangeText={setConfirmPassword}
-            secureTextEntry={!showPassword}
-          />
-          <TextInput
-            className="border-2 border-black p-2  mb-4 rounded"
-            placeholder="Enter your Phone"
-            value={userData.phone}
-            onChangeText={(text) => setUserData({ ...userData, phone: text })}
-            keyboardType="phone-pad"
-          />
-          <Button
-            title={loading ? "Loading..." : "Sign Up"}
+
+          {/* Email Input */}
+          <View className="mb-4">
+            <Text className="text-gray-700 mb-2 font-medium">Email</Text>
+            <View className="flex-row items-center border border-gray-300 rounded-lg bg-gray-50 px-3">
+              <Ionicons name="mail-outline" size={20} color="#555" />
+              <TextInput
+                className="flex-1 py-3 px-2 text-gray-700"
+                placeholder="Enter your email"
+                keyboardType="email-address"
+                autoCapitalize="none"
+                value={userData.email}
+                onChangeText={(text) =>
+                  setUserData({ ...userData, email: text })
+                }
+              />
+            </View>
+          </View>
+
+          {/* Phone Input */}
+          <View className="mb-4">
+            <Text className="text-gray-700 mb-2 font-medium">Phone Number</Text>
+            <View className="flex-row items-center border border-gray-300 rounded-lg bg-gray-50 px-3">
+              <Ionicons name="call-outline" size={20} color="#555" />
+              <TextInput
+                className="flex-1 py-3 px-2 text-gray-700"
+                placeholder="Enter your phone number"
+                keyboardType="phone-pad"
+                value={userData.phone}
+                onChangeText={(text) =>
+                  setUserData({ ...userData, phone: text })
+                }
+              />
+            </View>
+          </View>
+
+          {/* Password Input */}
+          <View className="mb-4">
+            <Text className="text-gray-700 mb-2 font-medium">Password</Text>
+            <View className="flex-row items-center border border-gray-300 rounded-lg bg-gray-50 px-3">
+              <Ionicons name="lock-closed-outline" size={20} color="#555" />
+              <TextInput
+                className="flex-1 py-3 px-2 text-gray-700"
+                placeholder="Enter password"
+                secureTextEntry={!showPassword}
+                value={userData.password}
+                onChangeText={(text) =>
+                  setUserData({ ...userData, password: text })
+                }
+              />
+              <TouchableOpacity onPress={togglePasswordVisibility}>
+                <Ionicons
+                  name={showPassword ? "eye-off-outline" : "eye-outline"}
+                  size={22}
+                  color="#555"
+                />
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          {/* Confirm Password Input */}
+          <View className="mb-6">
+            <Text className="text-gray-700 mb-2 font-medium">
+              Confirm Password
+            </Text>
+            <View className="flex-row items-center border border-gray-300 rounded-lg bg-gray-50 px-3">
+              <Ionicons name="lock-closed-outline" size={20} color="#555" />
+              <TextInput
+                className="flex-1 py-3 px-2 text-gray-700"
+                placeholder="Confirm password"
+                secureTextEntry={!showPassword}
+                value={confirmPassword}
+                onChangeText={setConfirmPassword}
+              />
+            </View>
+          </View>
+
+          {/* Sign Up Button */}
+          <TouchableOpacity
+            className={`bg-blue-600 py-3 rounded-lg items-center justify-center mb-4 ${
+              loading ? "opacity-70" : ""
+            }`}
             onPress={handleSubmit}
             disabled={loading}
-          />
+          >
+            {loading ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text className="text-white font-bold text-lg">SIGN UP</Text>
+            )}
+          </TouchableOpacity>
+
+          {/* Login Link */}
+          <View className="flex-row justify-center mt-4">
+            <Text className="text-gray-600">Already have an account? </Text>
+            <TouchableOpacity
+              onPress={() => navigation.navigate("LoginScreen")}
+            >
+              <Text className="text-blue-600 font-semibold">Login</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>

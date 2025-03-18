@@ -1,4 +1,4 @@
-import React, { useContext, useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -7,30 +7,119 @@ import {
   TouchableOpacity,
   Alert,
   ActivityIndicator,
+  Platform,
+  Image,
 } from "react-native";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { getFirestore, doc, getDoc } from "firebase/firestore";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { FireBase_Auth } from "Gym_App/Backend/firebase";
+import { Ionicons } from "@expo/vector-icons";
+import { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { CommonActions } from "@react-navigation/native";
 
-//@ts-ignore
-const HandleLogin = ({ navigation }) => {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
+// Define navigation types
+type RootStackParamList = {
+  LoginScreen: undefined;
+  Forgot_Password: undefined;
+  User_SignUp: undefined;
+  Gym_rgn: undefined;  // Updated to match App.tsx navigation structure
+  TrainerHome: undefined;
+  UserTabs: undefined;
+  GymHome: undefined;
+  // TR_SGnp: undefined;  // Removed trainer registration route
+};
 
-  const togglePasswordVisibility = () => setShowPassword(!showPassword);
+type LoginScreenProps = {
+  navigation: NativeStackNavigationProp<RootStackParamList>;
+};
 
-  const handleSignIn = async () => {
-    if (loading) return; // Prevent multiple login attempts
-    if (!email || !password)
-      return Alert.alert("Error", "Enter email and password");
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
-      return Alert.alert("Error", "Invalid email format");
+/**
+ * Login screen component for user authentication
+ * @param {LoginScreenProps} props - Component props including navigation
+ * @returns {JSX.Element} Login screen UI
+ */
+const HandleLogin = ({ navigation }: LoginScreenProps): JSX.Element => {
+  // State management
+  const [email, setEmail] = useState<string>("");
+  const [password, setPassword] = useState<string>("");
+  const [loading, setLoading] = useState<boolean>(false);
+  const [showPassword, setShowPassword] = useState<boolean>(false);
+  const [emailError, setEmailError] = useState<string>("");
+  const [passwordError, setPasswordError] = useState<string>("");
+  const [authInProgress, setAuthInProgress] = useState<boolean>(false);
+
+  /**
+   * Toggle password visibility
+   */
+  const togglePasswordVisibility = (): void => setShowPassword(!showPassword);
+
+  /**
+   * Validate email format
+   * @param {string} email - User email to validate
+   * @returns {boolean} Whether email is valid
+   */
+  const validateEmail = (email: string): boolean => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
+
+  /**
+   * Validate form inputs
+   * @returns {boolean} Whether form is valid
+   */
+  const validateForm = (): boolean => {
+    let isValid = true;
+
+    // Email validation
+    if (!email) {
+      setEmailError("Email is required");
+      isValid = false;
+    } else if (!validateEmail(email)) {
+      setEmailError("Invalid email format");
+      isValid = false;
+    } else {
+      setEmailError("");
+    }
+
+    // Password validation
+    if (!password) {
+      setPasswordError("Password is required");
+      isValid = false;
+    } else {
+      setPasswordError("");
+    }
+
+    return isValid;
+  };
+
+  /**
+   * Navigate to appropriate screen based on user type
+   * Uses reset to avoid navigation stack issues
+   */
+  const navigateToUserScreen = (destination: "UserTabs" | "TrainerHome" | "GymHome"): void => {
+    // Reset navigation to prevent going back to login after authentication
+    navigation.dispatch(
+      CommonActions.reset({
+        index: 0,
+        routes: [{ name: destination }],
+      })
+    );
+  };
+
+  /**
+   * Handle user sign in process
+   */
+  const handleSignIn = async (): Promise<void> => {
+    if (loading || authInProgress) return; // Prevent multiple login attempts
+
+    // Validate form before submission
+    if (!validateForm()) return;
 
     try {
       setLoading(true);
+      setAuthInProgress(true);
+
       const userCredential = await signInWithEmailAndPassword(
         FireBase_Auth,
         email,
@@ -40,21 +129,43 @@ const HandleLogin = ({ navigation }) => {
       console.log("Auth successful, UID:", userId);
 
       const db = getFirestore();
-      const [userDoc, trainerDoc] = await Promise.all([
+      // Check user, trainer, and gym collections
+      const [userDoc, trainerDoc, gymDoc] = await Promise.all([
         getDoc(doc(db, "users", userId)),
         getDoc(doc(db, "Trainers", userId)),
+        getDoc(doc(db, "gyms", userId)),
       ]);
 
-      if (trainerDoc.exists() && trainerDoc.data()?.type === "trainer") {
-        navigation.replace("TrainerHome");
+      // Navigate to appropriate screen based on user type
+      if (gymDoc.exists() && gymDoc.data()?.type === "gym") {
+        navigateToUserScreen("GymHome");
+      } else if (trainerDoc.exists() && trainerDoc.data()?.type === "trainer") {
+        navigateToUserScreen("TrainerHome");
       } else if (userDoc.exists() && userDoc.data()?.type === "user") {
-        navigation.replace("UserTabs");
+        navigateToUserScreen("UserTabs");
       } else {
         Alert.alert("Error", "Account type not found. Please register first.");
+        setAuthInProgress(false);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Login error:", error);
-      Alert.alert("Login Failed", (error as Error).message);
+      
+      // Handle specific authentication errors with user-friendly messages
+      let errorMessage = "An unexpected error occurred. Please try again.";
+      
+      if (error && error.code) {
+        const errorCode = error.code;
+        if (errorCode === 'auth/user-not-found' || errorCode === 'auth/wrong-password') {
+          errorMessage = "Invalid email or password. Please check your credentials.";
+        } else if (errorCode === 'auth/too-many-requests') {
+          errorMessage = "Too many failed login attempts. Please try again later.";
+        } else if (errorCode === 'auth/network-request-failed') {
+          errorMessage = "Network error. Please check your internet connection.";
+        }
+      }
+      
+      Alert.alert("Login Failed", errorMessage);
+      setAuthInProgress(false);
     } finally {
       setLoading(false);
     }
@@ -62,72 +173,132 @@ const HandleLogin = ({ navigation }) => {
 
   return (
     <SafeAreaView className="flex-1 bg-white">
-      <KeyboardAvoidingView className="flex-1 justify-center px-6">
-        <View className="items-center">
-          <Text className="text-black text-3xl font-semibold mb-6">Login</Text>
-
-          <TextInput
-            className="w-full border border-gray-300 rounded-lg p-3 mb-4 text-lg"
-            placeholder="Enter your Email"
-            value={email}
-            onChangeText={setEmail}
-            autoCapitalize="none"
-            keyboardType="email-address"
+      <KeyboardAvoidingView
+        className="flex-1 justify-center"
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+      >
+        <View className="items-center mb-10">
+          <Image 
+            source={require('../../../assets/icon.png')} 
+            className="w-16 h-16"
+            resizeMode="contain"
           />
+          <Text className="text-2xl font-bold text-blue-600 mt-2">GymBuddy</Text>
+        </View>
 
-          <View className="relative w-full mb-4">
+        <View className="px-8">
+          <Text className="text-2xl font-bold text-gray-800 mb-1">Welcome Back</Text>
+          <Text className="text-base text-gray-500 mb-6">Sign in to continue</Text>
+
+          {/* Email Input */}
+          <View className="flex-row items-center mb-1 border border-gray-300 rounded-lg bg-gray-50 px-2">
+            <View className="px-2 py-3">
+              <Ionicons name="mail-outline" size={22} color="#0091EA" />
+            </View>
             <TextInput
-              className="w-full border border-gray-300 rounded-lg p-3 pr-12 text-lg"
-              placeholder="Enter your Password"
+              className={`flex-1 py-3 px-2 text-base text-gray-700 ${
+                emailError ? "border-red-500" : ""
+              }`}
+              placeholder="Email Address"
+              value={email}
+              onChangeText={(text) => {
+                setEmail(text);
+                if (emailError) setEmailError("");
+              }}
+              autoCapitalize="none"
+              keyboardType="email-address"
+              placeholderTextColor="#999"
+            />
+          </View>
+          {emailError ? (
+            <Text className="text-red-500 text-xs mb-2 ml-1">{emailError}</Text>
+          ) : (
+            <View className="h-5" />
+          )}
+
+          {/* Password Input */}
+          <View className="flex-row items-center mb-1 border border-gray-300 rounded-lg bg-gray-50 px-2">
+            <View className="px-2 py-3">
+              <Ionicons name="lock-closed-outline" size={22} color="#0091EA" />
+            </View>
+            <TextInput
+              className={`flex-1 py-3 px-2 text-base text-gray-700 ${
+                passwordError ? "border-red-500" : ""
+              }`}
+              placeholder="Password"
               value={password}
-              onChangeText={setPassword}
+              onChangeText={(text) => {
+                setPassword(text);
+                if (passwordError) setPasswordError("");
+              }}
               secureTextEntry={!showPassword}
+              placeholderTextColor="#999"
             />
             <TouchableOpacity
               onPress={togglePasswordVisibility}
-              className="absolute right-4 top-4"
+              className="px-2"
             >
-              <Text className="text-blue-500">
-                {showPassword ? "Hide" : "Show"}
-              </Text>
+              <Ionicons
+                name={showPassword ? "eye-off" : "eye"}
+                size={24}
+                color="#0091EA"
+              />
             </TouchableOpacity>
           </View>
+          {passwordError ? (
+            <Text className="text-red-500 text-xs mb-2 ml-1">{passwordError}</Text>
+          ) : (
+            <View className="h-5" />
+          )}
 
+          {/* Forgot Password Link */}
           <TouchableOpacity
-            className="w-full bg-blue-500 py-3 rounded-lg mb-3"
+            onPress={() => navigation.navigate("Forgot_Password")}
+            className="self-end mb-5"
+          >
+            <Text className="text-blue-500 font-medium">Forgot Password?</Text>
+          </TouchableOpacity>
+
+          {/* Login Button */}
+          <TouchableOpacity
+            className={`py-3 px-6 rounded-lg items-center justify-center ${
+              loading ? "bg-blue-400" : "bg-blue-600"
+            }`}
             onPress={handleSignIn}
             disabled={loading}
           >
             {loading ? (
-              <ActivityIndicator color="white" />
+              <ActivityIndicator color="#ffffff" />
             ) : (
-              <Text className="text-white text-lg text-center">LOGIN</Text>
+              <Text className="text-white font-bold text-lg">LOGIN</Text>
             )}
           </TouchableOpacity>
 
-          <TouchableOpacity
-            onPress={() => navigation.navigate("Forgot_Password")}
-          >
-            <Text className="text-blue-500 text-lg mb-3">Forgot Password?</Text>
-          </TouchableOpacity>
+          {/* Sign Up Section */}
+          <View className="flex-row justify-center mt-6 mb-4">
+            <Text className="text-gray-600">Don't have an account? </Text>
+            <TouchableOpacity onPress={() => navigation.navigate("User_SignUp")}>
+              <Text className="text-blue-600 font-semibold">Sign Up</Text>
+            </TouchableOpacity>
+          </View>
 
-          <TouchableOpacity
-            className="w-full bg-gray-200 py-3 rounded-lg mb-3"
-            onPress={() => navigation.navigate("User_SignUp")}
-          >
-            <Text className="text-black text-lg text-center">
-              Create User Account
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            className="w-full bg-gray-200 py-3 rounded-lg"
-            onPress={() => navigation.navigate("Gym_rgn")}
-          >
-            <Text className="text-black text-lg text-center">
-              Create Gym Account
-            </Text>
-          </TouchableOpacity>
+          {/* Alternative Sign Up Options */}
+          <View className="mt-6">
+            <Text className="text-gray-500 text-center mb-4">Or register as</Text>
+            
+            <View className="flex-row justify-center">
+              {/* Gym Owner Registration */}
+              <TouchableOpacity 
+                className="flex-row items-center bg-blue-50 py-3 px-6 rounded-lg border border-blue-200"
+                onPress={() => navigation.navigate("Gym_rgn")}
+              >
+                <Ionicons name="fitness-outline" size={20} color="#0091EA" />
+                <Text className="ml-2 text-blue-700 font-medium">Gym Owner</Text>
+              </TouchableOpacity>
+              
+              {/* Removed trainer registration option */}
+            </View>
+          </View>
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
