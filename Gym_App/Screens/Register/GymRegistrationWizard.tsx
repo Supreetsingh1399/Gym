@@ -16,6 +16,10 @@ import { Ionicons } from "@expo/vector-icons";
 import { FireBase_Auth } from "../../Backend/firebase";
 import { createUserWithEmailAndPassword, sendEmailVerification } from "firebase/auth";
 import { getFirestore, setDoc, doc } from "firebase/firestore";
+import axios from "axios";
+
+// Define API_URL or import it from a config file
+const API_URL = process.env.API_URL || "localhost:3000";// Replace with your actual API URL
 
 interface GymData {
   gymName: string;
@@ -248,36 +252,29 @@ const GymRegistrationWizard = ({ navigation }) => {
   const handleSubmit = async () => {
     setLoading(true);
     setError("");
-
+  
     try {
-      // Create user account with Firebase Authentication
-      const userCredential = await createUserWithEmailAndPassword(
-        FireBase_Auth,
-        gymData.email,
-        gymData.password
-      );
-
-      const user = userCredential.user;
-
-      // Send email verification
-      await sendEmailVerification(user);
-
-      // Save gym profile in Firestore
-      const db = getFirestore();
-      await setDoc(doc(db, "gyms", user.uid), {
-        gymName: gymData.gymName,
-        ownerName: gymData.ownerName,
-        contactNumber: gymData.contactNumber,
-        email: gymData.email,
-        description: gymData.description,
-        type: "gym", // Specify this is a gym account
-        location: gymData.location,
-        facilities: gymData.facilities,
-        pricing: gymData.pricing,
-        status: "pending", // Gyms need approval
-        createdAt: new Date().toISOString(),
-      });
-
+      // First, send gym registration to MongoDB for admin approval
+      const response = await axios.post(`${API_URL}/Register/Gyms`, {
+          gymName: gymData.gymName,
+          ownerName: gymData.ownerName,
+          contactNumber: gymData.contactNumber,
+          email: gymData.email,
+          password: gymData.password, // Will be encrypted on server
+          description: gymData.description,
+          location: gymData.location,
+          facilities: gymData.facilities,
+          pricing: gymData.pricing,
+          status: "pending", // Gyms need approval
+          createdAt: new Date().toISOString(),
+        });
+  
+      const result = response.data;
+  
+      if (!result.success) {
+        throw new Error(result.message || "Registration failed");
+      }
+  
       // Registration success
       Alert.alert(
         "Registration Submitted",
@@ -291,10 +288,10 @@ const GymRegistrationWizard = ({ navigation }) => {
       );
     } catch (error: any) {
       console.error("Gym registration error:", error);
-      if (error.code === "auth/email-already-in-use") {
+      if (error.message.includes("email already in use")) {
         setError("This email is already registered. Please login instead.");
       } else {
-        setError("Failed to create account. Please try again.");
+        setError(error.message || "Failed to create account. Please try again.");
       }
     } finally {
       setLoading(false);

@@ -23,6 +23,7 @@ import { Ionicons } from "@expo/vector-icons";
 type UserSignUpProps = {
   navigation: NavigationProp<any>;
 };
+const API_URL = process.env.API_URL || "localhost:3000";
 
 const US_SignUp = ({ navigation }: UserSignUpProps) => {
   const [userData, setUserData] = useState({
@@ -84,6 +85,13 @@ const US_SignUp = ({ navigation }: UserSignUpProps) => {
         phone: userData.phone,
         type: "user", // Specify this is a user account
         createdAt: new Date().toISOString(),
+      });
+      // Optionally, save user data to your backend
+      await axios.post(`${API_URL}/Register/Users`, {
+        name: userData.name,
+        email: userData.email,
+        phone: userData.phone,
+        uid: user.uid,
       });
 
       // Sign up success

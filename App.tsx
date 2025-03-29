@@ -5,10 +5,9 @@ import { ActivityIndicator, View, Text, TouchableOpacity } from "react-native";
 import { User } from "firebase/auth";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import DebugApp from "./debug";
-
 // Screen imports
 import ForgotPass from "Gym_App/Screens/Login/ForgotPass";
-import TR_SignUp from "Gym_App/Screens/Register/TR_SGnp";
+// import TR_SignUp from "Gym_App/Screens/Register/TR_SGnp";
 import US_SignUp from "Gym_App/Screens/Register/US_SGNP";
 import TrainerHome from "Gym_App/Screens/TrainerDashboard/TrainerHome";
 import TabNavigator from "Gym_App/TabNavigator/user_tab-navigator";
@@ -68,11 +67,11 @@ const StackNavigator = ({ user }: { user: User | null }): JSX.Element => {
             component={US_SignUp}
             options={{ title: "Create User Account" }}
           />
-          <Stack.Screen 
+          {/* <Stack.Screen 
             name="Trainer_SignUp" 
             component={TR_SignUp}
             options={{ title: "Create Trainer Account" }}
-          />
+          /> */}
           <Stack.Screen 
             name="Forgot_Password" 
             component={ForgotPass}
