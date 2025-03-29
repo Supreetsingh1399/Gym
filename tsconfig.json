@@ -22,7 +22,7 @@
     "allowSyntheticDefaultImports": true,
     "resolveJsonModule": true
   },
-  "include": ["**/*.ts", "**/*.tsx", "Gym_App/Screens/TrainerDashboard"],
+  "include": ["**/*.ts", "**/*.tsx", "Gym_App/Screens/TrainerDashboard", "Gym_App/Screens/UserDashboard/utils/helpers.tsx"],
   "exclude": ["node_modules"],
   "extends": "expo/tsconfig.base"
 }
