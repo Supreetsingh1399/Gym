@@ -20,6 +20,8 @@ import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { FireBase_Auth, FireBase_DB } from "Gym_App/Backend/firebase";
 import { collection, getDocs, query, limit, orderBy, where, getDoc, doc } from "firebase/firestore";
 import { useFocusEffect } from '@react-navigation/native';
+import axios from 'axios';
+import {API_URL} from '@env';
 
 // Import our components and utilities
 import { GymCard } from './components/GymCard';
@@ -82,14 +84,11 @@ const UserHome: React.FC<NavigationProps> = ({ navigation }) => {
   const [userName, setUserName] = useState<string>('');
   const [refreshing, setRefreshing] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(true);
-  const [searchText, setSearchText] = useState<string>('');
-  const [isSearching, setIsSearching] = useState<boolean>(false);
   
   // Data states
   const [registeredGyms, setRegisteredGyms] = useState<GymData[]>([]);
   const [nearbyGyms, setNearbyGyms] = useState<GymData[]>([]);
   const [popularGyms, setPopularGyms] = useState<GymData[]>([]);
-  const [searchResults, setSearchResults] = useState<GymData[]>([]);
   const [popularWorkouts, setPopularWorkouts] = useState<WorkoutData[]>([]);
 
   // Memoized values
@@ -148,43 +147,77 @@ const UserHome: React.FC<NavigationProps> = ({ navigation }) => {
     }
   };
 
-  // Fetch gyms the user has registered with
+
+  // Fetch gyms the user has registered with - Updated to use axios
   const fetchRegisteredGyms = async () => {
     try {
       const currentUser = FireBase_Auth.currentUser;
-      if (!currentUser) return;
-      
-      const userGymsRef = collection(FireBase_DB, "users", currentUser.uid, "registeredGyms");
-      const querySnapshot = await getDocs(userGymsRef);
-      
-      if (querySnapshot.empty) {
+      if (!currentUser) {
         setRegisteredGyms([]);
         return;
       }
-
-      const gymsPromises = querySnapshot.docs.map(async (snapshot) => {
-        const gymId = snapshot.id;
-        const gymDocRef = doc(FireBase_DB, "gyms", gymId);
-        const gymDoc = await getDoc(gymDocRef);
-        
-        if (!gymDoc.exists()) return null;
-        
-        const data = gymDoc.data() as GymData;
-        return {
-          id: gymDoc.id,
-          gymName: data.gymName || 'Unnamed Gym',
-          location: data.location || { address: 'No address', city: '', state: '' },
-          rating: data.rating || 4.5,
-          imageUrl: data.imageUrl || getRandomItem(GYM_IMAGES),
-          facilities: data.facilities || { gymType: 'General Fitness' },
-          isRegistered: true
-        };
-      });
+      // Get auth token for API request
+      const token = await currentUser.getIdToken();
       
-      const gyms = (await Promise.all(gymsPromises)).filter(Boolean) as GymData[];
+      const response = await axios.get(
+        `${API_URL}/Register/Gyms/${currentUser.uid}`,
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          },
+          timeout: 10000
+        }
+      ).catch(error => {
+        console.error("Axios request failed:", error.message);
+        if (error.response) {
+          // The request was made and the server responded with a status code
+          // that falls out of the range of 2xx
+          console.error("Response data:", error.response.data);
+          console.error("Response status:", error.response.status);
+          console.error("Response headers:", error.response.headers);
+        } else if (error.request) {
+          // The request was made but no response was received
+          console.error("No response received:", error.request);
+        } else {
+          // Something happened in setting up the request that triggered an Error
+          console.error("Error setting up request:", error.message);
+        }
+        throw error;
+      });
+
+      
+      if (!response.data || !response.data.gyms || response.data.gyms.length === 0) {
+        setRegisteredGyms([]);
+        return;
+      }
+      
+      // Convert API response to GymData format
+      const gyms: GymData[] = response.data.gyms.map((gym: any) => ({
+        id: gym.id,
+        gymName: gym.name || 'Unnamed Gym',
+        location: {
+          address: gym.address || 'No address',
+          city: gym.city || '',
+          state: gym.state || ''
+        },
+        rating: gym.rating || 4.5,
+        imageUrl: gym.imageUrl || getRandomItem(GYM_IMAGES),
+        facilities: {
+          gymType: gym.gymType || 'General Fitness',
+          hasPool: gym.facilities?.hasPool || false,
+          hasClasses: gym.facilities?.hasClasses || false,
+          hasCardio: gym.facilities?.hasCardio || false,
+          hasWeights: gym.facilities?.hasWeights || false
+        },
+        isRegistered: true,
+        trainers: gym.trainers || [],
+        membershipType: gym.membershipType,
+        distance: gym.distance || '0.0 mi'
+      }));
+      
       setRegisteredGyms(gyms);
     } catch (error) {
-      console.error('Error fetching registered gyms:', error);
+      console.error('Error fetching registered gyms in userHome:', error);
       setRegisteredGyms([]);
     }
   };
@@ -284,83 +317,6 @@ const UserHome: React.FC<NavigationProps> = ({ navigation }) => {
       setPopularWorkouts(getMockWorkouts());
     }
   };
-
-  // Search gyms with debouncing
-  const searchGyms = useCallback(async (query: string) => {
-    if (!query.trim()) {
-      setSearchResults([]);
-      setIsSearching(false);
-      return;
-    }
-    
-    try {
-      setIsSearching(true);
-      
-      // In a production app, implement server-side search or use Algolia
-      // This is a simplified example
-      const response = await fetch(
-        `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${query}+gym&key=${GOOGLE_PLACES_API_KEY}`
-      );
-      
-      if (!response.ok) {
-        throw new Error('Failed to fetch search results');
-      }
-      
-      const data = await response.json();
-      
-      // Process results and convert to GymData format
-      const results: GymData[] = data.results
-        .filter((place: any) => 
-          place.types.includes('gym') || 
-          place.name.toLowerCase().includes('gym')
-        )
-        .map((place: any) => ({
-          id: place.place_id,
-          gymName: place.name,
-          location: {
-            address: place.formatted_address,
-            city: '', // Would need to parse from formatted_address
-            state: ''
-          },
-          rating: place.rating,
-          imageUrl: place.photos?.[0]?.photo_reference 
-            ? `https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photoreference=${place.photos[0].photo_reference}&key=${GOOGLE_PLACES_API_KEY}`
-            : getRandomItem(GYM_IMAGES),
-          distance: `${(place.distance / 1000).toFixed(1)} km`
-        }));
-      
-      setSearchResults(results);
-    } catch (error) {
-      console.error('Error searching gyms:', error);
-      setSearchResults([]);
-    } finally {
-      setIsSearching(false);
-    }
-  }, []);
-
-  // Debounced search handler
-  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-
-  const handleSearch = useCallback((text: string) => {
-    setSearchText(text);
-    
-    // Clear any existing timeout
-    if (searchTimeoutRef.current) {
-      clearTimeout(searchTimeoutRef.current);
-    }
-    
-    // Set a new timeout
-    searchTimeoutRef.current = setTimeout(() => {
-      searchGyms(text);
-    }, 500); // 500ms debounce
-  }, [searchGyms]);
-
-  // Pull-to-refresh functionality
-  const onRefresh = useCallback(async () => {
-    setRefreshing(true);
-    await loadAllData();
-    setRefreshing(false);
-  }, []);
 
   // Get random distance - for mock data only
   const getRandomDistance = () => {
@@ -529,6 +485,11 @@ const UserHome: React.FC<NavigationProps> = ({ navigation }) => {
   const handleProfilePress = useCallback(() => {
     navigation.navigate('UserProfile');
   }, [navigation]);
+  
+  // Handle search press - navigate to search screen
+  const handleSearchPress = useCallback(() => {
+    navigation.navigate('SearchResults');
+  }, [navigation]);
 
   // Render quick action buttons
   const renderQuickActions = () => (
@@ -544,6 +505,10 @@ const UserHome: React.FC<NavigationProps> = ({ navigation }) => {
       ))}
     </View>
   );
+
+  function onRefresh(): void {
+    throw new Error('Function not implemented.');
+  }
 
   // Main component render
   return (
@@ -566,28 +531,16 @@ const UserHome: React.FC<NavigationProps> = ({ navigation }) => {
           </Pressable>
         </View>
         
-        {/* Search Bar */}
-        <View className="mt-4 flex-row items-center bg-gray-100 px-3 py-2 rounded-lg">
+        {/* Search Bar - Now a button that navigates to search screen */}
+        <Pressable 
+          className="mt-4 flex-row items-center bg-gray-100 px-3 py-2 rounded-lg"
+          onPress={handleSearchPress}
+        >
           <Ionicons name="search" size={20} color="#6b7280" />
-          <TextInput
-            className="flex-1 ml-2 text-gray-800"
-            placeholder="Search gyms by name, city, or type..."
-            placeholderTextColor="#9ca3af"
-            value={searchText}
-            onChangeText={handleSearch}
-          />
-          {searchText.length > 0 && (
-            <Pressable 
-              onPress={() => {
-                setSearchText('');
-                setSearchResults([]);
-              }}
-              hitSlop={{ top: 10, right: 10, bottom: 10, left: 10 }}
-            >
-              <Ionicons name="close-circle" size={20} color="#6b7280" />
-            </Pressable>
-          )}
-        </View>
+          <Text className="flex-1 ml-2 text-gray-500">
+            Search gyms by name, city, or type...
+          </Text>
+        </Pressable>
       </View>
       
       {/* Main Content */}
@@ -605,163 +558,124 @@ const UserHome: React.FC<NavigationProps> = ({ navigation }) => {
             />
           }
         >
-          {/* Search Results */}
-          {searchText.length > 0 && (
-            <View className="mt-4 mb-6">
-              <Text className="px-6 text-lg font-bold text-gray-800 mb-4">
-                Search Results {isSearching ? '...' : `(${searchResults.length})`}
-              </Text>
-              
-              {isSearching ? (
-                <View className="px-6 py-8 items-center">
-                  <ActivityIndicator color={THEME.colors.primary} />
-                  <Text className="text-gray-600 mt-2">Searching...</Text>
-                </View>
-              ) : searchResults.length > 0 ? (
-                <ScrollView
-                  horizontal
-                  showsHorizontalScrollIndicator={false}
-                  className="pl-6"
-                >
-                  {searchResults.map((gym) => (
-                    <GymCard 
-                      key={gym.id}
-                      gym={gym} 
-                      onPress={() => handleGymPress(gym.id)} 
-                    />
-                  ))}
-                </ScrollView>
-              ) : (
-                <EmptyState 
-                  icon="search" 
-                  message="No gyms found matching your search. Try different keywords." 
-                />
-              )}
-            </View>
-          )}
+          {/* Quick Action Buttons */}
+          {renderQuickActions()}
 
-          {searchText.length === 0 && (
-            <>
-              {/* Quick Action Buttons */}
-              {renderQuickActions()}
-
-              {/* Registered Gyms Section */}
-              <View className="mt-2 mb-6">
-                <SectionHeader 
-                  title="Your Gyms" 
-                  onSeeAllPress={() => navigation.navigate('RegisteredGyms')} 
-                />
-                
-                {registeredGyms.length > 0 ? (
-                  <ScrollView 
-                    horizontal 
-                    showsHorizontalScrollIndicator={false}
-                    className="pl-6"
-                  >
-                    {registeredGyms.map((gym) => (
-                      <GymCard 
-                        key={gym.id} 
-                        gym={gym} 
-                        onPress={() => handleGymPress(gym.id)} 
-                      />
-                    ))}
-                  </ScrollView>
-                ) : (
-                  <EmptyState 
-                    icon="fitness-center" 
-                    message="You haven't registered with any gyms yet. Find a gym to get started!" 
+          {/* Registered Gyms Section */}
+          <View className="mt-2 mb-6">
+            <SectionHeader 
+              title="Your Gyms" 
+              onSeeAllPress={() => navigation.navigate('RegisteredGyms')} 
+            />
+            
+            {registeredGyms.length > 0 ? (
+              <ScrollView 
+                horizontal 
+                showsHorizontalScrollIndicator={false}
+                className="pl-6"
+              >
+                {registeredGyms.map((gym) => (
+                  <GymCard 
+                    key={gym.id} 
+                    gym={gym} 
+                    onPress={() => handleGymPress(gym.id)} 
                   />
-                )}
-              </View>
+                ))}
+              </ScrollView>
+            ) : (
+              <EmptyState 
+                icon="fitness-center" 
+                message="You haven't registered with any gyms yet. Find a gym to get started!" 
+              />
+            )}
+          </View>
 
-              {/* Nearby Gyms Section */}
-              <View className="mb-6">
-                <SectionHeader 
-                  title="Gyms Near You" 
-                  onSeeAllPress={handleSeeAllNearbyGyms} 
+          {/* Nearby Gyms Section */}
+          <View className="mb-6">
+            <SectionHeader 
+              title="Gyms Near You" 
+              onSeeAllPress={handleSeeAllNearbyGyms} 
+            />
+            
+            <ScrollView 
+              horizontal 
+              showsHorizontalScrollIndicator={false}
+              className="pl-6"
+            >
+              {nearbyGyms.map((gym) => (
+                <GymCard 
+                  key={gym.id} 
+                  gym={gym} 
+                  onPress={() => handleGymPress(gym.id)} 
                 />
-                
-                <ScrollView 
-                  horizontal 
-                  showsHorizontalScrollIndicator={false}
-                  className="pl-6"
-                >
-                  {nearbyGyms.map((gym) => (
-                    <GymCard 
-                      key={gym.id} 
-                      gym={gym} 
-                      onPress={() => handleGymPress(gym.id)} 
-                    />
-                  ))}
-                </ScrollView>
-              </View>
+              ))}
+            </ScrollView>
+          </View>
 
-              {/* Popular Gyms Section */}
-              <View className="mb-6">
-                <SectionHeader 
-                  title="Popular Gyms" 
-                  onSeeAllPress={handleSeeAllPopularGyms} 
+          {/* Popular Gyms Section */}
+          <View className="mb-6">
+            <SectionHeader 
+              title="Popular Gyms" 
+              onSeeAllPress={handleSeeAllPopularGyms} 
+            />
+            
+            <ScrollView 
+              horizontal 
+              showsHorizontalScrollIndicator={false}
+              className="pl-6"
+            >
+              {popularGyms.map((gym) => (
+                <GymCard 
+                  key={gym.id} 
+                  gym={gym} 
+                  onPress={() => handleGymPress(gym.id)} 
                 />
-                
-                <ScrollView 
-                  horizontal 
-                  showsHorizontalScrollIndicator={false}
-                  className="pl-6"
-                >
-                  {popularGyms.map((gym) => (
-                    <GymCard 
-                      key={gym.id} 
-                      gym={gym} 
-                      onPress={() => handleGymPress(gym.id)} 
-                    />
-                  ))}
-                </ScrollView>
-              </View>
+              ))}
+            </ScrollView>
+          </View>
 
-              {/* Workouts Section */}
-              <View className="mb-6">
-                <SectionHeader 
-                  title="Popular Workouts" 
-                  onSeeAllPress={handleSeeAllWorkouts} 
+          {/* Workouts Section */}
+          <View className="mb-6">
+            <SectionHeader 
+              title="Popular Workouts" 
+              onSeeAllPress={handleSeeAllWorkouts} 
+            />
+            
+            <ScrollView 
+              horizontal 
+              showsHorizontalScrollIndicator={false}
+              className="pl-6"
+            >
+              {popularWorkouts.map((workout) => (
+                <WorkoutCard 
+                  key={workout.id} 
+                  workout={{
+                    ...workout,
+                    description: workout.description || 'No description available'
+                  }} 
+                  onPress={() => handleWorkoutPress(workout.id)} 
                 />
-                
-                <ScrollView 
-                  horizontal 
-                  showsHorizontalScrollIndicator={false}
-                  className="pl-6"
-                >
-                    {popularWorkouts.map((workout) => (
-                    <WorkoutCard 
-                      key={workout.id} 
-                      workout={{
-                      ...workout,
-                      description: workout.description || 'No description available'
-                      }} 
-                      onPress={() => handleWorkoutPress(workout.id)} 
-                    />
-                    ))}
-                </ScrollView>
-              </View>
+              ))}
+            </ScrollView>
+          </View>
 
-              {/* Motivational Quote Section */}
-              <View className="mx-6 mb-8">
-                <ImageBackground
-                  source={{ uri: 'https://images.unsplash.com/photo-1526506118085-60ce8714f8c5?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxzZWFyY2h8Mnx8Z3ltJTIwbW90aXZhdGlvbnxlbnwwfHwwfHw%3D&auto=format&fit=crop&w=800&q=60' }}
-                  className="rounded-2xl overflow-hidden h-[180px] justify-center"
-                  imageStyle={{ opacity: 0.7, backgroundColor: '#000' }}
-                >
-                  <View className="px-6 py-4">
-                    <Text className="text-2xl font-bold text-white mb-2 text-center shadow-lg">
-                      "{motivationalQuote.quote}"
-                    </Text>
-                    <Text className="text-white text-right mt-2 italic">
-                      - {motivationalQuote.author}
-                    </Text>
-                  </View>
-                </ImageBackground>
+          {/* Motivational Quote Section */}
+          <View className="mx-6 mb-8">
+            <ImageBackground
+              source={{ uri: 'https://images.unsplash.com/photo-1526506118085-60ce8714f8c5?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxzZWFyY2h8Mnx8Z3ltJTIwbW90aXZhdGlvbnxlbnwwfHwwfHw%3D&auto=format&fit=crop&w=800&q=60' }}
+              className="rounded-2xl overflow-hidden h-[180px] justify-center"
+              imageStyle={{ opacity: 0.7, backgroundColor: '#000' }}
+            >
+              <View className="px-6 py-4">
+                <Text className="text-2xl font-bold text-white mb-2 text-center shadow-lg">
+                  "{motivationalQuote.quote}"
+                </Text>
+                <Text className="text-white text-right mt-2 italic">
+                  - {motivationalQuote.author}
+                </Text>
               </View>
-            </>
-          )}
+            </ImageBackground>
+          </View>
         </ScrollView>
       )}
     </SafeAreaView>

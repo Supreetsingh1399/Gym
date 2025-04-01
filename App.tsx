@@ -14,6 +14,8 @@ import TabNavigator from "Gym_App/TabNavigator/user_tab-navigator";
 import GymRegistrationWizard from "Gym_App/Screens/Register/GymRegistrationWizard";
 import Registered_Gyms from "Gym_App/Screens/UserDashboard/User_home_touchables/Registered_gyms";
 import HandleLogin from "./Gym_App/Screens/Login/LoginScreen";
+import SearchResults from "Gym_App/Screens/UserDashboard/SearchResults";
+import ExternalGymDetails from "Gym_App/Screens/UserDashboard/ExternalGymDetails";
 
 // Hooks
 import useAuth from "Gym_App/Backend/hooks/Auth";
@@ -29,6 +31,13 @@ type RootStackParamList = {
   RGN_Gyms: undefined;
   TrainerHome: undefined;
   Gym_rgn: undefined;
+  SearchResults: {
+    query?: string;
+    filters?: any; // Replace with your actual filter type
+  };
+  ExternalGymDetails: {
+    gymId: string;
+  };
 };
 
 // Create the stack navigator
@@ -67,6 +76,7 @@ const StackNavigator = ({ user }: { user: User | null }): JSX.Element => {
             component={US_SignUp}
             options={{ title: "Create User Account" }}
           />
+            
           {/* <Stack.Screen 
             name="Trainer_SignUp" 
             component={TR_SignUp}
@@ -85,6 +95,7 @@ const StackNavigator = ({ user }: { user: User | null }): JSX.Element => {
         </Stack.Group>
       ) : (
         // Protected screens - only accessible when authenticated
+        
         <Stack.Group>
           <Stack.Screen
             name="UserTabs"
@@ -101,6 +112,8 @@ const StackNavigator = ({ user }: { user: User | null }): JSX.Element => {
             component={TrainerHome}
             options={{ title: "Trainer Dashboard" }}
           />
+           <Stack.Screen name="SearchResults" component={SearchResults} />
+           <Stack.Screen name="ExternalGymDetails" component={ExternalGymDetails} />
           
         </Stack.Group>
       )}

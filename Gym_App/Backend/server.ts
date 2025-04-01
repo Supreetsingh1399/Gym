@@ -14,7 +14,9 @@ import {
   deleteGym,
   getAllGyms,
   registerGym,
-} from "./controllers/Gym_controls";
+  getUserGyms,
+} from "./controllers/Gym_controls";// Import the Gym model
+import Gym from "./Models/Gym_Register";
 
 dotenv.config({ path: path.resolve(__dirname, "../../.env") });
 const router = express.Router();
@@ -70,6 +72,18 @@ router.delete("/Register/Gyms/:id", async (req: Request, res: Response) => {
     await deleteGym(req, res);
   } catch (error) {
     res.status(500).send({ error: "Internal Server Error" });
+  }
+});
+// Add this route to get gyms for a specific user
+router.get("/Register/Gyms/:userId", async (req: Request, res: Response) => {
+  try {
+    const { userId } = req.params;
+    const userGyms = await Gym.find({ userId: userId });
+    
+    res.status(200).json({ gyms: userGyms });
+  } catch (error) {
+    console.error("Error fetching user gyms:", error);
+    res.status(500).json({ error: "Failed to fetch user gyms" });
   }
 });
 

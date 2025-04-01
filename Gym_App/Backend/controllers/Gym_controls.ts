@@ -110,3 +110,20 @@ export const updateGym = async (req: Request, res: Response) => {
     });
   }
 };
+// In controllers/Gym_controls.ts
+export const getUserGyms = async (req: Request, res: Response) => {
+  try {
+    const { userId } = req.params;
+    
+    if (!userId) {
+      return res.status(400).json({ error: "User ID is required" });
+    }
+    
+    const userGyms = await Gym.find({ userId: userId });
+    
+    res.status(200).json({ gyms: userGyms });
+  } catch (error) {
+    console.error("Error fetching user gyms:", error);
+    res.status(500).json({ error: "Failed to fetch user gyms" });
+  }
+};
