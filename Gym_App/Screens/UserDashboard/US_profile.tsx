@@ -13,6 +13,8 @@ import {
 import { NavigationProp } from "@react-navigation/native";
 import { FireBase_Auth } from "Gym_App/Backend/firebase";
 import { Ionicons } from '@expo/vector-icons';
+import axios from 'axios';
+import { API_URL } from '@env';
 
 // Define interfaces for our data structure
 interface Props {
@@ -50,27 +52,88 @@ export default function UserProfile({ navigation }: Props) {
   const [notifications, setNotifications] = useState<boolean>(true);
   const [loading, setLoading] = useState<boolean>(false);
 
-  // Mock user data
-  const user: UserData = {
-    name: "John Doe",
-    email: "johndoe@example.com",
-    phone: "+1234567890",
-    profilePic: "https://randomuser.me/api/portraits/men/32.jpg",
-    height: "5'11\"",
-    weight: "180 lbs",
-    fitnessGoal: "Build muscle & improve strength",
-    membership: {
-      gym: "FitZone Gym",
-      type: "Premium",
-      expiry: "Dec 31, 2025",
-      active: true,
-    },
-    trainer: {
-      name: "Mike Johnson",
-      experience: "5 years",
-      imageUrl: "https://randomuser.me/api/portraits/men/41.jpg"
-    },
-  };
+  // State for user data
+  const [user, setUser] = useState<UserData | null>(null);
+
+  // Fetch user data from MongoDB
+  React.useEffect(() => {
+    const fetchUserData = async () => {
+      try {
+        const response = await axios.get(
+          `${API_URL}/Register/Users`,
+          {
+            headers: {
+              Authorization: `Bearer ${await FireBase_Auth.currentUser?.getIdToken()}`,
+            },
+          }
+        );
+        
+        console.log("API Response:", response.data);
+        
+        // Check if data is an array and has at least one item
+        const userData = Array.isArray(response.data) 
+          ? response.data[0] 
+          : Array.isArray(response.data.data) 
+            ? response.data.data[0] 
+            : response.data.data;
+        
+        console.log("Processed userData:", userData);
+        console.log("Name from API:", userData?.name);
+        
+        if (!userData) {
+          throw new Error("No user data found");
+        }
+        
+        setUser({
+          profilePic: userData.profilePic || "https://randomuser.me/api/portraits/men/32.jpg",
+          name: userData.name || "No Name",
+          email: userData.email || "No Email",
+          phone: userData.phone || "No Phone",
+          height: userData.height || "N/A",
+          weight: userData.weight || "N/A",
+          fitnessGoal: userData.fitnessGoal || "No goal set",
+          membership: {
+            gym: userData.membership?.gym || "No gym",
+            type: userData.membership?.type || "Basic",
+            expiry: userData.membership?.expiry || "N/A",
+            active: userData.membership?.active || false,
+          },
+          trainer: {
+            name: userData.trainer?.name || "No trainer",
+            experience: userData.trainer?.experience || "N/A",
+            imageUrl: userData.trainer?.imageUrl || "https://randomuser.me/api/portraits/men/41.jpg",
+          },
+        });
+      } catch (error) {
+        console.error("Error fetching user data:", error);
+        Alert.alert("Error", "Failed to fetch user data. Please try again.");
+        
+        // Set default user data for testing
+        setUser({
+          profilePic: "https://randomuser.me/api/portraits/men/32.jpg",
+          name: "John Doe",
+          email: "john.doe@example.com",
+          phone: "(123) 456-7890",
+          height: "5'10\"",
+          weight: "175 lbs",
+          fitnessGoal: "Build muscle and improve endurance",
+          membership: {
+            gym: "Fitness Plus",
+            type: "Premium",
+            expiry: "Dec 31, 2023",
+            active: true,
+          },
+          trainer: {
+            name: "Mike Johnson",
+            experience: "5 years",
+            imageUrl: "https://randomuser.me/api/portraits/men/41.jpg",
+          },
+        });
+      }
+    };
+  
+    fetchUserData();
+  }, []);
 
   const handleLogout = async () => {
     try {
@@ -95,13 +158,19 @@ export default function UserProfile({ navigation }: Props) {
     );
   };
 
+  // If user data is still loading, show a loading indicator
+  if (!user) {
+    return (
+      <SafeAreaView className="flex-1 bg-white justify-center items-center">
+        <ActivityIndicator size="large" color="#0091EA" />
+        <Text className="mt-4 text-gray-600">Loading profile...</Text>
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView className="flex-1 bg-white">
       <ScrollView showsVerticalScrollIndicator={false}>
-        {/* Header Section */}
-        <View className="px-5 py-2.5 border-b border-gray-100">
-          <Text className="text-lg font-bold text-gray-800">My Profile</Text>
-        </View>
 
         {/* Profile Information */}
         <View className="flex-row items-center px-5 py-5">
@@ -109,14 +178,16 @@ export default function UserProfile({ navigation }: Props) {
             source={{ uri: user.profilePic }}
             className="w-20 h-20 rounded-full border-3 border-gray-100"
           />
-          <View className="flex-1 ml-4">
-            <Text className="text-xl font-bold text-gray-800 mb-1">{user.name}</Text>
-            <Text className="text-sm text-gray-600 mb-1">{user.email}</Text>
-            <View className="flex-row items-center gap-1">
-              <Ionicons name="call-outline" size={16} color="#666" />
-              <Text className="text-sm text-gray-600">{user.phone}</Text>
-            </View>
-          </View>
+         <View className="flex-1 ml-4">
+  <Text className="text-2xl font-bold text-gray-800">
+    {user?.name || 'User Name'}
+  </Text>
+  <Text className="text-sm text-gray-600 mb-1">{user?.email || 'user@example.com'}</Text>
+  <View className="flex-row items-center gap-1">
+    <Ionicons name="call-outline" size={16} color="#666" />
+    <Text className="text-sm text-gray-600">{user?.phone || 'No phone'}</Text>
+  </View>
+</View>
           <TouchableOpacity className="w-10 h-10 bg-gray-100 rounded-full justify-center items-center">
             <Ionicons name="pencil" size={18} color="#0091EA" />
           </TouchableOpacity>

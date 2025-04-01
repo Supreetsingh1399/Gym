@@ -82,10 +82,10 @@ const NewsScreen = () => {
 
   return (
     <SafeAreaView className="flex-1 bg-gray-200">
-      <View className="flex-1 px-4 -mt-4">
-        <Text className="text-2xl font-bold  text-center mb-4">
+      <View className="flex-1 px-4 mt-2">
+        {/* <Text className="text-2xl font-bold  text-center mb-4">
           Gym & Fitness News
-        </Text>
+        </Text> */}
         <FlatList
           data={news}
           renderItem={renderNewsItem}

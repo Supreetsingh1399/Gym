@@ -156,8 +156,9 @@ const UserHome: React.FC<NavigationProps> = ({ navigation }) => {
         setRegisteredGyms([]);
         return;
       }
-      // Get auth token for API request
       const token = await currentUser.getIdToken();
+    
+      console.log("Making API request to:", `${API_URL}/Register/Gyms/${currentUser.uid}`);
       
       const response = await axios.get(
         `${API_URL}/Register/Gyms/${currentUser.uid}`,
@@ -165,26 +166,9 @@ const UserHome: React.FC<NavigationProps> = ({ navigation }) => {
           headers: {
             'Authorization': `Bearer ${token}`
           },
-          timeout: 10000
+          timeout: 15000 
         }
-      ).catch(error => {
-        console.error("Axios request failed:", error.message);
-        if (error.response) {
-          // The request was made and the server responded with a status code
-          // that falls out of the range of 2xx
-          console.error("Response data:", error.response.data);
-          console.error("Response status:", error.response.status);
-          console.error("Response headers:", error.response.headers);
-        } else if (error.request) {
-          // The request was made but no response was received
-          console.error("No response received:", error.request);
-        } else {
-          // Something happened in setting up the request that triggered an Error
-          console.error("Error setting up request:", error.message);
-        }
-        throw error;
-      });
-
+      );
       
       if (!response.data || !response.data.gyms || response.data.gyms.length === 0) {
         setRegisteredGyms([]);
