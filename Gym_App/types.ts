@@ -29,6 +29,7 @@ export interface GymData {
     isRegistered?: boolean;
     trainerId?: string;
     trainerName?: string;
+    source?: string;
   }
   
   export interface NavigationProps {

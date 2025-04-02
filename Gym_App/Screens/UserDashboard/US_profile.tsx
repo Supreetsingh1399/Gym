@@ -15,6 +15,7 @@ import { FireBase_Auth } from "Gym_App/Backend/firebase";
 import { Ionicons } from '@expo/vector-icons';
 import axios from 'axios';
 import { API_URL } from '@env';
+import { profile } from 'console';
 
 // Define interfaces for our data structure
 interface Props {
@@ -85,7 +86,7 @@ export default function UserProfile({ navigation }: Props) {
         }
         
         setUser({
-          profilePic: userData.profilePic || "https://randomuser.me/api/portraits/men/32.jpg",
+          profilePic: userData.profilePic,
           name: userData.name || "No Name",
           email: userData.email || "No Email",
           phone: userData.phone || "No Phone",
@@ -174,10 +175,19 @@ export default function UserProfile({ navigation }: Props) {
 
         {/* Profile Information */}
         <View className="flex-row items-center px-5 py-5">
-          <Image
-            source={{ uri: user.profilePic }}
-            className="w-20 h-20 rounded-full border-3 border-gray-100"
-          />
+        {user.profilePic ? (
+  <Image 
+    source={{ uri: user.profilePic }} 
+    className="w-[60px] h-[60px] rounded-full"
+    onError={() => console.log("Image failed to load:", user.profilePic)}
+  />
+) : (
+  <View className="w-[60px] h-[60px] bg-gray-200 rounded-full justify-center items-center">
+    <Text className="text-2xl font-bold text-gray-700">
+      {user.name?.charAt(0).toUpperCase() || "U"}
+    </Text>
+  </View>
+)}
          <View className="flex-1 ml-4">
   <Text className="text-2xl font-bold text-gray-800">
     {user?.name || 'User Name'}

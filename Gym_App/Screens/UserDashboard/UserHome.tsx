@@ -13,15 +13,18 @@ import {
   RefreshControl,
   ActivityIndicator,
   Dimensions,
-  Pressable
+  Pressable,
+  Alert
 } from "react-native";
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { FireBase_Auth, FireBase_DB } from "Gym_App/Backend/firebase";
+import { FireBase_Auth, FireBase_DB } from "../../Backend/firebase";
 import { collection, getDocs, query, limit, orderBy, where, getDoc, doc } from "firebase/firestore";
 import { useFocusEffect } from '@react-navigation/native';
 import axios from 'axios';
 import {API_URL} from '@env';
+import * as Location from 'expo-location';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Import our components and utilities
 import { GymCard } from './components/GymCard';
@@ -36,10 +39,20 @@ import { getRandomItem, getGreetingByTime } from './utils/helpers';
 import { GYM_IMAGES, WORKOUT_IMAGES } from './constants/assetUrls';
 
 // Types
-import { GymData, WorkoutData, NavigationProps } from 'Gym_App/types';
+import { GymData, WorkoutData, NavigationProps } from '../../types';
+
+interface UserLocation {
+  latitude: number;
+  longitude: number;
+  timestamp: number;
+}
 
 const { width } = Dimensions.get('window');
 const CARD_WIDTH = width * 0.85;
+
+// User location storage key
+const LOCATION_STORAGE_KEY = 'userLocation';
+const LOCATION_EXPIRY = 60 * 60 * 1000; // 1 hour in milliseconds
 
 // Quick action buttons configuration
 const QUICK_ACTIONS: Array<{
@@ -84,6 +97,8 @@ const UserHome: React.FC<NavigationProps> = ({ navigation }) => {
   const [userName, setUserName] = useState<string>('');
   const [refreshing, setRefreshing] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(true);
+  const [locationLoading, setLocationLoading] = useState<boolean>(false);
+  const [userLocation, setUserLocation] = useState<UserLocation | null>(null);
   
   // Data states
   const [registeredGyms, setRegisteredGyms] = useState<GymData[]>([]);
@@ -93,11 +108,12 @@ const UserHome: React.FC<NavigationProps> = ({ navigation }) => {
 
   // Memoized values
   const greeting = useMemo(() => getGreetingByTime(), []);
-  const motivationalQuote = useMemo(() => getRandomItem(QUOTES as any[]), []);
+  const motivationalQuote = useMemo(() => getRandomItem(QUOTES), []);
   
   // Fetch user data on component mount
   useEffect(() => {
     getUserInfo();
+    loadUserLocation();
     loadAllData();
   }, []);
   
@@ -107,6 +123,76 @@ const UserHome: React.FC<NavigationProps> = ({ navigation }) => {
       loadAllData();
     }, [])
   );
+  
+  // Load user location - this is now the central location request
+  const loadUserLocation = async () => {
+    try {
+      setLocationLoading(true);
+      
+      // First try to get from AsyncStorage
+      const storedLocation = await AsyncStorage.getItem(LOCATION_STORAGE_KEY);
+      if (storedLocation) {
+        const parsedLocation = JSON.parse(storedLocation);
+        // Check if stored location is less than expiry time old
+        if (Date.now() - parsedLocation.timestamp < LOCATION_EXPIRY) {
+          setUserLocation(parsedLocation);
+          setLocationLoading(false);
+          return;
+        }
+      }
+      
+      // If no recent stored location, request new location
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert(
+          'Location Access Required',
+          'Please enable location services to find gyms near you.',
+          [{ text: 'OK' }]
+        );
+        setLocationLoading(false);
+        return;
+      }
+      
+      const location = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.Balanced
+      });
+      
+      const newLocation = {
+        latitude: location.coords.latitude,
+        longitude: location.coords.longitude,
+        timestamp: Date.now()
+      };
+      
+      // Save to state and AsyncStorage
+      setUserLocation(newLocation);
+      await AsyncStorage.setItem(LOCATION_STORAGE_KEY, JSON.stringify(newLocation));
+      
+      // Refresh nearby gyms with the new location
+      fetchNearbyGyms(newLocation);
+    } catch (error) {
+      console.error('Error getting location:', error);
+    } finally {
+      setLocationLoading(false);
+    }
+  };
+  
+  // Calculate distance between coordinates
+  const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
+    const R = 3958.8; // Earth's radius in miles
+    const dLat = toRad(lat2 - lat1);
+    const dLon = toRad(lon2 - lon1);
+    const a = 
+      Math.sin(dLat/2) * Math.sin(dLat/2) +
+      Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * 
+      Math.sin(dLon/2) * Math.sin(dLon/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    return R * c;
+  };
+  
+  // Convert degrees to radians
+  const toRad = (value: number): number => {
+    return value * Math.PI / 180;
+  };
   
   // Get user info from auth
   const getUserInfo = async () => {
@@ -136,7 +222,7 @@ const UserHome: React.FC<NavigationProps> = ({ navigation }) => {
     try {
       await Promise.all([
         fetchRegisteredGyms(),
-        fetchNearbyGyms(), 
+        userLocation ? fetchNearbyGyms(userLocation) : fetchNearbyGyms(), 
         fetchPopularGyms(),
         fetchPopularWorkouts()
       ]);
@@ -146,7 +232,6 @@ const UserHome: React.FC<NavigationProps> = ({ navigation }) => {
       setLoading(false);
     }
   };
-
 
   // Fetch gyms the user has registered with - Updated to use axios
   const fetchRegisteredGyms = async () => {
@@ -196,7 +281,8 @@ const UserHome: React.FC<NavigationProps> = ({ navigation }) => {
         isRegistered: true,
         trainers: gym.trainers || [],
         membershipType: gym.membershipType,
-        distance: gym.distance || '0.0 mi'
+        distance: gym.distance || '0.0 mi',
+        source: 'registered'
       }));
       
       setRegisteredGyms(gyms);
@@ -206,10 +292,65 @@ const UserHome: React.FC<NavigationProps> = ({ navigation }) => {
     }
   };
 
-  // Fetch nearby gyms - optimized query with distance calculation
-  const fetchNearbyGyms = async () => {
+  // Fetch nearby gyms - now uses actual location if available
+  const fetchNearbyGyms = async (location?: UserLocation) => {
     try {
-      // In a real app, you would use geolocation here
+      // First try to get from Google Places API with location if available
+      if (location) {
+        try {
+          const placesUrl = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${location.latitude},${location.longitude}&radius=5000&type=gym&key=${GOOGLE_PLACES_API_KEY}`;
+          
+          const placesResponse = await fetch(placesUrl);
+          
+          if (placesResponse.ok) {
+            const data = await placesResponse.json();
+            
+            if (data.results && data.results.length > 0) {
+              const googleGyms: GymData[] = data.results
+                .filter((place: any) => 
+                  place.types.includes('gym') || 
+                  place.name.toLowerCase().includes('gym') ||
+                  place.name.toLowerCase().includes('fitness')
+                )
+                .slice(0, 5)
+                .map((place: any) => {
+                  // Calculate distance
+                  const distance = calculateDistance(
+                    location.latitude, 
+                    location.longitude, 
+                    place.geometry.location.lat, 
+                    place.geometry.location.lng
+                  );
+                  
+                  return {
+                    id: `google-${place.place_id}`,
+                    gymName: place.name,
+                    location: {
+                      address: place.vicinity || 'No address',
+                      city: '', 
+                      state: ''
+                    },
+                    rating: place.rating || 4.0,
+                    imageUrl: place.photos?.[0]?.photo_reference 
+                      ? `https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photoreference=${place.photos[0].photo_reference}&key=${GOOGLE_PLACES_API_KEY}`
+                      : getRandomItem(GYM_IMAGES),
+                    facilities: {},
+                    distance: `${distance.toFixed(1)} mi`,
+                    source: 'google'
+                  };
+                });
+              
+              setNearbyGyms(googleGyms);
+              return;
+            }
+          }
+        } catch (error) {
+          console.error('Error fetching from Google Places:', error);
+          // Fall back to Firebase if Google Places fails
+        }
+      }
+      
+      // Fall back to Firebase gyms if no location or Google Places failed
       const gymsRef = collection(FireBase_DB, 'gyms');
       const gymsQuery = query(gymsRef, limit(5));
       const querySnapshot = await getDocs(gymsQuery);
@@ -221,6 +362,22 @@ const UserHome: React.FC<NavigationProps> = ({ navigation }) => {
       
       const gyms: GymData[] = querySnapshot.docs.map(doc => {
         const data = doc.data();
+        
+        // If we have location and gym has coordinates, calculate actual distance
+        let distance = '? mi';
+        if (location && data.coordinates) {
+          const actualDistance = calculateDistance(
+            location.latitude,
+            location.longitude,
+            data.coordinates.latitude,
+            data.coordinates.longitude
+          );
+          distance = `${actualDistance.toFixed(1)} mi`;
+        } else {
+          // Otherwise use random distance for demo purposes
+          distance = getRandomDistance();
+        }
+        
         return {
           id: doc.id,
           gymName: data.gymName || 'Unnamed Gym',
@@ -228,9 +385,19 @@ const UserHome: React.FC<NavigationProps> = ({ navigation }) => {
           rating: data.rating || 4.5,
           imageUrl: data.imageUrl || getRandomItem(GYM_IMAGES),
           facilities: data.facilities,
-          distance: getRandomDistance() // In a real app, calculate actual distance
+          distance: distance,
+          source: 'app'
         };
       });
+      
+      // Sort by distance if available
+      if (location) {
+        gyms.sort((a, b) => {
+          const distA = parseFloat(a.distance?.replace(' mi', '') || '999');
+          const distB = parseFloat(b.distance?.replace(' mi', '') || '999');
+          return distA - distB;
+        });
+      }
       
       setNearbyGyms(gyms);
     } catch (error) {
@@ -259,7 +426,8 @@ const UserHome: React.FC<NavigationProps> = ({ navigation }) => {
           location: data.location || { address: 'No address', city: '', state: '' },
           rating: data.rating || 4.7,
           imageUrl: data.imageUrl || getRandomItem(GYM_IMAGES),
-          facilities: data.facilities
+          facilities: data.facilities,
+          source: 'app'
         };
       });
       
@@ -270,7 +438,7 @@ const UserHome: React.FC<NavigationProps> = ({ navigation }) => {
     }
   };
 
-  // Fetch popular workouts - optimized with proper error handling
+  // Fetch popular workouts
   const fetchPopularWorkouts = async () => {
     try {
       const workoutsRef = collection(FireBase_DB, 'workouts');
@@ -323,7 +491,8 @@ const UserHome: React.FC<NavigationProps> = ({ navigation }) => {
       facilities: {
         gymType: 'Full Service'
       },
-      distance: '0.8 mi'
+      distance: '0.8 mi',
+      source: 'app'
     },
     {
       id: 'nearby2',
@@ -338,7 +507,8 @@ const UserHome: React.FC<NavigationProps> = ({ navigation }) => {
       facilities: {
         gymType: 'Bodybuilding'
       },
-      distance: '1.2 mi'
+      distance: '1.2 mi',
+      source: 'app'
     },
     {
       id: 'nearby3',
@@ -353,7 +523,8 @@ const UserHome: React.FC<NavigationProps> = ({ navigation }) => {
       facilities: {
         gymType: 'Strength & Conditioning'
       },
-      distance: '1.7 mi'
+      distance: '1.7 mi',
+      source: 'app'
     },
   ];
 
@@ -370,7 +541,8 @@ const UserHome: React.FC<NavigationProps> = ({ navigation }) => {
       imageUrl: GYM_IMAGES[3],
       facilities: {
         gymType: 'Luxury Fitness'
-      }
+      },
+      source: 'app'
     },
     {
       id: 'popular2',
@@ -384,7 +556,8 @@ const UserHome: React.FC<NavigationProps> = ({ navigation }) => {
       imageUrl: GYM_IMAGES[0],
       facilities: {
         gymType: 'CrossFit'
-      }
+      },
+      source: 'app'
     },
     {
       id: 'popular3',
@@ -398,7 +571,8 @@ const UserHome: React.FC<NavigationProps> = ({ navigation }) => {
       imageUrl: GYM_IMAGES[2],
       facilities: {
         gymType: 'Yoga & Pilates'
-      }
+      },
+      source: 'app'
     },
   ];
 
@@ -440,6 +614,17 @@ const UserHome: React.FC<NavigationProps> = ({ navigation }) => {
       description: 'Build strength in arms, chest, back and shoulders'
     },
   ];
+
+  // Handler for refreshing the screen
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await loadUserLocation();
+      await loadAllData();
+    } finally {
+      setRefreshing(false);
+    }
+  }, []);
 
   // Memoized navigation handlers to prevent unnecessary re-renders
   const handleGymPress = useCallback((gymId: string) => {
@@ -490,10 +675,6 @@ const UserHome: React.FC<NavigationProps> = ({ navigation }) => {
     </View>
   );
 
-  function onRefresh(): void {
-    throw new Error('Function not implemented.');
-  }
-
   // Main component render
   return (
     <SafeAreaView className="flex-1 bg-gray-50">
@@ -513,6 +694,35 @@ const UserHome: React.FC<NavigationProps> = ({ navigation }) => {
           >
             <Ionicons name="person" size={20} color={THEME.colors.primary} />
           </Pressable>
+        </View>
+        
+        {/* Location indicator */}
+        <View className="flex-row items-center mt-2">
+          <Ionicons 
+            name="location" 
+            size={16} 
+            color={userLocation ? THEME.colors.green : THEME.colors.primary} 
+          />
+          <Text className="ml-1 text-sm text-gray-600">
+            {userLocation 
+              ? "Using your current location" 
+              : "Location services not enabled"}
+          </Text>
+          {locationLoading && (
+            <ActivityIndicator 
+              size="small" 
+              color={THEME.colors.primary} 
+              style={{ marginLeft: 8 }}
+            />
+          )}
+          {!userLocation && !locationLoading && (
+            <TouchableOpacity
+              className="ml-2 px-2 py-1 bg-blue-100 rounded-full"
+              onPress={loadUserLocation}
+            >
+              <Text className="text-xs text-blue-600 font-medium">Enable</Text>
+            </TouchableOpacity>
+          )}
         </View>
         
         {/* Search Bar - Now a button that navigates to search screen */}
@@ -581,19 +791,33 @@ const UserHome: React.FC<NavigationProps> = ({ navigation }) => {
               onSeeAllPress={handleSeeAllNearbyGyms} 
             />
             
-            <ScrollView 
-              horizontal 
-              showsHorizontalScrollIndicator={false}
-              className="pl-6"
-            >
-              {nearbyGyms.map((gym) => (
-                <GymCard 
-                  key={gym.id} 
-                  gym={gym} 
-                  onPress={() => handleGymPress(gym.id)} 
-                />
-              ))}
-            </ScrollView>
+            {userLocation ? (
+              <ScrollView 
+                horizontal 
+                showsHorizontalScrollIndicator={false}
+                className="pl-6"
+              >
+                {nearbyGyms.map((gym) => (
+                  <GymCard 
+                    key={gym.id} 
+                    gym={gym} 
+                    onPress={() => handleGymPress(gym.id)} 
+                  />
+                ))}
+              </ScrollView>
+            ) : (
+              <View className="px-6">
+                <TouchableOpacity 
+                  className="bg-blue-50 py-3 px-4 rounded-lg flex-row items-center justify-center"
+                  onPress={loadUserLocation}
+                >
+                  <Ionicons name="location-outline" size={20} color={THEME.colors.blue} />
+                  <Text className="ml-2 text-blue-600">
+                    Enable location to see gyms near you
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            )}
           </View>
 
           {/* Popular Gyms Section */}
