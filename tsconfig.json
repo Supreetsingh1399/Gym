@@ -22,7 +22,7 @@
     "allowSyntheticDefaultImports": true,
     "resolveJsonModule": true
   },
-  "include": ["**/*.ts", "**/*.tsx", "Gym_App/Screens/TrainerDashboard", "Gym_App/Screens/UserDashboard/utils/helpers.tsx", "Gym_App/Screens/UserDashboard/components/FilterChip.jsx"],
+  "include": ["**/*.ts", "**/*.tsx", "Gym_App/Screens/TrainerDashboard", "Gym_App/Screens/UserDashboard/utils/helpers.tsx", "Gym_App/Screens/UserDashboard/components/FilterChip.jsx", "index.js"],
   "exclude": ["node_modules"],
   "extends": "expo/tsconfig.base"
 }

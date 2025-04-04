@@ -6,14 +6,14 @@ module.exports = function(api) {
       ['module:react-native-dotenv', {
         moduleName: '@env',
         path: '.env',
-        blacklist: null,
-        whitelist: null,
+        // blacklist and whitelist are deprecated
+        allowlist: null,
+        denylist: null,
         safe: false,
         allowUndefined: true,
       }],
-      "nativewind/babel",
-      "react-native-reanimated/plugin",
+      ["nativewind/babel"],
+      ["react-native-reanimated/plugin"],
     ],
   };
 };
-  

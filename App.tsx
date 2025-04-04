@@ -1,10 +1,13 @@
-import React, { useEffect, useState } from "react";
+import React, { JSX, useEffect, useState } from "react";
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { ActivityIndicator, View, Text, TouchableOpacity } from "react-native";
 import { User } from "firebase/auth";
 import { SafeAreaProvider } from "react-native-safe-area-context";
-import DebugApp from "./debug";
+
+// Import Firebase first to ensure initialization
+import * as Firebase from "Gym_App/Backend/firebase";
+
 // Screen imports
 import ForgotPass from "Gym_App/Screens/Login/ForgotPass";
 // import TR_SignUp from "Gym_App/Screens/Register/TR_SGnp";
@@ -20,9 +23,10 @@ import ExternalGymDetails from "Gym_App/Screens/UserDashboard/ExternalGymDetails
 // Hooks
 import useAuth from "Gym_App/Backend/hooks/Auth";
 import { FireBase_Auth } from "Gym_App/Backend/firebase";
+import ErrorBoundary from "./ErrorBoundary";
 
 // Define the stack navigator param list
-type RootStackParamList = {
+export type RootStackParamList = {
   LoginScreen: undefined;
   User_SignUp: undefined;
   Trainer_SignUp: undefined;
@@ -36,6 +40,10 @@ type RootStackParamList = {
     filters?: any; // Replace with your actual filter type
   };
   ExternalGymDetails: {
+    placeId: string;
+    gymId?: string;
+  };
+  GymDetails: {
     gymId: string;
   };
 };
@@ -76,7 +84,6 @@ const StackNavigator = ({ user }: { user: User | null }): JSX.Element => {
             component={US_SignUp}
             options={{ title: "Create User Account" }}
           />
-            
           {/* <Stack.Screen 
             name="Trainer_SignUp" 
             component={TR_SignUp}
@@ -95,7 +102,6 @@ const StackNavigator = ({ user }: { user: User | null }): JSX.Element => {
         </Stack.Group>
       ) : (
         // Protected screens - only accessible when authenticated
-        
         <Stack.Group>
           <Stack.Screen
             name="UserTabs"
@@ -108,13 +114,20 @@ const StackNavigator = ({ user }: { user: User | null }): JSX.Element => {
             options={{ title: "Registered Gyms" }}
           />
           <Stack.Screen 
-            name="TrainerHome" 
+            name="TrainerHome"
             component={TrainerHome}
             options={{ title: "Trainer Dashboard" }}
           />
-           <Stack.Screen name="SearchResults" component={SearchResults} />
-           <Stack.Screen name="ExternalGymDetails" component={ExternalGymDetails} />
-          
+          <Stack.Screen 
+            name="SearchResults" 
+            component={SearchResults}
+            options={{ title: "Search Results" }}
+          />
+          <Stack.Screen 
+            name="ExternalGymDetails" 
+            component={ExternalGymDetails}
+            options={{ title: "Gym Details" }}
+          />
         </Stack.Group>
       )}
     </Stack.Navigator>
@@ -127,34 +140,82 @@ const StackNavigator = ({ user }: { user: User | null }): JSX.Element => {
  * @returns {JSX.Element} App component
  */
 const App = (): JSX.Element => {
+  const [firebaseReady, setFirebaseReady] = useState(false);
+  const [initError, setInitError] = useState<string | null>(null);
   const { user, loading, error } = useAuth();
   const [retryCount, setRetryCount] = useState(0);
 
+  // Check if Firebase is initialized correctly
+  useEffect(() => {
+    const checkFirebase = async () => {
+      try {
+        console.log("[App] Checking Firebase initialization...");
+        if (Firebase.FireBase_Auth) {
+          console.log("[App] Firebase Auth is available");
+          setFirebaseReady(true);
+        } else {
+          console.error("[App] Firebase Auth is not available");
+          setInitError("Firebase authentication not initialized properly");
+        }
+      } catch (err) {
+        console.error("[App] Firebase check error:", err);
+        setInitError(err instanceof Error ? err.message : "Unknown initialization error");
+      }
+    };
+    
+    checkFirebase();
+  }, [retryCount]);
+   
   useEffect(() => {
     console.log("[App] Auth State:", { 
       loading, 
       error: error ? error.toString() : null,
       userExists: !!user,
-      firebaseInitialized: !!FireBase_Auth,
+      firebaseInitialized: !!FireBase_Auth && firebaseReady,
       retryCount
     });
-  }, [loading, error, user, retryCount]);
+  }, [loading, error, user, retryCount, firebaseReady]);
 
   const handleRetry = () => {
+    console.log("[App] Retrying connection...");
     setRetryCount(prev => prev + 1);
-    window.location.reload();
+    setInitError(null);
+    setFirebaseReady(false);
+    // Don't use window.location.reload() in React Native
+    // Instead, reset the states and retry initialization
   };
 
-  if (loading) {
+  // Show initialization error
+  if (initError) {
+    return (
+      <SafeAreaProvider>
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'white', padding: 16 }}>
+          <Text style={{ color: '#e53935', fontSize: 18, marginBottom: 8 }}>Initialization Error</Text>
+          <Text style={{ color: '#666', marginBottom: 16, textAlign: 'center' }}>{initError}</Text>
+          <TouchableOpacity 
+            style={{ backgroundColor: '#0091EA', padding: 12, borderRadius: 8 }}
+            onPress={handleRetry}
+          >
+            <Text style={{ color: 'white', fontWeight: '600' }}>Retry Initialization</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaProvider>
+    );
+  }
+
+  // Show loading state
+  if (loading || !firebaseReady) {
     return (
       <SafeAreaProvider>
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'white' }}>
           <ActivityIndicator size="large" color="#0091EA" />
-          <Text style={{ marginTop: 16, color: '#666' }}>Loading...</Text>
+          <Text style={{ marginTop: 16, color: '#666' }}>
+            {!firebaseReady ? "Initializing Firebase..." : "Loading user data..."}
+          </Text>
           <Text style={{ marginTop: 8, color: '#999', fontSize: 12 }}>
             Firebase Status: {FireBase_Auth ? "Initialized" : "Not Initialized"}
           </Text>
-          {retryCount > 0 && (
+          {(retryCount > 0 || !firebaseReady) && (
             <TouchableOpacity 
               style={{ marginTop: 16, backgroundColor: '#0091EA', padding: 12, borderRadius: 8 }}
               onPress={handleRetry}
@@ -167,6 +228,7 @@ const App = (): JSX.Element => {
     );
   }
 
+  // Show authentication error
   if (error) {
     return (
       <SafeAreaProvider>
@@ -184,12 +246,19 @@ const App = (): JSX.Element => {
     );
   }
 
+  // Render the app when everything is ready
   return (
-    <SafeAreaProvider>
-      <NavigationContainer>
-        <StackNavigator user={user} />
-      </NavigationContainer>
-    </SafeAreaProvider>
+    <ErrorBoundary>
+      <SafeAreaProvider>
+        <NavigationContainer
+          onStateChange={(state) => {
+            console.log("[Navigation] Navigation state changed");
+          }}
+        >
+          <StackNavigator user={user} />
+        </NavigationContainer>
+      </SafeAreaProvider>
+    </ErrorBoundary>
   );
 };
 

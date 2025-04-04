@@ -55,3 +55,41 @@ export interface GymData {
       imageUrl?: string;
     }[];
   }
+  export interface GooglePlaceDetail {
+    geometry: {
+      location: {
+        lat: number;
+        lng: number;
+      };
+    };
+    name: string;
+    formatted_address: string;
+    place_id: string;
+    rating?: number;  // Optional since not all places have ratings
+    photos?: Array<{
+      photo_reference: string;
+      height: number;
+      width: number;
+    }>;
+    // Add other properties as needed
+  }
+  export type RootStackParamList = {
+    LoginScreen: undefined;
+    User_SignUp: undefined;
+    Trainer_SignUp: undefined;
+    Forgot_Password: undefined;
+    UserTabs: undefined;
+    RGN_Gyms: undefined;
+    TrainerHome: undefined;
+    Gym_rgn: undefined;
+    SearchResults: {
+      query?: string;
+      filters?: any;
+    };
+    ExternalGymDetails: {
+      placeId: string;
+    };
+    GymDetails: {
+      gymId: string;
+    };
+  };

@@ -8,7 +8,7 @@
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "splash": {
-      "image": "./assets/favicon.png",
+      "image": "./assets/Gym_Project.jpg",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },

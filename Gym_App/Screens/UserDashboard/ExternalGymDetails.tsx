@@ -1,110 +1,126 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, JSX } from 'react';
 import {
   View,
   Text,
   SafeAreaView,
   ScrollView,
   Image,
-  StyleSheet,
   Linking,
   TouchableOpacity,
   Pressable,
   StatusBar,
   ActivityIndicator,
-  Share
+  Share,
+  ShareContent
 } from 'react-native';
-import { Ionicons, MaterialIcons, FontAwesome } from '@expo/vector-icons';
-import { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { RouteProp } from "@react-navigation/native";
+import { Ionicons } from '@expo/vector-icons';
 import { GOOGLE_PLACES_API_KEY } from '@env';
 import MapView, { Marker } from 'react-native-maps';
 import axios from 'axios';
+import { NativeStackScreenProps } from '@react-navigation/native-stack';
 
-import { THEME } from './constants/theme';
 import { GYM_IMAGES } from './constants/assetUrls';
 import { getRandomItem } from './utils/helpers';
+import GymSplineView from './components/GymSplineView';
+import { RootStackParamList } from '../../types';
 
-// Type definitions
-type RootStackParamList = {
-  ExternalGymDetails: { placeId: string };
-  SearchResults: undefined;
-  UserHome: undefined;
-};
+// Define types for Google Places API response
+interface PlacePhoto {
+  height: number;
+  width: number;
+  photo_reference: string;
+  html_attributions: string[];
+}
 
-type ExternalGymDetailsScreenNavigationProp = NativeStackNavigationProp<
-  RootStackParamList,
-  'ExternalGymDetails'
->;
+interface PlaceReview {
+  author_name: string;
+  author_url: string;
+  language: string;
+  profile_photo_url: string;
+  rating: number;
+  relative_time_description: string;
+  text: string;
+  time: number;
+}
 
-type ExternalGymDetailsScreenRouteProp = RouteProp<
-  RootStackParamList,
-  'ExternalGymDetails'
->;
+interface PlaceOpeningHours {
+  open_now?: boolean;
+  periods?: Array<{
+    close: { day: number; time: string };
+    open: { day: number; time: string };
+  }>;
+  weekday_text?: string[];
+}
 
-type ExternalGymDetailsProps = {
-  navigation: ExternalGymDetailsScreenNavigationProp;
-  route: ExternalGymDetailsScreenRouteProp;
-};
+interface PlaceGeometry {
+  location: {
+    lat: number;
+    lng: number;
+  };
+  viewport?: {
+    northeast: { lat: number; lng: number };
+    southwest: { lat: number; lng: number };
+  };
+}
 
-// Type for Google Place details
 interface PlaceDetails {
   place_id: string;
   name: string;
-  formatted_address: string;
+  formatted_address?: string;
   formatted_phone_number?: string;
   international_phone_number?: string;
   website?: string;
   rating?: number;
   user_ratings_total?: number;
-  opening_hours?: {
-    weekday_text: string[];
-    open_now: boolean;
-  };
-  photos?: Array<{
-    photo_reference: string;
-    height: number;
-    width: number;
-  }>;
-  geometry: {
-    location: {
-      lat: number;
-      lng: number;
-    }
-  };
   price_level?: number;
-  reviews?: Array<{
-    author_name: string;
-    rating: number;
-    text: string;
-    relative_time_description: string;
-  }>;
+  opening_hours?: PlaceOpeningHours;
+  photos?: PlacePhoto[];
+  geometry?: PlaceGeometry;
+  reviews?: PlaceReview[];
   types?: string[];
 }
+
+interface GymForSpline {
+  id: string;
+  gymName: string;
+  rating: number;
+  location: {
+    address: string;
+  };
+  geometry?: PlaceGeometry;
+}
+
+type ExternalGymDetailsProps = NativeStackScreenProps<RootStackParamList, 'ExternalGymDetails'>;
 
 const ExternalGymDetails: React.FC<ExternalGymDetailsProps> = ({ navigation, route }) => {
   const { placeId } = route.params;
   
-  // State
+  // State with proper type annotations
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [placeDetails, setPlaceDetails] = useState<PlaceDetails | null>(null);
+  const [showSplineView, setShowSplineView] = useState<boolean>(false);
   
-  // Fetch place details from Google Places API
+  // Fetch place details from Google Places API with types
   useEffect(() => {
-    const fetchPlaceDetails = async () => {
+    const fetchPlaceDetails = async (): Promise<void> => {
       try {
         setLoading(true);
         setError(null);
         
         // Using axios to fetch place details
-        const response = await axios.get(
+        const response = await axios.get<{
+          status: string;
+          result: PlaceDetails;
+          error_message?: string;
+        }>(
           `https://maps.googleapis.com/maps/api/place/details/json?place_id=${placeId}&fields=name,formatted_address,formatted_phone_number,international_phone_number,website,rating,user_ratings_total,opening_hours,photos,geometry,price_level,reviews,types&key=${GOOGLE_PLACES_API_KEY}`
         );
         
         if (response.data.status === 'OK' && response.data.result) {
           setPlaceDetails(response.data.result);
         } else {
-          setError('Could not load gym details. Please try again later.');
+          setError(response.data.error_message || 'Could not load gym details. Please try again later.');
         }
       } catch (err) {
         console.error('Error fetching place details:', err);
@@ -117,8 +133,8 @@ const ExternalGymDetails: React.FC<ExternalGymDetailsProps> = ({ navigation, rou
     fetchPlaceDetails();
   }, [placeId]);
   
-  // Handle actions
-  const handleCall = useCallback(() => {
+  // Handle actions with typed parameters and return values
+  const handleCall = useCallback((): void => {
     if (placeDetails?.international_phone_number) {
       Linking.openURL(`tel:${placeDetails.international_phone_number}`);
     } else if (placeDetails?.formatted_phone_number) {
@@ -126,13 +142,13 @@ const ExternalGymDetails: React.FC<ExternalGymDetailsProps> = ({ navigation, rou
     }
   }, [placeDetails]);
   
-  const handleWebsite = useCallback(() => {
+  const handleWebsite = useCallback((): void => {
     if (placeDetails?.website) {
       Linking.openURL(placeDetails.website);
     }
   }, [placeDetails]);
   
-  const handleDirections = useCallback(() => {
+  const handleDirections = useCallback((): void => {
     if (placeDetails?.geometry?.location) {
       const { lat, lng } = placeDetails.geometry.location;
       const url = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&destination_place_id=${placeId}`;
@@ -140,45 +156,52 @@ const ExternalGymDetails: React.FC<ExternalGymDetailsProps> = ({ navigation, rou
     }
   }, [placeDetails, placeId]);
   
-  const handleShare = useCallback(async () => {
+  const handleShare = useCallback(async (): Promise<void> => {
     if (placeDetails) {
       try {
         const shareUrl = placeDetails.website || 
           `https://www.google.com/maps/search/?api=1&query=Google&query_place_id=${placeId}`;
         
-        await Share.share({
-          message: `Check out ${placeDetails.name} at ${placeDetails.formatted_address}. ${shareUrl}`,
+        const content: ShareContent = {
+          message: `Check out ${placeDetails.name} at ${placeDetails.formatted_address || ''}. ${shareUrl}`,
           url: shareUrl
-        });
+        };
+        
+        await Share.share(content);
       } catch (error) {
         console.error('Error sharing:', error);
       }
     }
   }, [placeDetails, placeId]);
   
-  // Get photo URL from photo reference
-  const getPhotoUrl = useCallback((photoReference: string) => {
+  // Toggle 3D visualization
+  const handleToggleSplineView = (): void => {
+    setShowSplineView(!showSplineView);
+  };
+  
+  // Get photo URL from photo reference with type
+  const getPhotoUrl = useCallback((photoReference: string): string => {
     return `https://maps.googleapis.com/maps/api/place/photo?maxwidth=800&photoreference=${photoReference}&key=${GOOGLE_PLACES_API_KEY}`;
   }, []);
   
-  // Render star rating
-  const renderStarRating = (rating: number) => {
+  // Render star rating with type
+  const renderStarRating = (rating: number): JSX.Element => {
     const fullStars = Math.floor(rating);
     const halfStar = rating % 1 >= 0.5;
     const emptyStars = 5 - fullStars - (halfStar ? 1 : 0);
     
     return (
-      <View style={styles.ratingContainer}>
-        {[...Array(fullStars)].map((_, i) => (
+      <View className="flex-row items-center">
+        {Array.from({ length: fullStars }).map((_, i) => (
           <Ionicons key={`full-${i}`} name="star" size={18} color="#FFD700" />
         ))}
         {halfStar && <Ionicons name="star-half" size={18} color="#FFD700" />}
-        {[...Array(emptyStars)].map((_, i) => (
+        {Array.from({ length: emptyStars }).map((_, i) => (
           <Ionicons key={`empty-${i}`} name="star-outline" size={18} color="#FFD700" />
         ))}
-        <Text style={styles.ratingText}>{rating.toFixed(1)}</Text>
+        <Text className="ml-1 text-sm font-semibold text-gray-700">{rating.toFixed(1)}</Text>
         {placeDetails?.user_ratings_total && (
-          <Text style={styles.reviewCount}>
+          <Text className="ml-1 text-sm text-gray-500">
             ({placeDetails.user_ratings_total})
           </Text>
         )}
@@ -186,47 +209,35 @@ const ExternalGymDetails: React.FC<ExternalGymDetailsProps> = ({ navigation, rou
     );
   };
   
-  // Render price level
-  const renderPriceLevel = (priceLevel?: number) => {
-    if (priceLevel === undefined) return null;
-    
-    const dollars = [...Array(priceLevel)].map(() => '$').join('');
-    const grayDollars = [...Array(4 - priceLevel)].map(() => '$').join('');
-    
-    return (
-      <Text style={styles.priceLevel}>
-        <Text style={styles.priceLevelActive}>{dollars}</Text>
-        <Text style={styles.priceLevelInactive}>{grayDollars}</Text>
-      </Text>
-    );
-  };
-  
-  // Render opening hours
-  const renderOpeningHours = () => {
+  // Render opening hours with return type
+  const renderOpeningHours = (): JSX.Element | null => {
     if (!placeDetails?.opening_hours?.weekday_text) {
       return null;
     }
     
     return (
-      <View style={styles.sectionContainer}>
-        <Text style={styles.sectionTitle}>Hours</Text>
-        <View style={styles.hoursContainer}>
+      <View className="p-5 border-b border-gray-200">
+        <Text className="text-lg font-semibold text-gray-800 mb-3">Hours</Text>
+        <View>
           {placeDetails.opening_hours.weekday_text.map((day, index) => {
-            const [dayName, hours] = day.split(': ');
+            const dayParts = day.split(': ');
+            const dayName = dayParts[0];
+            const hours = dayParts.slice(1).join(': '); // Handle cases where hours might contain colons
             return (
-              <View key={index} style={styles.hourRow}>
-                <Text style={styles.dayName}>{dayName}</Text>
-                <Text style={styles.hours}>{hours}</Text>
+              <View key={index} className="flex-row justify-between mb-1.5">
+                <Text className="text-sm font-medium text-gray-700 w-1/3">{dayName}</Text>
+                <Text className="text-sm text-gray-800 w-2/3">{hours}</Text>
               </View>
             );
           })}
         </View>
         {placeDetails.opening_hours.open_now !== undefined && (
-          <View style={[
-            styles.openStatus, 
-            placeDetails.opening_hours.open_now ? styles.openNow : styles.closedNow
-          ]}>
-            <Text style={styles.openStatusText}>
+          <View className={`mt-2 self-start px-3 py-1.5 rounded-full ${
+            placeDetails.opening_hours.open_now ? 'bg-green-100' : 'bg-red-100'
+          }`}>
+            <Text className={`text-xs font-semibold ${
+              placeDetails.opening_hours.open_now ? 'text-green-800' : 'text-red-800'
+            }`}>
               {placeDetails.opening_hours.open_now ? 'Open Now' : 'Closed Now'}
             </Text>
           </View>
@@ -235,21 +246,21 @@ const ExternalGymDetails: React.FC<ExternalGymDetailsProps> = ({ navigation, rou
     );
   };
   
-  // Render reviews
-  const renderReviews = () => {
+  // Render reviews with return type
+  const renderReviews = (): JSX.Element | null => {
     if (!placeDetails?.reviews || placeDetails.reviews.length === 0) {
       return null;
     }
     
     return (
-      <View style={styles.sectionContainer}>
-        <Text style={styles.sectionTitle}>Reviews</Text>
+      <View className="p-5 border-b border-gray-200">
+        <Text className="text-lg font-semibold text-gray-800 mb-3">Reviews</Text>
         {placeDetails.reviews.slice(0, 3).map((review, index) => (
-          <View key={index} style={styles.reviewContainer}>
-            <View style={styles.reviewHeader}>
-              <Text style={styles.reviewerName}>{review.author_name}</Text>
-              <View style={styles.reviewRating}>
-                {[...Array(5)].map((_, i) => (
+          <View key={index} className="mb-4 pb-4 border-b border-gray-100">
+            <View className="mb-2">
+              <Text className="text-sm font-semibold text-gray-800">{review.author_name}</Text>
+              <View className="flex-row my-1">
+                {Array.from({ length: 5 }).map((_, i) => (
                   <Ionicons 
                     key={i} 
                     name={i < review.rating ? "star" : "star-outline"} 
@@ -258,10 +269,10 @@ const ExternalGymDetails: React.FC<ExternalGymDetailsProps> = ({ navigation, rou
                   />
                 ))}
               </View>
-              <Text style={styles.reviewTime}>{review.relative_time_description}</Text>
+              <Text className="text-xs text-gray-500">{review.relative_time_description}</Text>
             </View>
             <Text 
-              style={styles.reviewText}
+              className="text-sm text-gray-700 leading-5"
               numberOfLines={3}
               ellipsizeMode="tail"
             >
@@ -273,28 +284,58 @@ const ExternalGymDetails: React.FC<ExternalGymDetailsProps> = ({ navigation, rou
     );
   };
   
+  // If showing 3D view, render that instead
+  if (showSplineView && placeDetails) {
+    const gymForSpline: GymForSpline = {
+      id: placeId,
+      gymName: placeDetails.name,
+      rating: placeDetails.rating || 4.0,
+      location: {
+        address: placeDetails.formatted_address || ''
+      },
+      geometry: placeDetails.geometry
+    };
+    
+    return (
+      <SafeAreaView className="flex-1 bg-white">
+        <StatusBar barStyle="light-content" />
+        <View className="flex-row items-center justify-between p-3 bg-blue-600">
+          <Pressable
+            className="p-2"
+            onPress={handleToggleSplineView}
+          >
+            <Ionicons name="arrow-back" size={24} color="white" />
+          </Pressable>
+          <Text className="text-lg font-bold text-white">{placeDetails.name} - 3D View</Text>
+          <View className="w-10" />
+        </View>
+        <GymSplineView gym={gymForSpline} />
+      </SafeAreaView>
+    );
+  }
+  
   // Main render
   if (loading) {
     return (
-      <SafeAreaView style={styles.loadingContainer}>
-        <StatusBar barStyle="dark-content" backgroundColor={THEME.colors.background} />
-        <ActivityIndicator size="large" color={THEME.colors.primary} />
-        <Text style={styles.loadingText}>Loading gym details...</Text>
+      <SafeAreaView className="flex-1 bg-white justify-center items-center">
+        <StatusBar barStyle="dark-content" />
+        <ActivityIndicator size="large" color="#3b82f6" />
+        <Text className="mt-4 text-base text-gray-500">Loading gym details...</Text>
       </SafeAreaView>
     );
   }
   
   if (error || !placeDetails) {
     return (
-      <SafeAreaView style={styles.errorContainer}>
-        <StatusBar barStyle="dark-content" backgroundColor={THEME.colors.background} />
-        <Ionicons name="alert-circle-outline" size={64} color={THEME.colors.error} />
-        <Text style={styles.errorText}>{error || 'Failed to load gym details'}</Text>
+      <SafeAreaView className="flex-1 bg-white justify-center items-center p-5">
+        <StatusBar barStyle="dark-content" />
+        <Ionicons name="alert-circle-outline" size={64} color="#ef4444" />
+        <Text className="mt-3 text-base text-gray-600 text-center">{error || 'Failed to load gym details'}</Text>
         <TouchableOpacity 
-          style={styles.backButton}
+          className="mt-6 px-6 py-3 bg-blue-600 rounded-lg"
           onPress={() => navigation.goBack()}
         >
-          <Text style={styles.backButtonText}>Go Back</Text>
+          <Text className="text-white text-base font-semibold">Go Back</Text>
         </TouchableOpacity>
       </SafeAreaView>
     );
@@ -305,21 +346,21 @@ const ExternalGymDetails: React.FC<ExternalGymDetailsProps> = ({ navigation, rou
     : getRandomItem(GYM_IMAGES);
   
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView className="flex-1 bg-white">
       <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
       
       {/* Header Image */}
-      <View style={styles.headerContainer}>
+      <View className="relative h-64">
         <Image 
           source={{ uri: mainImageUrl }}
-          style={styles.headerImage}
+          className="w-full h-full"
           resizeMode="cover"
         />
-        <View style={styles.overlay} />
+        <View className="absolute inset-0 bg-black bg-opacity-30" />
         
         {/* Back Button */}
         <Pressable
-          style={styles.backButtonHeader}
+          className="absolute top-10 left-4 w-10 h-10 rounded-full bg-black bg-opacity-50 items-center justify-center"
           onPress={() => navigation.goBack()}
         >
           <Ionicons name="arrow-back" size={24} color="white" />
@@ -327,31 +368,47 @@ const ExternalGymDetails: React.FC<ExternalGymDetailsProps> = ({ navigation, rou
         
         {/* Share Button */}
         <Pressable
-          style={styles.shareButton}
+          className="absolute top-10 right-4 w-10 h-10 rounded-full bg-black bg-opacity-50 items-center justify-center"
           onPress={handleShare}
         >
           <Ionicons name="share-outline" size={24} color="white" />
         </Pressable>
+        
+        {/* 3D View Button */}
+        <Pressable
+          className="absolute bottom-4 right-4 px-3 py-2 rounded-lg bg-blue-600 flex-row items-center"
+          onPress={handleToggleSplineView}
+        >
+          <Ionicons name="cube-outline" size={20} color="white" />
+          <Text className="text-white font-semibold ml-1">3D View</Text>
+        </Pressable>
       </View>
       
-      <ScrollView style={styles.contentContainer} showsVerticalScrollIndicator={false}>
+      <ScrollView className="flex-1 -mt-5 bg-white rounded-t-3xl" showsVerticalScrollIndicator={false}>
         {/* Gym Name and Rating */}
-        <View style={styles.titleContainer}>
-          <Text style={styles.title}>{placeDetails.name}</Text>
-          <View style={styles.ratingRow}>
+        <View className="p-5">
+          <Text className="text-2xl font-bold text-gray-800 mb-2">{placeDetails.name}</Text>
+          <View className="flex-row items-center mb-3">
             {placeDetails.rating !== undefined && renderStarRating(placeDetails.rating)}
-            {renderPriceLevel(placeDetails.price_level)}
+            
+            {/* Price Level */}
+            {placeDetails.price_level !== undefined && (
+              <Text className="ml-4 text-sm">
+                <Text className="text-blue-600 font-bold">{"$".repeat(placeDetails.price_level)}</Text>
+                <Text className="text-gray-300">{"$".repeat(4 - placeDetails.price_level)}</Text>
+              </Text>
+            )}
           </View>
           
           {/* Gym Type Tags */}
-          {placeDetails.types && (
-            <View style={styles.typesContainer}>
+          {placeDetails.types && placeDetails.types.length > 0 && (
+            <View className="flex-row flex-wrap mb-3">
               {placeDetails.types
                 .filter(type => !['establishment', 'point_of_interest', 'health'].includes(type))
                 .slice(0, 3)
                 .map((type, index) => (
-                  <View key={index} style={styles.typeTag}>
-                    <Text style={styles.typeText}>
+                  <View key={index} className="bg-gray-100 px-3 py-1.5 rounded-full mr-2 mb-2">
+                    <Text className="text-xs text-gray-600 font-medium">
                       {type.replace(/_/g, ' ').toUpperCase()}
                     </Text>
                   </View>
@@ -361,48 +418,60 @@ const ExternalGymDetails: React.FC<ExternalGymDetailsProps> = ({ navigation, rou
           )}
           
           {/* Address */}
-          <View style={styles.addressContainer}>
-            <Ionicons name="location-outline" size={18} color={THEME.colors.text.secondary} />
-            <Text style={styles.address}>{placeDetails.formatted_address}</Text>
-          </View>
+          {placeDetails.formatted_address && (
+            <View className="flex-row items-start">
+              <Ionicons name="location-outline" size={18} color="#9ca3af" />
+              <Text className="ml-2 flex-1 text-sm text-gray-600 leading-5">
+                {placeDetails.formatted_address}
+              </Text>
+            </View>
+          )}
         </View>
         
         {/* Action Buttons */}
-        <View style={styles.actionButtonsContainer}>
+        <View className="flex-row justify-between px-5 pb-5 border-b border-gray-200">
           <TouchableOpacity 
-            style={styles.actionButton}
+            className="items-center"
             onPress={handleDirections}
           >
-            <Ionicons name="navigate-outline" size={24} color={THEME.colors.primary} />
-            <Text style={styles.actionButtonText}>Directions</Text>
+            <View className="w-12 h-12 rounded-full bg-blue-50 items-center justify-center mb-1">
+              <Ionicons name="navigate-outline" size={24} color="#3b82f6" />
+            </View>
+            <Text className="text-xs text-gray-600">Directions</Text>
           </TouchableOpacity>
           
           {(placeDetails.formatted_phone_number || placeDetails.international_phone_number) && (
             <TouchableOpacity 
-              style={styles.actionButton}
+              className="items-center"
               onPress={handleCall}
             >
-              <Ionicons name="call-outline" size={24} color={THEME.colors.primary} />
-              <Text style={styles.actionButtonText}>Call</Text>
+              <View className="w-12 h-12 rounded-full bg-blue-50 items-center justify-center mb-1">
+                <Ionicons name="call-outline" size={24} color="#3b82f6" />
+              </View>
+              <Text className="text-xs text-gray-600">Call</Text>
             </TouchableOpacity>
           )}
           
           {placeDetails.website && (
             <TouchableOpacity 
-              style={styles.actionButton}
+              className="items-center"
               onPress={handleWebsite}
             >
-              <Ionicons name="globe-outline" size={24} color={THEME.colors.primary} />
-              <Text style={styles.actionButtonText}>Website</Text>
+              <View className="w-12 h-12 rounded-full bg-blue-50 items-center justify-center mb-1">
+                <Ionicons name="globe-outline" size={24} color="#3b82f6" />
+              </View>
+              <Text className="text-xs text-gray-600">Website</Text>
             </TouchableOpacity>
           )}
           
           <TouchableOpacity 
-            style={styles.actionButton}
+            className="items-center"
             onPress={handleShare}
           >
-            <Ionicons name="share-social-outline" size={24} color={THEME.colors.primary} />
-            <Text style={styles.actionButtonText}>Share</Text>
+            <View className="w-12 h-12 rounded-full bg-blue-50 items-center justify-center mb-1">
+              <Ionicons name="share-social-outline" size={24} color="#3b82f6" />
+            </View>
+            <Text className="text-xs text-gray-600">Share</Text>
           </TouchableOpacity>
         </View>
         
@@ -411,10 +480,10 @@ const ExternalGymDetails: React.FC<ExternalGymDetailsProps> = ({ navigation, rou
         
         {/* Map Section */}
         {placeDetails.geometry?.location && (
-          <View style={styles.mapContainer}>
-            <Text style={styles.sectionTitle}>Location</Text>
+          <View className="p-5 border-b border-gray-200">
+            <Text className="text-lg font-semibold text-gray-800 mb-3">Location</Text>
             <MapView
-              style={styles.map}
+              className="w-full h-48 rounded-lg"
               initialRegion={{
                 latitude: placeDetails.geometry.location.lat,
                 longitude: placeDetails.geometry.location.lng,
@@ -432,29 +501,29 @@ const ExternalGymDetails: React.FC<ExternalGymDetailsProps> = ({ navigation, rou
               />
             </MapView>
             <TouchableOpacity
-              style={styles.directionsButton}
+              className="mt-3 flex-row items-center justify-center bg-blue-600 py-3 rounded-lg"
               onPress={handleDirections}
             >
-              <Text style={styles.directionsButtonText}>Get Directions</Text>
-              <Ionicons name="navigate" size={16} color="white" style={styles.directionsIcon} />
+              <Text className="text-white font-semibold">Get Directions</Text>
+              <Ionicons name="navigate" size={16} color="white" style={{ marginLeft: 8 }} />
             </TouchableOpacity>
           </View>
         )}
         
         {/* Photos Section */}
         {placeDetails.photos && placeDetails.photos.length > 1 && (
-          <View style={styles.photosContainer}>
-            <Text style={styles.sectionTitle}>Photos</Text>
+          <View className="p-5 border-b border-gray-200">
+            <Text className="text-lg font-semibold text-gray-800 mb-3">Photos</Text>
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.photosScrollContainer}
+              className="flex-row"
             >
               {placeDetails.photos.slice(1).map((photo, index) => (
                 <Image
                   key={index}
                   source={{ uri: getPhotoUrl(photo.photo_reference) }}
-                  style={styles.photoItem}
+                  className="w-40 h-28 mr-3 rounded-lg"
                   resizeMode="cover"
                 />
               ))}
@@ -466,348 +535,23 @@ const ExternalGymDetails: React.FC<ExternalGymDetailsProps> = ({ navigation, rou
         {renderReviews()}
         
         {/* Register/Check-in Prompt */}
-        <View style={styles.registerContainer}>
-          <Text style={styles.registerTitle}>Interested in this gym?</Text>
-          <Text style={styles.registerDescription}>
+        <View className="m-5 p-4 bg-gray-50 rounded-lg">
+          <Text className="text-lg font-semibold text-gray-800 mb-2">Interested in this gym?</Text>
+          <Text className="text-sm text-gray-600 mb-4 leading-5">
             Add this gym to your personal collection to track your visits and connect with trainers.
           </Text>
-          <TouchableOpacity style={styles.registerButton}>
-            <Text style={styles.registerButtonText}>Add to My Gyms</Text>
+          <TouchableOpacity className="bg-blue-600 py-3 rounded-lg items-center">
+            <Text className="text-white font-semibold">Add to My Gyms</Text>
           </TouchableOpacity>
         </View>
         
-        {/* Footer with attribution */}
-        <View style={styles.footer}>
-          <Text style={styles.footerText}>Data provided by Google Places</Text>
+        {/* Footer */}
+        <View className="items-center pb-6 pt-2">
+          <Text className="text-xs text-gray-400">Data provided by Google Places</Text>
         </View>
       </ScrollView>
     </SafeAreaView>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#fff',
-  },
-  loadingText: {
-    fontSize: 16,
-    color: '#666',
-    marginTop: 12,
-  },
-  errorContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#fff',
-    padding: 20,
-  },
-  errorText: {
-    fontSize: 16,
-    color: '#666',
-    marginTop: 12,
-    textAlign: 'center',
-  },
-  backButton: {
-    marginTop: 24,
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    backgroundColor: THEME.colors.primary,
-    borderRadius: 8,
-  },
-  backButtonText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  headerContainer: {
-    height: 250,
-    position: 'relative',
-  },
-  headerImage: {
-    height: '100%',
-    width: '100%',
-  },
-  overlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.3)',
-  },
-  backButtonHeader: {
-    position: 'absolute',
-    top: 40,
-    left: 16,
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  shareButton: {
-    position: 'absolute',
-    top: 40,
-    right: 16,
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  contentContainer: {
-    flex: 1,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    marginTop: -20,
-    backgroundColor: 'white',
-  },
-  titleContainer: {
-    padding: 20,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#111',
-    marginBottom: 8,
-  },
-  ratingRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  ratingContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  ratingText: {
-    marginLeft: 4,
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#333',
-  },
-  reviewCount: {
-    marginLeft: 4,
-    fontSize: 14,
-    color: '#666',
-  },
-  priceLevel: {
-    marginLeft: 16,
-    fontSize: 14,
-  },
-  priceLevelActive: {
-    color: THEME.colors.primary,
-    fontWeight: 'bold',
-  },
-  priceLevelInactive: {
-    color: '#ccc',
-  },
-  typesContainer: {
-    flexDirection: 'row',
-    marginBottom: 12,
-    flexWrap: 'wrap',
-  },
-  typeTag: {
-    backgroundColor: '#f3f4f6',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
-    marginRight: 8,
-    marginBottom: 8,
-  },
-  typeText: {
-    fontSize: 12,
-    color: '#4b5563',
-    fontWeight: '500',
-  },
-  addressContainer: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-  },
-  address: {
-    flex: 1,
-    marginLeft: 8,
-    fontSize: 14,
-    color: '#4b5563',
-    lineHeight: 20,
-  },
-  actionButtonsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingBottom: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f3f4f6',
-  },
-  actionButton: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    width: 75,
-  },
-  actionButtonText: {
-    marginTop: 8,
-    fontSize: 12,
-    color: '#4b5563',
-    textAlign: 'center',
-  },
-  sectionContainer: {
-    padding: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f3f4f6',
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#111',
-    marginBottom: 12,
-  },
-  hoursContainer: {
-    marginBottom: 12,
-  },
-  hourRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 6,
-  },
-  dayName: {
-    fontSize: 14,
-    color: '#4b5563',
-    width: '30%',
-    fontWeight: '500',
-  },
-  hours: {
-    fontSize: 14,
-    color: '#111',
-    width: '70%',
-  },
-  openStatus: {
-    alignSelf: 'flex-start',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
-    marginTop: 8,
-  },
-  openNow: {
-    backgroundColor: '#dcfce7',
-  },
-  closedNow: {
-    backgroundColor: '#fee2e2',
-  },
-  openStatusText: {
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  mapContainer: {
-    padding: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f3f4f6',
-  },
-  map: {
-    width: '100%',
-    height: 200,
-    borderRadius: 8,
-  },
-  directionsButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: THEME.colors.primary,
-    paddingVertical: 12,
-    borderRadius: 8,
-    marginTop: 12,
-  },
-  directionsButtonText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  directionsIcon: {
-    marginLeft: 8,
-  },
-  photosContainer: {
-    padding: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f3f4f6',
-  },
-  photosScrollContainer: {
-    paddingRight: 20,
-  },
-  photoItem: {
-    width: 180,
-    height: 120,
-    borderRadius: 8,
-    marginRight: 12,
-  },
-  reviewContainer: {
-    marginBottom: 16,
-    paddingBottom: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f3f4f6',
-  },
-  reviewHeader: {
-    marginBottom: 8,
-  },
-  reviewerName: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#111',
-  },
-  reviewRating: {
-    flexDirection: 'row',
-    marginTop: 4,
-  },
-  reviewTime: {
-    fontSize: 12,
-    color: '#6b7280',
-    marginTop: 4,
-  },
-  reviewText: {
-    fontSize: 14,
-    color: '#4b5563',
-    lineHeight: 20,
-  },
-  registerContainer: {
-    padding: 20,
-    backgroundColor: '#f9fafb',
-    borderRadius: 12,
-    margin: 20,
-  },
-  registerTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#111',
-    marginBottom: 8,
-  },
-  registerDescription: {
-    fontSize: 14,
-    color: '#4b5563',
-    lineHeight: 20,
-    marginBottom: 16,
-  },
-  registerButton: {
-    backgroundColor: THEME.colors.primary,
-    paddingVertical: 12,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  registerButtonText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  footer: {
-    alignItems: 'center',
-    paddingVertical: 20,
-  },
-  footerText: {
-    fontSize: 12,
-    color: '#9ca3af',
-  },
-});
 
 export default ExternalGymDetails;

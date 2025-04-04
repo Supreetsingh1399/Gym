@@ -81,6 +81,9 @@ export const calculateCalories = (durationMinutes: number, intensityLevel: strin
   const calsPerMinute = baseCalsPerMinute[intensityLevel as keyof typeof baseCalsPerMinute] || 5;
   return Math.round(durationMinutes * calsPerMinute);
 };
+export const generateId = () => {
+  return Math.random().toString(36).substring(2) + Date.now().toString(36);
+};
 
 /**
  * Creates a debounced version of a function
