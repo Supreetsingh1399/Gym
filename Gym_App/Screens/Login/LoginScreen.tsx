@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -8,19 +8,20 @@ import {
   ActivityIndicator,
   Platform,
 } from "react-native";
-import { signInWithEmailAndPassword } from "firebase/auth";
+import { signInWithEmailAndPassword, getAuth, onAuthStateChanged } from "firebase/auth";
+import { app, isFirebaseReady } from "../../Backend/firebase";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { FireBase_Auth, isFirebaseReady } from "../../Backend/firebase";
 import { Ionicons } from "@expo/vector-icons";
 import { ScreenProps } from "../../types/navigation";
 
-// Import custom hooks and utilities
-import useToastNotification from "../../hooks/useToastNotification";
+// Import correct ToastManager
+import ToastManager from "../UserDashboard/components/ToastManager";
+
+// Import utilities
 import { isFirebaseError, getAuthErrorMessage } from "../../utils/errorHandling";
 
 /**
  * Login screen component for user authentication
- * @returns {JSX.Element} Login screen UI
  */
 const HandleLogin = ({ navigation }: ScreenProps<"LoginScreen">): JSX.Element => {
   // State management
@@ -32,27 +33,43 @@ const HandleLogin = ({ navigation }: ScreenProps<"LoginScreen">): JSX.Element =>
   const [passwordError, setPasswordError] = useState<string>("");
   const [authInProgress, setAuthInProgress] = useState<boolean>(false);
   const [authAvailable, setAuthAvailable] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
   
-  // Custom hooks
-  const toast = useToastNotification();
+  // Get auth directly - no helper needed
+  const FireBase_Auth = getAuth(app);
+  
+  // Toast instance
+  const toast = ToastManager;
 
-  // Check if Firebase Auth is available
+  // Track component mount state
+  const isMounted = useRef(true);
+
+  // Clean up on unmount
   useEffect(() => {
-    const checkAuth = () => {
-      const services = isFirebaseReady();
-      if (services.auth) {
-        console.log("Firebase Auth is available in LoginScreen");
-        setAuthAvailable(true);
-      } else {
-        console.log("Firebase Auth not available in LoginScreen");
-      }
+    return () => {
+      isMounted.current = false;
     };
+  }, []);
 
-    // Check immediately and then every second
-    checkAuth();
-    const interval = setInterval(checkAuth, 1000);
+  // Simple Firebase Auth availability check
+  useEffect(() => {
+    // One-time check for Firebase Auth availability
+    const services = isFirebaseReady();
+    setAuthAvailable(services.auth);
     
-    return () => clearInterval(interval);
+    if (services.auth) {
+      console.log("Firebase Auth is available in LoginScreen");
+    } else {
+      console.log("Firebase Auth not available in LoginScreen");
+      // Single retry if not available
+      setTimeout(() => {
+        if (isMounted.current) {
+          const retryServices = isFirebaseReady();
+          setAuthAvailable(retryServices.auth);
+          console.log("Auth retry result:", retryServices.auth);
+        }
+      }, 1000);
+    }
   }, []);
 
   /**
@@ -62,8 +79,6 @@ const HandleLogin = ({ navigation }: ScreenProps<"LoginScreen">): JSX.Element =>
 
   /**
    * Validate email format
-   * @param {string} email - User email to validate
-   * @returns {boolean} Whether email is valid
    */
   const validateEmail = (email: string): boolean => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -72,7 +87,6 @@ const HandleLogin = ({ navigation }: ScreenProps<"LoginScreen">): JSX.Element =>
 
   /**
    * Validate form inputs
-   * @returns {boolean} Whether form is valid
    */
   const validateForm = (): boolean => {
     let isValid = true;
@@ -103,25 +117,27 @@ const HandleLogin = ({ navigation }: ScreenProps<"LoginScreen">): JSX.Element =>
    * Handle user sign in process
    */
   const handleSignIn = async (): Promise<void> => {
-    if (loading || authInProgress) {
-      console.log("Sign in blocked - already in progress");
+    // Prevent multiple submissions
+    if (loading || authInProgress) return;
+    
+    // Validate the form
+    if (!validateForm()) return;
+    
+    // Check if Auth is available
+    if (!authAvailable || !FireBase_Auth) {
+      if (toast && typeof toast.error === 'function') {
+        toast.error("Authentication service is not available");
+      } else {
+        console.error("Authentication service is not available");
+        alert("Authentication service is not available");
+      }
       return;
     }
     
-    if (!authAvailable || !FireBase_Auth) {
-      const errorMsg = "Authentication service is initializing. Please try again in a moment.";
-      toast.warning(errorMsg, "Service Unavailable");
-      return;
-    }
-
-    // Validate form before submission
-    if (!validateForm()) return;
-
     try {
       setLoading(true);
       setAuthInProgress(true);
-      console.log("Attempting to sign in with:", email);
-
+      
       const userCredential = await signInWithEmailAndPassword(
         FireBase_Auth,
         email,
@@ -129,146 +145,126 @@ const HandleLogin = ({ navigation }: ScreenProps<"LoginScreen">): JSX.Element =>
       );
       
       console.log("Sign in successful");
-      toast.auth("Login successful!", true);
-      // Navigation will be handled by the auth state change listener in App.js
       
-    } catch (err) {
-      console.error("Login error:", err);
+      if (toast && typeof toast.success === 'function') {
+        toast.success("Login successful!");
+      } else {
+        alert("Login successful!");
+      }
       
-      // Use our error handling utility for consistent messages
-      const errorMessage = getAuthErrorMessage(err);
-      toast.error(errorMessage, "Login Failed");
-      setAuthInProgress(false);
+    } catch (error) {
+      console.error("Login error:", error);
+      
+      const errorMessage = isFirebaseError(error) 
+        ? getAuthErrorMessage(error) 
+        : "An unexpected error occurred";
+        
+      if (toast && typeof toast.error === 'function') {
+        toast.error(errorMessage);
+      } else {
+        alert(`Login error: ${errorMessage}`);
+      }
+      
     } finally {
-      setLoading(false);
+      if (isMounted.current) {
+        setLoading(false);
+        setAuthInProgress(false);
+      }
     }
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-white">
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#f5f5f5' }}>
       <KeyboardAvoidingView
-        className="flex-1 justify-center"
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={{ flex: 1 }}
       >
-        <View className="items-center mb-10">
-          <View className="w-16 h-16 bg-blue-100 rounded-full items-center justify-center">
-            <Ionicons name="fitness" size={32} color="#0091EA" />
-          </View>
-          <Text className="text-2xl font-bold text-blue-600 mt-2">GymBuddy</Text>
-        </View>
-
-        <View className="px-8">
-          <Text className="text-2xl font-bold text-gray-800 mb-1">Welcome Back</Text>
-          <Text className="text-base text-gray-500 mb-6">Sign in to continue</Text>
-
+        <View style={{ flex: 1, padding: 20, justifyContent: 'center' }}>
+          <Text style={{ fontSize: 28, fontWeight: 'bold', marginBottom: 30, textAlign: 'center' }}>
+            Login to Your Account
+          </Text>
+          
+          {/* Error message if auth is not available */}
+          {!authAvailable && (
+            <View style={{ marginBottom: 15, padding: 10, backgroundColor: '#ffeeee', borderRadius: 5 }}>
+              <Text style={{ color: 'red' }}>
+                Authentication service is initializing. Please wait or try again.
+              </Text>
+            </View>
+          )}
+          
           {/* Email Input */}
-          <View className="flex-row items-center mb-1 border border-gray-300 rounded-lg bg-gray-50 px-2">
-            <View className="px-2 py-3">
-              <Ionicons name="mail-outline" size={22} color="#0091EA" />
-            </View>
+          <View style={{ marginBottom: 15 }}>
+            <Text style={{ marginBottom: 5 }}>Email</Text>
             <TextInput
-              className={`flex-1 py-3 px-2 text-base text-gray-700 ${
-                emailError ? "border-red-500" : ""
-              }`}
-              placeholder="Email Address"
+              placeholder="Enter your email"
               value={email}
-              onChangeText={(text) => {
-                setEmail(text);
-                if (emailError) setEmailError("");
-              }}
-              autoCapitalize="none"
+              onChangeText={setEmail}
               keyboardType="email-address"
-              placeholderTextColor="#999"
-            />
-          </View>
-          {emailError ? (
-            <Text className="text-red-500 text-xs mb-2 ml-1">{emailError}</Text>
-          ) : (
-            <View className="h-5" />
-          )}
-
-          {/* Password Input */}
-          <View className="flex-row items-center mb-1 border border-gray-300 rounded-lg bg-gray-50 px-2">
-            <View className="px-2 py-3">
-              <Ionicons name="lock-closed-outline" size={22} color="#0091EA" />
-            </View>
-            <TextInput
-              className={`flex-1 py-3 px-2 text-base text-gray-700 ${
-                passwordError ? "border-red-500" : ""
-              }`}
-              placeholder="Password"
-              value={password}
-              onChangeText={(text) => {
-                setPassword(text);
-                if (passwordError) setPasswordError("");
+              autoCapitalize="none"
+              style={{
+                borderWidth: 1,
+                borderColor: emailError ? 'red' : '#ddd',
+                padding: 12,
+                borderRadius: 8
               }}
-              secureTextEntry={!showPassword}
-              placeholderTextColor="#999"
             />
-            <TouchableOpacity
-              onPress={togglePasswordVisibility}
-              className="px-2"
-            >
-              <Ionicons
-                name={showPassword ? "eye-off" : "eye"}
-                size={24}
-                color="#0091EA"
+            {emailError ? <Text style={{ color: 'red', marginTop: 5 }}>{emailError}</Text> : null}
+          </View>
+          
+          {/* Password Input */}
+          <View style={{ marginBottom: 25 }}>
+            <Text style={{ marginBottom: 5 }}>Password</Text>
+            <View style={{ 
+              flexDirection: 'row', 
+              borderWidth: 1, 
+              borderColor: passwordError ? 'red' : '#ddd',
+              borderRadius: 8,
+              alignItems: 'center' 
+            }}>
+              <TextInput
+                placeholder="Enter your password"
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry={!showPassword}
+                style={{ flex: 1, padding: 12 }}
               />
-            </TouchableOpacity>
-          </View>
-          {passwordError ? (
-            <Text className="text-red-500 text-xs mb-2 ml-1">{passwordError}</Text>
-          ) : (
-            <View className="h-5" />
-          )}
-
-          {/* Forgot Password Link */}
-          <TouchableOpacity
-            onPress={() => navigation.navigate("Forgot_Password")}
-            className="self-end mb-5"
-          >
-            <Text className="text-blue-500 font-medium">Forgot Password?</Text>
-          </TouchableOpacity>
-
-          {/* Login Button */}
-          <TouchableOpacity
-            className={`py-3 px-6 rounded-lg items-center justify-center ${
-              loading || !authAvailable ? "bg-blue-400" : "bg-blue-600"
-            }`}
-            onPress={handleSignIn}
-            disabled={loading || !authAvailable}
-          >
-            {loading ? (
-              <ActivityIndicator color="#ffffff" />
-            ) : !authAvailable ? (
-              <Text className="text-white font-bold text-lg">INITIALIZING...</Text>
-            ) : (
-              <Text className="text-white font-bold text-lg">LOGIN</Text>
-            )}
-          </TouchableOpacity>
-
-          {/* Sign Up Section */}
-          <View className="flex-row justify-center mt-6 mb-4">
-            <Text className="text-gray-600">Don't have an account? </Text>
-            <TouchableOpacity onPress={() => navigation.navigate("User_SignUp")}>
-              <Text className="text-blue-600 font-semibold">Sign Up</Text>
-            </TouchableOpacity>
-          </View>
-
-          {/* Alternative Sign Up Options */}
-          <View className="mt-6">
-            <Text className="text-gray-500 text-center mb-4">Or register as</Text>
-            
-            <View className="flex-row justify-center">
-              {/* Gym Owner Registration */}
-              <TouchableOpacity 
-                className="flex-row items-center bg-blue-50 py-3 px-6 rounded-lg border border-blue-200"
-                onPress={() => navigation.navigate("Gym_rgn")}
-              >
-                <Ionicons name="fitness-outline" size={20} color="#0091EA" />
-                <Text className="ml-2 text-blue-700 font-medium">Gym Owner</Text>
+              <TouchableOpacity onPress={togglePasswordVisibility} style={{ padding: 12 }}>
+                <Ionicons name={showPassword ? 'eye-off' : 'eye'} size={24} color="#777" />
               </TouchableOpacity>
             </View>
+            {passwordError ? <Text style={{ color: 'red', marginTop: 5 }}>{passwordError}</Text> : null}
+          </View>
+          
+          {/* Login Button */}
+          <TouchableOpacity
+            onPress={handleSignIn}
+            disabled={loading || authInProgress || !authAvailable}
+            style={{
+              backgroundColor: loading || authInProgress || !authAvailable ? '#a0cef5' : '#3498db',
+              padding: 15,
+              borderRadius: 8,
+              alignItems: 'center',
+              marginBottom: 20
+            }}
+          >
+            {loading ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 16 }}>
+                Log In
+              </Text>
+            )}
+          </TouchableOpacity>
+          
+          {/* Register Link */}
+          <View style={{ flexDirection: 'row', justifyContent: 'center' }}>
+            <Text>Don't have an account? </Text>
+            <TouchableOpacity onPress={() => navigation.navigate('Register')}>
+              <Text style={{ color: '#3498db', fontWeight: 'bold' }}>
+                Register
+              </Text>
+            </TouchableOpacity>
           </View>
         </View>
       </KeyboardAvoidingView>

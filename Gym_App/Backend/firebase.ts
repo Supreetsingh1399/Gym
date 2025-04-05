@@ -1,7 +1,9 @@
-import { initializeApp, getApps } from 'firebase/app';
-import { getAuth } from 'firebase/auth';
-import { getFirestore } from 'firebase/firestore';
-import { getStorage } from 'firebase/storage';
+import { initializeAuth, getReactNativePersistence } from '@firebase/auth';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { initializeApp, getApps, FirebaseApp } from '@firebase/app';
+import { Auth, getAuth } from '@firebase/auth';
+import { Firestore, getFirestore } from '@firebase/firestore';
+import { FirebaseStorage, getStorage } from '@firebase/storage';
 
 // Firebase configuration
 const firebaseConfig = {
@@ -14,10 +16,10 @@ const firebaseConfig = {
   measurementId: "G-KFQJTRFPKD",
 };
 
-let app;
-let FireBase_Auth;
-let FireBase_DB;
-let FireBase_Storage;
+let app: FirebaseApp | FirebaseApp | undefined;
+let FireBase_Auth: Auth;
+let FireBase_DB: Firestore | Firestore;
+let FireBase_Storage: FirebaseStorage;
 
 try {
   console.log("Initializing Firebase services");
@@ -31,8 +33,12 @@ try {
     app = getApps()[0];
   }
   
-  // Initialize Firebase services
-  FireBase_Auth = getAuth(app);
+  
+ // Initialize Firebase Auth with persistence
+ FireBase_Auth = initializeAuth(app, {
+  persistence: getReactNativePersistence(AsyncStorage)
+});
+  // Initialize other Firebase services
   FireBase_DB = getFirestore(app);
   FireBase_Storage = getStorage(app);
   
