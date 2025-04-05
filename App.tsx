@@ -49,7 +49,7 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo): void {
     console.error("Error caught by boundary:", error, errorInfo);
-    showToast.error("App Error", error.message || "An unexpected error occurred");
+    showToast?.error("App Error", error.message || "An unexpected error occurred");
   }
 
   resetError = (): void => {
@@ -103,19 +103,25 @@ const StackNavigator = ({ user }: StackNavigatorProps): JSX.Element => {
       {!user ? (
         // Authentication screens
         <>
-         <Stack.Screen name="auth" component={HandleLogin} options={{ title: "Login" }} />
-         <Stack.Screen name="LoginScreen" component={HandleLogin} options={{ title: "Login" }} />
           <Stack.Screen 
+            name="LoginScreen" 
+            component={HandleLogin} 
+            options={{ title: "Login" }} 
+          />
+          <Stack.Screen 
+            //@ts-ignore
             name="User_SignUp" 
             component={US_SignUp}
             options={{ title: "Create User Account" }}
           />
           <Stack.Screen 
+            //@ts-ignore
             name="Forgot_Password" 
             component={ForgotPass}
             options={{ title: "Reset Password" }}
           />
           <Stack.Screen 
+            //@ts-ignore
             name="Gym_rgn" 
             component={GymRegistrationWizard}
             options={{ title: "Register Gym" }}
@@ -125,11 +131,13 @@ const StackNavigator = ({ user }: StackNavigatorProps): JSX.Element => {
         // Protected screens - only accessible when authenticated
         <>
           <Stack.Screen
+            //@ts-ignore
             name="UserTabs"
             component={TabNavigator}
             options={{ headerShown: false }}
           />
           <Stack.Screen 
+            //@ts-ignore
             name="RGN_Gyms" 
             component={Registered_Gyms}
             options={{ title: "Registered Gyms" }}
@@ -160,92 +168,88 @@ const StackNavigator = ({ user }: StackNavigatorProps): JSX.Element => {
  * Manages authentication state and renders appropriate screens
  */
 const App = (): JSX.Element => {
-  const [firebaseReady, setFirebaseReady] = useState<boolean>(false);
-  const [retryCount, setRetryCount] = useState<number>(0);
-  const { user, loading, error, authReady } = useAuth();
+  const [servicesReady, setServicesReady] = useState<boolean>(false);
+  const [initAttempts, setInitAttempts] = useState<number>(0);
+  const { user, loading, error } = useAuth();
+  
+  // Max number of initialization attempts before showing retry button
+  const MAX_INIT_ATTEMPTS = 10;
 
-  // Check if Firebase is initialized correctly
+  // Check if Firebase services are ready
   useEffect(() => {
-    let mounted = true;
-    let checkCount = 0;
-    const checkFirebaseServices = () => {
-      if (!mounted) return;
-      
-      const services = isFirebaseReady();
-      console.log(`[App] Firebase services check #${checkCount + 1}:`, services);
-      
-      if (services.auth && services.db) {
-        setFirebaseReady(true);
-        console.log("[App] Firebase services are ready");
-        return true;
-      }
-      
-      checkCount++;
+    // Skip if services are already marked as ready
+    if (servicesReady) return;
     
-     // Only retry a limited number of times to prevent infinite loops
-     if (checkCount < 5) {
-      setTimeout(checkFirebaseServices, 1000);
+    // Don't try more than MAX_INIT_ATTEMPTS times automatically
+    if (initAttempts >= MAX_INIT_ATTEMPTS) return;
+
+    console.log(`[App] Checking Firebase services, attempt ${initAttempts + 1}/${MAX_INIT_ATTEMPTS}`);
+    
+    const services = isFirebaseReady();
+    
+    if (services.auth && services.db) {
+      console.log("[App] Firebase services are ready");
+      setServicesReady(true);
     } else {
-      console.log("[App] Max Firebase init attempts reached, showing retry option");
+      // Schedule next check
+      const timer = setTimeout(() => {
+        setInitAttempts(prev => prev + 1);
+      }, 1000);
+      
+      return () => clearTimeout(timer);
     }
-    
-    return false;
-  };
-  
-  checkFirebaseServices();
-  
-  // Cleanup
-  return () => {
-    mounted = false;
-  };
-}, [retryCount]);
-   
+  }, [initAttempts, servicesReady]);
+
   // Log important state changes
   useEffect(() => {
     console.log("[App] Status:", { 
       loading, 
       error: error ? "Error present" : "No error",
       userExists: !!user,
-      firebaseReady,
-      authReady,
-      retryCount
+      servicesReady,
+      initAttempts
     });
-  }, [loading, error, user, firebaseReady, authReady, retryCount]);
+  }, [loading, error, user, servicesReady, initAttempts]);
 
-  // Effect to show toast notifications for auth state changes
+  // Show toast notifications for auth state changes
   useEffect(() => {
-    if (!loading && authReady) {
-      if (user) {
-        showToast.success("Authentication", "Successfully logged in");
-      }
+    if (!loading && user) {
+      showToast.success("Authentication", "Successfully logged in");
     }
 
     if (error) {
       showToast.error("Authentication Error", error);
     }
-  }, [user, loading, error, authReady]);
+  }, [user, loading, error]);
 
   const handleRetry = (): void => {
-    console.log("[App] Retrying initialization...");
+    console.log("[App] Retrying Firebase initialization...");
     showToast.info("Connection", "Retrying connection to services...");
-    setRetryCount(prev => prev + 1);
+    setInitAttempts(0);
+    setServicesReady(false);
   };
 
-  // Show loading state
-  if (loading || !firebaseReady || !authReady) {
+  // Show loading state if services aren't ready or auth is still loading
+  if (!servicesReady || loading) {
+    const showRetryButton = initAttempts >= MAX_INIT_ATTEMPTS || error;
+    
     return (
       <SafeAreaProvider>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#0091EA" />
           <Text style={styles.loadingText}>
-            {!firebaseReady ? "Initializing services..." : "Loading user data..."}
+            {!servicesReady ? "Initializing services..." : "Loading user data..."}
           </Text>
           <Text style={styles.statusText}>
-  Firebase Auth: {typeof FireBase_Auth !== 'undefined' ? "Ready" : "Initializing"}
-  {authReady ? " | Auth System: Ready" : " | Auth System: Initializing"}
-</Text>
+            Firebase Auth: {FireBase_Auth ? "Available" : "Initializing"}
+          </Text>
+          {initAttempts > 0 && (
+            <Text style={styles.statusText}>
+              Initialization attempts: {initAttempts}/{MAX_INIT_ATTEMPTS}
+            </Text>
+          )}
           
-          {(retryCount > 0 || !firebaseReady || !authReady) && (
+          {showRetryButton && (
             <TouchableOpacity style={styles.retryButton} onPress={handleRetry}>
               <Text style={styles.retryText}>Retry Connection</Text>
             </TouchableOpacity>

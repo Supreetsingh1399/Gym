@@ -46,5 +46,6 @@ export interface NavigationProps<T extends keyof RootStackParamList = 'Home'> {
 export type ScreenProps<T extends keyof RootStackParamList> = {
   navigation: AppNavigationProp<T>;
   route: AppRouteProp<T>;
-  
+  UserTabParamList: RootStackParamList;
+
 }; 

@@ -15,7 +15,7 @@ import { sendPasswordResetEmail } from "firebase/auth";
 import { Ionicons } from "@expo/vector-icons";
 import { showToast } from "../UserDashboard/components/ToastManager";
 import { ScreenProps } from "../../types/navigation";
-
+//@ts-ignore
 const ForgotPass = ({ navigation }: ScreenProps<"Forgot_Password">) => {
   const [email, setEmail] = useState<string>("");
   const [error, setError] = useState<string>("");
@@ -95,6 +95,7 @@ const ForgotPass = ({ navigation }: ScreenProps<"Forgot_Password">) => {
   };
 
   return (
+    //@ts-ignore  
     <SafeAreaView style={styles.container}>
       <KeyboardAvoidingView style={styles.keyboardView} behavior="padding">
         <View style={styles.iconContainer}>

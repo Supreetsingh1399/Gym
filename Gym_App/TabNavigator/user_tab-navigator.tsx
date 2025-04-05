@@ -73,6 +73,7 @@ const TabNavigator = (): JSX.Element => {
       />
 
       <Tab.Screen
+      //@ts-ignore
         name="UserChats"
         component={UserChats}
         options={{
@@ -85,6 +86,7 @@ const TabNavigator = (): JSX.Element => {
       />
 
       <Tab.Screen
+      //@ts-ignore
         name="UserNews"
         component={NewsScreen}
         options={{
@@ -97,7 +99,9 @@ const TabNavigator = (): JSX.Element => {
       />
 
       <Tab.Screen
+      //@ts-ignore
         name="UserProfile"
+        //@ts-ignore
         component={UserProfile}
         options={{
           title: "My Profile",

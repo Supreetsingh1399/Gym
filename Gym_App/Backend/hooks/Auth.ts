@@ -1,92 +1,71 @@
 import { User, onAuthStateChanged } from "firebase/auth";
-import { FirebaseError } from "firebase/app";
 import { useState, useEffect, useRef } from "react";
-import { FireBase_Auth, isFirebaseReady } from "../firebase";
+import { FireBase_Auth } from "../firebase";
 
 /**
  * Custom hook for Firebase authentication state management
+ * Simplified version that doesn't rely on authReady state
  * @returns {Object} Authentication state with user and loading status
  */
 const useAuth = () => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-  const [authReady, setAuthReady] = useState<boolean>(false);
   
-  // Ref to track previous user and prevent unnecessary re-renders
-  const prevUserRef = useRef<User | null>(null);
-  const authCheckAttempted = useRef<boolean>(false);
+  // Track if component is mounted
+  const isMounted = useRef<boolean>(true);
   const unsubscribeRef = useRef<(() => void) | null>(null);
-  // First effect - check if Firebase Auth is initialized
+  
+  // Cleanup on unmount
   useEffect(() => {
-
-     // Check if Firebase Auth is available
-     if (!FireBase_Auth) {
-      console.error("[Auth Hook] Firebase Auth is not initialized");
-      setError("Firebase Auth not initialized");
-      setLoading(false);
-      return;
-    }
-    console.log("[Auth Hook] Setting up auth subscription");
-    let checkAuthTimer: NodeJS.Timeout | undefined;
-    
-    const checkAuth = () => {
-      const services = isFirebaseReady();
-      console.log("[Auth Hook] Auth ready status:", services.auth);
-      
-      if (services.auth) {
-        setAuthReady(true);
-        if (checkAuthTimer) {
-          clearInterval(checkAuthTimer); // Stop checking once auth is ready
-        }
-      }
-    };
-    
-    // Check immediately
-    checkAuth();
-    
-    // Then check every 500ms until auth is ready
-    checkAuthTimer = setInterval(checkAuth, 500);
-    
-    // Cleanup interval
     return () => {
-      if (checkAuthTimer) {
-        clearInterval(checkAuthTimer);
-      }
+      isMounted.current = false;
       if (unsubscribeRef.current) {
         unsubscribeRef.current();
       }
     };
   }, []);
-  // Second effect - set up auth listener once auth is ready
+
+  // Set up auth listener
   useEffect(() => {
-    if (!authReady) return;
-    
-    let authTimeoutId: NodeJS.Timeout | undefined;
+    let timeoutId: NodeJS.Timeout;
     
     try {
-      authCheckAttempted.current = true;
-      console.log("[Auth Hook] Setting up auth state listener");
-      
-      // Set up the auth state listener
-      unsubscribeRef.current = onAuthStateChanged(
-        FireBase_Auth,
-        (currentUser: User | null) => {
-          console.log("[Auth Hook] Auth state changed:", currentUser ? "User logged in" : "No user");
-          
-          // Update previous user ref
-          prevUserRef.current = currentUser;
-          
-          // Update state
-          setUser(currentUser);
+      // Check if Firebase Auth is available
+      if (!FireBase_Auth) {
+        console.error("[Auth Hook] Firebase Auth is not initialized");
+        if (isMounted.current) {
+          setError("Firebase Auth not initialized");
           setLoading(false);
         }
-        // Error handling is not supported as a third argument in onAuthStateChanged
-      );
+        return;
+      }
+      
+      console.log("[Auth Hook] Setting up auth subscription");
+      
+      try {
+        // Set up the auth state listener
+        unsubscribeRef.current = onAuthStateChanged(
+          FireBase_Auth,
+          (currentUser) => {
+            if (!isMounted.current) return;
+            
+            console.log("[Auth Hook] Auth state changed:", currentUser ? "User logged in" : "No user");
+            setUser(currentUser);
+            setLoading(false);
+          }
+        );
+      } catch (authError) {
+        console.error("[Auth Hook] Error in auth state listener:", authError);
+        if (isMounted.current) {
+          setError(authError instanceof Error ? authError.message : "Authentication error occurred");
+          setLoading(false);
+        }
+      }
       
       // Set a timeout to prevent infinite loading
-      authTimeoutId = setTimeout(() => {
-        if (loading) {
+      timeoutId = setTimeout(() => {
+        if (isMounted.current && loading) {
           console.log("[Auth Hook] Auth check timeout reached");
           setLoading(false);
           setError("Authentication check timed out");
@@ -95,23 +74,22 @@ const useAuth = () => {
       
     } catch (setupError) {
       console.error("[Auth Hook] Auth setup error:", setupError);
-      setError(setupError instanceof Error ? setupError.message : "Failed to establish authentication connection");
-      setLoading(false);
+      if (isMounted.current) {
+        setError(setupError instanceof Error ? setupError.message : "Failed to establish authentication connection");
+        setLoading(false);
+      }
     }
     
     return () => {
-      if (authTimeoutId) {
-        clearTimeout(authTimeoutId);
-      }
+      clearTimeout(timeoutId);
     };
-  }, [authReady, loading]);
+  }, []);
   
   return { 
     user, 
     loading,
     error,
-    isAuthenticated: !!user,
-    authReady
+    isAuthenticated: !!user
   };
 };
 

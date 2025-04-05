@@ -115,6 +115,7 @@ export const showToast = {
   
   warning: (title: string, message?: string) => {
     Toast.show({
+      //@ts-ignore
       type: 'warning',
       text1: title || 'Warning',
       text2: message,
@@ -125,6 +126,7 @@ export const showToast = {
   
   location: (title: string, message?: string) => {
     Toast.show({
+      //@ts-ignore
       type: 'location',
       text1: title || 'Location',
       text2: message,

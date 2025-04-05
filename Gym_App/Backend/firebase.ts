@@ -1,43 +1,54 @@
-import { initializeApp, getApps, getApp } from 'firebase/app';
-import { Auth, getAuth } from 'firebase/auth';
-import { Firestore, getFirestore } from 'firebase/firestore';
+import { initializeApp, getApps } from 'firebase/app';
+import { getAuth } from 'firebase/auth';
+import { getFirestore } from 'firebase/firestore';
+import { getStorage } from 'firebase/storage';
 
-// Your Firebase configuration
+// Firebase configuration
 const firebaseConfig = {
-  apiKey: "AIzaSyCu6N6VDckGCrS_VfR0b3e2c8mi5uZSzhc", // Replace with real values
+  apiKey: "AIzaSyCu6N6VDckGCrS_VfR0b3e2c8mi5uZSzhc",
   authDomain: "gymbuddy-7db1e.firebaseapp.com",
   projectId: "gymbuddy-7db1e",
-  storageBucket: "gymbuddy-7db1e.firebasestorage.app",
+  storageBucket: "gymbuddy-7db1e.appspot.com", // Corrected storage bucket URL
   messagingSenderId: "585102985855",
-  appId: "1:585102985855:web:8b13b4e3b6e95bd1ba4d4a"
+  appId: "1:585102985855:web:8b13b4e3b6e95bd1ba4d4a",
+  measurementId: "G-KFQJTRFPKD",
 };
 
-// Initialize Firebase only if it hasn't been initialized yet
-let firebaseApp;
-let FireBase_Auth: Auth;
-let FirebaseDB: Firestore;
+let app;
+let FireBase_Auth;
+let FireBase_DB;
+let FireBase_Storage;
 
 try {
-  // Check if Firebase app is already initialized
+  console.log("Initializing Firebase services");
+  
+  // Check if Firebase app already exists
   if (getApps().length === 0) {
-    console.log("Initializing new Firebase app");
-    firebaseApp = initializeApp(firebaseConfig);
+    console.log("Creating new Firebase app instance");
+    app = initializeApp(firebaseConfig);
   } else {
-    console.log("Firebase app already initialized, getting existing app");
-    firebaseApp = getApp();
+    console.log("Using existing Firebase app instance");
+    app = getApps()[0];
   }
   
-  // Initialize auth and firestore
-  FireBase_Auth = getAuth(firebaseApp);
-  FirebaseDB = getFirestore(firebaseApp);
+  // Initialize Firebase services
+  FireBase_Auth = getAuth(app);
+  FireBase_DB = getFirestore(app);
+  FireBase_Storage = getStorage(app);
+  
   console.log("Firebase services initialized successfully");
 } catch (error) {
-  console.error("Firebase initialization error:", error);
+  console.error("Error initializing Firebase services:", error);
 }
-export { FireBase_Auth, FirebaseDB, firebaseApp };
+
+// Helper function to check if Firebase services are ready
 export const isFirebaseReady = () => {
   return {
     auth: !!FireBase_Auth,
-    firestore: !!FirebaseDB,
+    db: !!FireBase_DB,
+    storage: !!FireBase_Storage,
+    app: !!app
   };
-}
+};
+
+export { FireBase_Auth, FireBase_DB, FireBase_Storage, app };
