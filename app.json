@@ -6,12 +6,16 @@
     "orientation": "portrait",
     "icon": "./assets/favicon.png",
     "userInterfaceStyle": "light",
+    "entryPoint": "./index.js",
     "newArchEnabled": true,
     "splash": {
       "image": "./assets/Gym_Project.jpg",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
     "ios": {
       "supportsTablet": true
     },

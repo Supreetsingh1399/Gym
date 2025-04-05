@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -10,18 +10,13 @@ import {
   Switch,
   SafeAreaView,
 } from "react-native";
-import { NavigationProp } from "@react-navigation/native";
-import { FireBase_Auth } from "Gym_App/Backend/firebase";
+import { FireBase_Auth, isFirebaseReady } from "Gym_App/Backend/firebase";
 import { Ionicons } from '@expo/vector-icons';
 import axios from 'axios';
 import { API_URL } from '@env';
-import { profile } from 'console';
+import { NavigationProps } from '../../types/navigation';
 
 // Define interfaces for our data structure
-interface Props {
-  navigation: NavigationProp<any>;
-}
-
 interface UserMembership {
   gym: string;
   type: string;
@@ -47,29 +42,64 @@ interface UserData {
   trainer: UserTrainer;
 }
 
-export default function UserProfile({ navigation }: Props) {
+export default function UserProfile({ navigation }: NavigationProps<'Profile'>) {
   // State for settings
-  const [darkMode, setDarkMode] = useState<boolean>(false);
-  const [notifications, setNotifications] = useState<boolean>(true);
-  const [loading, setLoading] = useState<boolean>(false);
+  const [darkMode, setDarkMode] = useState(false);
+  const [notifications, setNotifications] = useState(true);
+  const [loading, setLoading] = useState(true);
+  const [authLoading, setAuthLoading] = useState(false);
+  const [authAvailable, setAuthAvailable] = useState(false);
 
   // State for user data
   const [user, setUser] = useState<UserData | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
-  // Fetch user data from MongoDB
-  React.useEffect(() => {
+  // Check if Firebase Auth is available
+  useEffect(() => {
+    const checkAuth = () => {
+      const services = isFirebaseReady();
+      if (services.auth) {
+        console.log("Firebase Auth is available in UserProfile");
+        setAuthAvailable(true);
+      } else {
+        console.log("Firebase Auth not available in UserProfile");
+      }
+    };
+
+    // Check immediately and then every second
+    checkAuth();
+    const interval = setInterval(checkAuth, 1000);
+    
+    return () => clearInterval(interval);
+  }, []);
+
+  // Fetch user data from API
+  useEffect(() => {
     const fetchUserData = async () => {
+      if (!authAvailable || !FireBase_Auth || !FireBase_Auth.currentUser) {
+        setLoading(false);
+        return;
+      }
+
       try {
+        setLoading(true);
+        setError(null);
+        
+        // Get token for authentication
+        const token = await FireBase_Auth.currentUser.getIdToken();
+        console.log("Got authentication token for API request");
+        
         const response = await axios.get(
           `${API_URL}/Register/Users`,
           {
             headers: {
-              Authorization: `Bearer ${await FireBase_Auth.currentUser?.getIdToken()}`,
+              Authorization: `Bearer ${token}`,
             },
+            timeout: 10000 // 10 second timeout
           }
         );
         
-        console.log("API Response:", response.data);
+        console.log("API Response received");
         
         // Check if data is an array and has at least one item
         const userData = Array.isArray(response.data) 
@@ -78,15 +108,12 @@ export default function UserProfile({ navigation }: Props) {
             ? response.data.data[0] 
             : response.data.data;
         
-        console.log("Processed userData:", userData);
-        console.log("Name from API:", userData?.name);
-        
         if (!userData) {
           throw new Error("No user data found");
         }
         
         setUser({
-          profilePic: userData.profilePic,
+          profilePic: userData.profilePic || null,
           name: userData.name || "No Name",
           email: userData.email || "No Email",
           phone: userData.phone || "No Phone",
@@ -107,13 +134,13 @@ export default function UserProfile({ navigation }: Props) {
         });
       } catch (error) {
         console.error("Error fetching user data:", error);
-        Alert.alert("Error", "Failed to fetch user data. Please try again.");
+        setError("Failed to fetch user data. Please try again.");
         
-        // Set default user data for testing
+        // Set default user data for testing/fallback
         setUser({
           profilePic: "https://randomuser.me/api/portraits/men/32.jpg",
           name: "John Doe",
-          email: "john.doe@example.com",
+          email: FireBase_Auth.currentUser?.email || "user@example.com",
           phone: "(123) 456-7890",
           height: "5'10\"",
           weight: "175 lbs",
@@ -130,21 +157,29 @@ export default function UserProfile({ navigation }: Props) {
             imageUrl: "https://randomuser.me/api/portraits/men/41.jpg",
           },
         });
+      } finally {
+        setLoading(false);
       }
     };
   
     fetchUserData();
-  }, []);
+  }, [authAvailable]);
 
   const handleLogout = async () => {
+    if (!authAvailable || !FireBase_Auth) {
+      Alert.alert("Service Unavailable", "Firebase Auth is not available at the moment. Please try again later.");
+      return;
+    }
+
     try {
-      setLoading(true);
+      setAuthLoading(true);
       await FireBase_Auth.signOut();
-      // Navigation should be handled by the auth state change in App.tsx
+      // Navigation will be handled by the auth state change in App.tsx
     } catch (error) {
+      console.error("Logout error:", error);
       Alert.alert("Error", "Failed to logout. Please try again.");
     } finally {
-      setLoading(false);
+      setAuthLoading(false);
     }
   };
 
@@ -159,12 +194,31 @@ export default function UserProfile({ navigation }: Props) {
     );
   };
 
-  // If user data is still loading, show a loading indicator
-  if (!user) {
+  // If no auth is available or user data is still loading, show a loading indicator
+  if (!authAvailable || loading) {
     return (
       <SafeAreaView className="flex-1 bg-white justify-center items-center">
         <ActivityIndicator size="large" color="#0091EA" />
-        <Text className="mt-4 text-gray-600">Loading profile...</Text>
+        <Text className="mt-4 text-gray-600">
+          {!authAvailable ? "Initializing services..." : "Loading profile..."}
+        </Text>
+      </SafeAreaView>
+    );
+  }
+
+  // If there was an error and no user data, show error
+  if (error && !user) {
+    return (
+      <SafeAreaView className="flex-1 bg-white justify-center items-center">
+        <Ionicons name="alert-circle-outline" size={48} color="#e53935" />
+        <Text className="mt-2 text-red-500 font-bold">Error</Text>
+        <Text className="mt-2 text-gray-600 text-center px-6">{error}</Text>
+        <TouchableOpacity 
+          className="mt-4 bg-blue-500 px-6 py-2 rounded-lg"
+          onPress={() => setLoading(true)}
+        >
+          <Text className="text-white font-bold">Retry</Text>
+        </TouchableOpacity>
       </SafeAreaView>
     );
   }
@@ -175,29 +229,29 @@ export default function UserProfile({ navigation }: Props) {
 
         {/* Profile Information */}
         <View className="flex-row items-center px-5 py-5">
-        {user.profilePic ? (
-  <Image 
-    source={{ uri: user.profilePic }} 
-    className="w-[60px] h-[60px] rounded-full"
-    onError={() => console.log("Image failed to load:", user.profilePic)}
-  />
-) : (
-  <View className="w-[60px] h-[60px] bg-gray-200 rounded-full justify-center items-center">
-    <Text className="text-2xl font-bold text-gray-700">
-      {user.name?.charAt(0).toUpperCase() || "U"}
-    </Text>
-  </View>
-)}
+        {user?.profilePic ? (
+          <Image
+            source={{ uri: user.profilePic }}
+            className="w-[60px] h-[60px] rounded-full"
+            onError={() => console.log("Image failed to load:", user.profilePic)}
+          />
+        ) : (
+          <View className="w-[60px] h-[60px] bg-gray-200 rounded-full justify-center items-center">
+            <Text className="text-2xl font-bold text-gray-700">
+              {user?.name?.charAt(0).toUpperCase() || "U"}
+            </Text>
+          </View>
+        )}
          <View className="flex-1 ml-4">
-  <Text className="text-2xl font-bold text-gray-800">
-    {user?.name || 'User Name'}
-  </Text>
-  <Text className="text-sm text-gray-600 mb-1">{user?.email || 'user@example.com'}</Text>
-  <View className="flex-row items-center gap-1">
-    <Ionicons name="call-outline" size={16} color="#666" />
-    <Text className="text-sm text-gray-600">{user?.phone || 'No phone'}</Text>
-  </View>
-</View>
+          <Text className="text-2xl font-bold text-gray-800">
+            {user?.name || 'User Name'}
+          </Text>
+          <Text className="text-sm text-gray-600 mb-1">{user?.email || 'user@example.com'}</Text>
+          <View className="flex-row items-center gap-1">
+            <Ionicons name="call-outline" size={16} color="#666" />
+            <Text className="text-sm text-gray-600">{user?.phone || 'No phone'}</Text>
+          </View>
+        </View>
           <TouchableOpacity className="w-10 h-10 bg-gray-100 rounded-full justify-center items-center">
             <Ionicons name="pencil" size={18} color="#0091EA" />
           </TouchableOpacity>
@@ -206,12 +260,12 @@ export default function UserProfile({ navigation }: Props) {
         {/* Physical Stats */}
         <View className="flex-row mx-5 my-2.5 bg-gray-50 rounded-xl p-4 justify-between">
           <View className="flex-1 items-center">
-            <Text className="text-base font-bold text-gray-800 mb-1">{user.height}</Text>
+            <Text className="text-base font-bold text-gray-800 mb-1">{user?.height}</Text>
             <Text className="text-xs text-gray-600">Height</Text>
           </View>
           <View className="h-[80%] w-px bg-gray-200" />
           <View className="flex-1 items-center">
-            <Text className="text-base font-bold text-gray-800 mb-1">{user.weight}</Text>
+            <Text className="text-base font-bold text-gray-800 mb-1">{user?.weight}</Text>
             <Text className="text-xs text-gray-600">Weight</Text>
           </View>
           <View className="h-[80%] w-px bg-gray-200" />
@@ -227,7 +281,7 @@ export default function UserProfile({ navigation }: Props) {
             <Ionicons name="flag" size={20} color="#0091EA" />
             <Text className="text-base font-bold text-gray-800 ml-2">Fitness Goal</Text>
           </View>
-          <Text className="text-sm text-gray-700 ml-7">{user.fitnessGoal}</Text>
+          <Text className="text-sm text-gray-700 ml-7">{user?.fitnessGoal}</Text>
         </View>
 
         {/* Membership Details */}
@@ -238,21 +292,21 @@ export default function UserProfile({ navigation }: Props) {
           </View>
           <View className="bg-gray-50 rounded-lg p-4 mt-1 ml-7">
             <View className="flex-row justify-between items-center mb-2.5">
-              <Text className="text-base font-bold text-gray-800">{user.membership.gym}</Text>
-              <View className={`px-2 py-1 rounded-lg ${user.membership.active ? 'bg-green-100' : 'bg-red-100'}`}>
-                <Text className={`text-xs font-medium ${user.membership.active ? 'text-green-600' : 'text-red-600'}`}>
-                  {user.membership.active ? 'Active' : 'Expired'}
+              <Text className="text-base font-bold text-gray-800">{user?.membership.gym}</Text>
+              <View className={`px-2 py-1 rounded-lg ${user?.membership.active ? 'bg-green-100' : 'bg-red-100'}`}>
+                <Text className={`text-xs font-medium ${user?.membership.active ? 'text-green-600' : 'text-red-600'}`}>
+                  {user?.membership.active ? 'Active' : 'Expired'}
                 </Text>
               </View>
             </View>
             <View className="mt-2.5">
               <View className="flex-row mb-1.5">
                 <Text className="text-sm text-gray-600 w-[70px]">Type:</Text>
-                <Text className="text-sm text-gray-800 font-medium">{user.membership.type}</Text>
+                <Text className="text-sm text-gray-800 font-medium">{user?.membership.type}</Text>
               </View>
               <View className="flex-row">
                 <Text className="text-sm text-gray-600 w-[70px]">Expires:</Text>
-                <Text className="text-sm text-gray-800 font-medium">{user.membership.expiry}</Text>
+                <Text className="text-sm text-gray-800 font-medium">{user?.membership.expiry}</Text>
               </View>
             </View>
           </View>
@@ -266,12 +320,12 @@ export default function UserProfile({ navigation }: Props) {
           </View>
           <View className="flex-row bg-gray-50 rounded-lg p-4 mt-1 ml-7">
             <Image
-              source={{ uri: user.trainer.imageUrl }}
+              source={{ uri: user?.trainer.imageUrl }}
               className="w-[60px] h-[60px] rounded-full"
             />
             <View className="ml-4 flex-1">
-              <Text className="text-base font-bold text-gray-800 mb-1">{user.trainer.name}</Text>
-              <Text className="text-sm text-gray-600 mb-2">{user.trainer.experience} experience</Text>
+              <Text className="text-base font-bold text-gray-800 mb-1">{user?.trainer.name}</Text>
+              <Text className="text-sm text-gray-600 mb-2">{user?.trainer.experience} experience</Text>
               <TouchableOpacity className="bg-blue-500 rounded py-1 px-2.5 self-start">
                 <Text className="text-xs text-white font-medium">Message</Text>
               </TouchableOpacity>
@@ -311,8 +365,8 @@ export default function UserProfile({ navigation }: Props) {
               thumbColor={darkMode ? '#0091EA' : '#f4f3f4'}
             />
           </View>
-          
-          <TouchableOpacity 
+
+          <TouchableOpacity
             className="flex-row items-center justify-between py-3 border-b border-gray-100"
             onPress={() => Alert.alert("Coming Soon", "This feature will be available soon!")}
           >
@@ -323,7 +377,7 @@ export default function UserProfile({ navigation }: Props) {
             <Ionicons name="chevron-forward" size={22} color="#aaa" />
           </TouchableOpacity>
 
-          <TouchableOpacity 
+          <TouchableOpacity
             className="flex-row items-center justify-between py-3 border-b border-gray-100"
             onPress={() => Alert.alert("Coming Soon", "This feature will be available soon!")}
           >
@@ -339,9 +393,9 @@ export default function UserProfile({ navigation }: Props) {
         <TouchableOpacity
           className="bg-red-500 mx-5 my-5 rounded-xl py-3 items-center justify-center"
           onPress={confirmLogout}
-          disabled={loading}
+          disabled={authLoading || !authAvailable}
         >
-          {loading ? (
+          {authLoading ? (
             <ActivityIndicator color="#fff" size="small" />
           ) : (
             <View className="flex-row items-center">

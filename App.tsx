@@ -1,63 +1,92 @@
-import React, { JSX, useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
-import { ActivityIndicator, View, Text, TouchableOpacity } from "react-native";
-import { User } from "firebase/auth";
+import { ActivityIndicator, View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
+import { User } from "firebase/auth";
+
+// Import navigation types
+import { RootStackParamList } from "./Gym_App/types/navigation";
 
 // Import Firebase first to ensure initialization
-import * as Firebase from "Gym_App/Backend/firebase";
+import { FireBase_Auth, isFirebaseReady } from "./Gym_App/Backend/firebase";
+
+// Import toast manager for notifications
+import ToastManager from "./Gym_App/Screens/UserDashboard/components/ToastManager";
+import { showToast } from "./Gym_App/Screens/UserDashboard/components/ToastManager";
 
 // Screen imports
-import ForgotPass from "Gym_App/Screens/Login/ForgotPass";
-// import TR_SignUp from "Gym_App/Screens/Register/TR_SGnp";
-import US_SignUp from "Gym_App/Screens/Register/US_SGNP";
-import TrainerHome from "Gym_App/Screens/TrainerDashboard/TrainerHome";
-import TabNavigator from "Gym_App/TabNavigator/user_tab-navigator";
-import GymRegistrationWizard from "Gym_App/Screens/Register/GymRegistrationWizard";
-import Registered_Gyms from "Gym_App/Screens/UserDashboard/User_home_touchables/Registered_gyms";
+import ForgotPass from "./Gym_App/Screens/Login/ForgotPass";
+import US_SignUp from "./Gym_App/Screens/Register/US_SGNP";
+import TrainerHome from "./Gym_App/Screens/TrainerDashboard/TrainerHome";
+import TabNavigator from "./Gym_App/TabNavigator/user_tab-navigator";
+import GymRegistrationWizard from "./Gym_App/Screens/Register/GymRegistrationWizard";
+import Registered_Gyms from "./Gym_App/Screens/UserDashboard/User_home_touchables/Registered_gyms";
 import HandleLogin from "./Gym_App/Screens/Login/LoginScreen";
-import SearchResults from "Gym_App/Screens/UserDashboard/SearchResults";
-import ExternalGymDetails from "Gym_App/Screens/UserDashboard/ExternalGymDetails";
+import SearchResults from "./Gym_App/Screens/UserDashboard/SearchResults";
+import ExternalGymDetails from "./Gym_App/Screens/UserDashboard/ExternalGymDetails";
 
 // Hooks
-import useAuth from "Gym_App/Backend/hooks/Auth";
-import { FireBase_Auth } from "Gym_App/Backend/firebase";
-import ErrorBoundary from "./ErrorBoundary";
+import useAuth from "./Gym_App/Backend/hooks/Auth";
 
-// Define the stack navigator param list
-export type RootStackParamList = {
-  LoginScreen: undefined;
-  User_SignUp: undefined;
-  Trainer_SignUp: undefined;
-  Forgot_Password: undefined;
-  UserTabs: undefined;
-  RGN_Gyms: undefined;
-  TrainerHome: undefined;
-  Gym_rgn: undefined;
-  SearchResults: {
-    query?: string;
-    filters?: any; // Replace with your actual filter type
-  };
-  ExternalGymDetails: {
-    placeId: string;
-    gymId?: string;
-  };
-  GymDetails: {
-    gymId: string;
-  };
-};
+// Define interface for ErrorBoundary props and state
+interface ErrorBoundaryProps {
+  children: React.ReactNode;
+}
 
-// Create the stack navigator
+interface ErrorBoundaryState {
+  hasError: boolean;
+  error: Error | null;
+}
+
+// Error Boundary component
+class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundaryState> {
+  state: ErrorBoundaryState = { hasError: false, error: null };
+
+  static getDerivedStateFromError(error: Error): ErrorBoundaryState {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error: Error, errorInfo: React.ErrorInfo): void {
+    console.error("Error caught by boundary:", error, errorInfo);
+    showToast.error("App Error", error.message || "An unexpected error occurred");
+  }
+
+  resetError = (): void => {
+    this.setState({ hasError: false, error: null });
+  }
+
+  render(): React.ReactNode {
+    if (this.state.hasError) {
+      return (
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorTitle}>Something went wrong</Text>
+          <Text style={styles.errorMessage}>
+            {this.state.error?.toString() || "An unknown error occurred"}
+          </Text>
+          <TouchableOpacity style={styles.retryButton} onPress={this.resetError}>
+            <Text style={styles.retryText}>Retry</Text>
+          </TouchableOpacity>
+        </View>
+      );
+    }
+
+    return this.props.children;
+  }
+}
+
+// Define the stack navigator
 const Stack = createNativeStackNavigator<RootStackParamList>();
+
+// Stack Navigator props interface
+interface StackNavigatorProps {
+  user: User | null;
+}
 
 /**
  * Stack Navigator component that handles navigation based on authentication state
- * @param {Object} props - Component props
- * @param {User | null} props.user - Current authenticated user
- * @returns {JSX.Element} Stack navigator component
  */
-const StackNavigator = ({ user }: { user: User | null }): JSX.Element => {
+const StackNavigator = ({ user }: StackNavigatorProps): JSX.Element => {
   console.log("[Navigation] Rendering StackNavigator with user:", user ? "Logged in" : "Not logged in");
   
   return (
@@ -73,22 +102,14 @@ const StackNavigator = ({ user }: { user: User | null }): JSX.Element => {
     >
       {!user ? (
         // Authentication screens
-        <Stack.Group>
-          <Stack.Screen 
-            name="LoginScreen" 
-            component={HandleLogin}
-            options={{ title: "Log In" }}
-          />
+        <>
+         <Stack.Screen name="auth" component={HandleLogin} options={{ title: "Login" }} />
+         <Stack.Screen name="LoginScreen" component={HandleLogin} options={{ title: "Login" }} />
           <Stack.Screen 
             name="User_SignUp" 
             component={US_SignUp}
             options={{ title: "Create User Account" }}
           />
-          {/* <Stack.Screen 
-            name="Trainer_SignUp" 
-            component={TR_SignUp}
-            options={{ title: "Create Trainer Account" }}
-          /> */}
           <Stack.Screen 
             name="Forgot_Password" 
             component={ForgotPass}
@@ -99,10 +120,10 @@ const StackNavigator = ({ user }: { user: User | null }): JSX.Element => {
             component={GymRegistrationWizard}
             options={{ title: "Register Gym" }}
           />
-        </Stack.Group>
+        </>
       ) : (
         // Protected screens - only accessible when authenticated
-        <Stack.Group>
+        <>
           <Stack.Screen
             name="UserTabs"
             component={TabNavigator}
@@ -120,15 +141,15 @@ const StackNavigator = ({ user }: { user: User | null }): JSX.Element => {
           />
           <Stack.Screen 
             name="SearchResults" 
-            component={SearchResults}
+            component={SearchResults as any}
             options={{ title: "Search Results" }}
           />
           <Stack.Screen 
             name="ExternalGymDetails" 
-            component={ExternalGymDetails}
+            component={ExternalGymDetails as any}
             options={{ title: "Gym Details" }}
           />
-        </Stack.Group>
+        </>
       )}
     </Stack.Navigator>
   );
@@ -137,93 +158,100 @@ const StackNavigator = ({ user }: { user: User | null }): JSX.Element => {
 /**
  * Main App component
  * Manages authentication state and renders appropriate screens
- * @returns {JSX.Element} App component
  */
 const App = (): JSX.Element => {
-  const [firebaseReady, setFirebaseReady] = useState(false);
-  const [initError, setInitError] = useState<string | null>(null);
-  const { user, loading, error } = useAuth();
-  const [retryCount, setRetryCount] = useState(0);
+  const [firebaseReady, setFirebaseReady] = useState<boolean>(false);
+  const [retryCount, setRetryCount] = useState<number>(0);
+  const { user, loading, error, authReady } = useAuth();
 
   // Check if Firebase is initialized correctly
   useEffect(() => {
-    const checkFirebase = async () => {
-      try {
-        console.log("[App] Checking Firebase initialization...");
-        if (Firebase.FireBase_Auth) {
-          console.log("[App] Firebase Auth is available");
-          setFirebaseReady(true);
-        } else {
-          console.error("[App] Firebase Auth is not available");
-          setInitError("Firebase authentication not initialized properly");
-        }
-      } catch (err) {
-        console.error("[App] Firebase check error:", err);
-        setInitError(err instanceof Error ? err.message : "Unknown initialization error");
+    let mounted = true;
+    let checkCount = 0;
+    const checkFirebaseServices = () => {
+      if (!mounted) return;
+      
+      const services = isFirebaseReady();
+      console.log(`[App] Firebase services check #${checkCount + 1}:`, services);
+      
+      if (services.auth && services.db) {
+        setFirebaseReady(true);
+        console.log("[App] Firebase services are ready");
+        return true;
       }
-    };
+      
+      checkCount++;
     
-    checkFirebase();
-  }, [retryCount]);
+     // Only retry a limited number of times to prevent infinite loops
+     if (checkCount < 5) {
+      setTimeout(checkFirebaseServices, 1000);
+    } else {
+      console.log("[App] Max Firebase init attempts reached, showing retry option");
+    }
+    
+    return false;
+  };
+  
+  checkFirebaseServices();
+  
+  // Cleanup
+  return () => {
+    mounted = false;
+  };
+}, [retryCount]);
    
+  // Log important state changes
   useEffect(() => {
-    console.log("[App] Auth State:", { 
+    console.log("[App] Status:", { 
       loading, 
-      error: error ? error.toString() : null,
+      error: error ? "Error present" : "No error",
       userExists: !!user,
-      firebaseInitialized: !!FireBase_Auth && firebaseReady,
+      firebaseReady,
+      authReady,
       retryCount
     });
-  }, [loading, error, user, retryCount, firebaseReady]);
+  }, [loading, error, user, firebaseReady, authReady, retryCount]);
 
-  const handleRetry = () => {
-    console.log("[App] Retrying connection...");
+  // Effect to show toast notifications for auth state changes
+  useEffect(() => {
+    if (!loading && authReady) {
+      if (user) {
+        showToast.success("Authentication", "Successfully logged in");
+      }
+    }
+
+    if (error) {
+      showToast.error("Authentication Error", error);
+    }
+  }, [user, loading, error, authReady]);
+
+  const handleRetry = (): void => {
+    console.log("[App] Retrying initialization...");
+    showToast.info("Connection", "Retrying connection to services...");
     setRetryCount(prev => prev + 1);
-    setInitError(null);
-    setFirebaseReady(false);
-    // Don't use window.location.reload() in React Native
-    // Instead, reset the states and retry initialization
   };
 
-  // Show initialization error
-  if (initError) {
-    return (
-      <SafeAreaProvider>
-        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'white', padding: 16 }}>
-          <Text style={{ color: '#e53935', fontSize: 18, marginBottom: 8 }}>Initialization Error</Text>
-          <Text style={{ color: '#666', marginBottom: 16, textAlign: 'center' }}>{initError}</Text>
-          <TouchableOpacity 
-            style={{ backgroundColor: '#0091EA', padding: 12, borderRadius: 8 }}
-            onPress={handleRetry}
-          >
-            <Text style={{ color: 'white', fontWeight: '600' }}>Retry Initialization</Text>
-          </TouchableOpacity>
-        </View>
-      </SafeAreaProvider>
-    );
-  }
-
   // Show loading state
-  if (loading || !firebaseReady) {
+  if (loading || !firebaseReady || !authReady) {
     return (
       <SafeAreaProvider>
-        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'white' }}>
+        <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#0091EA" />
-          <Text style={{ marginTop: 16, color: '#666' }}>
-            {!firebaseReady ? "Initializing Firebase..." : "Loading user data..."}
+          <Text style={styles.loadingText}>
+            {!firebaseReady ? "Initializing services..." : "Loading user data..."}
           </Text>
-          <Text style={{ marginTop: 8, color: '#999', fontSize: 12 }}>
-            Firebase Status: {FireBase_Auth ? "Initialized" : "Not Initialized"}
-          </Text>
-          {(retryCount > 0 || !firebaseReady) && (
-            <TouchableOpacity 
-              style={{ marginTop: 16, backgroundColor: '#0091EA', padding: 12, borderRadius: 8 }}
-              onPress={handleRetry}
-            >
-              <Text style={{ color: 'white', fontWeight: '600' }}>Retry Connection</Text>
+          <Text style={styles.statusText}>
+  Firebase Auth: {typeof FireBase_Auth !== 'undefined' ? "Ready" : "Initializing"}
+  {authReady ? " | Auth System: Ready" : " | Auth System: Initializing"}
+</Text>
+          
+          {(retryCount > 0 || !firebaseReady || !authReady) && (
+            <TouchableOpacity style={styles.retryButton} onPress={handleRetry}>
+              <Text style={styles.retryText}>Retry Connection</Text>
             </TouchableOpacity>
           )}
         </View>
+        <ToastManager />
       </SafeAreaProvider>
     );
   }
@@ -232,16 +260,14 @@ const App = (): JSX.Element => {
   if (error) {
     return (
       <SafeAreaProvider>
-        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'white', padding: 16 }}>
-          <Text style={{ color: '#e53935', fontSize: 18, marginBottom: 8 }}>Authentication Error</Text>
-          <Text style={{ color: '#666', marginBottom: 16, textAlign: 'center' }}>{error}</Text>
-          <TouchableOpacity 
-            style={{ backgroundColor: '#0091EA', padding: 12, borderRadius: 8 }}
-            onPress={handleRetry}
-          >
-            <Text style={{ color: 'white', fontWeight: '600' }}>Retry</Text>
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorTitle}>Authentication Error</Text>
+          <Text style={styles.errorMessage}>{error}</Text>
+          <TouchableOpacity style={styles.retryButton} onPress={handleRetry}>
+            <Text style={styles.retryText}>Retry</Text>
           </TouchableOpacity>
         </View>
+        <ToastManager />
       </SafeAreaProvider>
     );
   }
@@ -250,16 +276,63 @@ const App = (): JSX.Element => {
   return (
     <ErrorBoundary>
       <SafeAreaProvider>
-        <NavigationContainer
-          onStateChange={(state) => {
-            console.log("[Navigation] Navigation state changed");
-          }}
-        >
+        <NavigationContainer>
           <StackNavigator user={user} />
         </NavigationContainer>
+        <ToastManager />
       </SafeAreaProvider>
     </ErrorBoundary>
   );
 };
+
+const styles = StyleSheet.create({
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'white',
+    padding: 20
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 16,
+    color: '#666'
+  },
+  statusText: {
+    marginTop: 8,
+    fontSize: 12,
+    color: '#999'
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'white',
+    padding: 20
+  },
+  errorTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#e53935',
+    marginBottom: 12
+  },
+  errorMessage: {
+    fontSize: 14,
+    color: '#666',
+    textAlign: 'center',
+    marginBottom: 20
+  },
+  retryButton: {
+    backgroundColor: '#0091EA',
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 8,
+    marginTop: 16
+  },
+  retryText: {
+    color: 'white',
+    fontWeight: 'bold'
+  }
+});
 
 export default App;

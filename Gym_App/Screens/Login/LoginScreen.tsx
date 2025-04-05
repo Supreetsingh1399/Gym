@@ -1,45 +1,28 @@
-import React, { useState, useEffect, JSX } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
   TextInput,
   KeyboardAvoidingView,
   TouchableOpacity,
-  Alert,
   ActivityIndicator,
   Platform,
-  Image,
 } from "react-native";
 import { signInWithEmailAndPassword } from "firebase/auth";
-import { getFirestore, doc, getDoc } from "firebase/firestore";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { FireBase_Auth } from "Gym_App/Backend/firebase";
+import { FireBase_Auth, isFirebaseReady } from "../../Backend/firebase";
 import { Ionicons } from "@expo/vector-icons";
-import { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { CommonActions } from "@react-navigation/native";
+import { ScreenProps } from "../../types/navigation";
 
-// Define navigation types
-type RootStackParamList = {
-  LoginScreen: undefined;
-  Forgot_Password: undefined;
-  User_SignUp: undefined;
-  Gym_rgn: undefined;  // Updated to match App.tsx navigation structure
-  TrainerHome: undefined;
-  UserTabs: undefined;
-  GymHome: undefined;
-  // TR_SGnp: undefined;  // Removed trainer registration route
-};
-
-type LoginScreenProps = {
-  navigation: NativeStackNavigationProp<RootStackParamList>;
-};
+// Import custom hooks and utilities
+import useToastNotification from "../../hooks/useToastNotification";
+import { isFirebaseError, getAuthErrorMessage } from "../../utils/errorHandling";
 
 /**
  * Login screen component for user authentication
- * @param {LoginScreenProps} props - Component props including navigation
  * @returns {JSX.Element} Login screen UI
  */
-const HandleLogin = ({ navigation }: LoginScreenProps): JSX.Element => {
+const HandleLogin = ({ navigation }: ScreenProps<"LoginScreen">): JSX.Element => {
   // State management
   const [email, setEmail] = useState<string>("");
   const [password, setPassword] = useState<string>("");
@@ -48,6 +31,29 @@ const HandleLogin = ({ navigation }: LoginScreenProps): JSX.Element => {
   const [emailError, setEmailError] = useState<string>("");
   const [passwordError, setPasswordError] = useState<string>("");
   const [authInProgress, setAuthInProgress] = useState<boolean>(false);
+  const [authAvailable, setAuthAvailable] = useState<boolean>(false);
+  
+  // Custom hooks
+  const toast = useToastNotification();
+
+  // Check if Firebase Auth is available
+  useEffect(() => {
+    const checkAuth = () => {
+      const services = isFirebaseReady();
+      if (services.auth) {
+        console.log("Firebase Auth is available in LoginScreen");
+        setAuthAvailable(true);
+      } else {
+        console.log("Firebase Auth not available in LoginScreen");
+      }
+    };
+
+    // Check immediately and then every second
+    checkAuth();
+    const interval = setInterval(checkAuth, 1000);
+    
+    return () => clearInterval(interval);
+  }, []);
 
   /**
    * Toggle password visibility
@@ -94,24 +100,19 @@ const HandleLogin = ({ navigation }: LoginScreenProps): JSX.Element => {
   };
 
   /**
-   * Navigate to appropriate screen based on user type
-   * Uses reset to avoid navigation stack issues
-   */
-  const navigateToUserScreen = (destination: "UserTabs" | "TrainerHome" | "GymHome"): void => {
-    // Reset navigation to prevent going back to login after authentication
-    navigation.dispatch(
-      CommonActions.reset({
-        index: 0,
-        routes: [{ name: destination }],
-      })
-    );
-  };
-
-  /**
    * Handle user sign in process
    */
   const handleSignIn = async (): Promise<void> => {
-    if (loading || authInProgress) return; // Prevent multiple login attempts
+    if (loading || authInProgress) {
+      console.log("Sign in blocked - already in progress");
+      return;
+    }
+    
+    if (!authAvailable || !FireBase_Auth) {
+      const errorMsg = "Authentication service is initializing. Please try again in a moment.";
+      toast.warning(errorMsg, "Service Unavailable");
+      return;
+    }
 
     // Validate form before submission
     if (!validateForm()) return;
@@ -119,52 +120,24 @@ const HandleLogin = ({ navigation }: LoginScreenProps): JSX.Element => {
     try {
       setLoading(true);
       setAuthInProgress(true);
+      console.log("Attempting to sign in with:", email);
 
       const userCredential = await signInWithEmailAndPassword(
         FireBase_Auth,
         email,
-        password,
+        password
       );
-      const userId = userCredential.user.uid;
-      console.log("Auth successful, UID:", userId);
-
-      const db = getFirestore();
-      // Check user, trainer, and gym collections
-      const [userDoc, trainerDoc, gymDoc] = await Promise.all([
-        getDoc(doc(db, "users", userId)),
-        getDoc(doc(db, "Trainers", userId)),
-        getDoc(doc(db, "gyms", userId)),
-      ]);
-
-      // Navigate to appropriate screen based on user type
-      if (gymDoc.exists() && gymDoc.data()?.type === "gym") {
-        navigateToUserScreen("GymHome");
-      } else if (trainerDoc.exists() && trainerDoc.data()?.type === "trainer") {
-        navigateToUserScreen("TrainerHome");
-      } else if (userDoc.exists() && userDoc.data()?.type === "user") {
-        navigateToUserScreen("UserTabs");
-      } else {
-        Alert.alert("Error", "Account type not found. Please register first.");
-        setAuthInProgress(false);
-      }
-    } catch (error: any) {
-      console.error("Login error:", error);
       
-      // Handle specific authentication errors with user-friendly messages
-      let errorMessage = "An unexpected error occurred. Please try again.";
+      console.log("Sign in successful");
+      toast.auth("Login successful!", true);
+      // Navigation will be handled by the auth state change listener in App.js
       
-      if (error && error.code) {
-        const errorCode = error.code;
-        if (errorCode === 'auth/user-not-found' || errorCode === 'auth/wrong-password') {
-          errorMessage = "Invalid email or password. Please check your credentials.";
-        } else if (errorCode === 'auth/too-many-requests') {
-          errorMessage = "Too many failed login attempts. Please try again later.";
-        } else if (errorCode === 'auth/network-request-failed') {
-          errorMessage = "Network error. Please check your internet connection.";
-        }
-      }
+    } catch (err) {
+      console.error("Login error:", err);
       
-      Alert.alert("Login Failed", errorMessage);
+      // Use our error handling utility for consistent messages
+      const errorMessage = getAuthErrorMessage(err);
+      toast.error(errorMessage, "Login Failed");
       setAuthInProgress(false);
     } finally {
       setLoading(false);
@@ -178,11 +151,9 @@ const HandleLogin = ({ navigation }: LoginScreenProps): JSX.Element => {
         behavior={Platform.OS === "ios" ? "padding" : "height"}
       >
         <View className="items-center mb-10">
-          <Image 
-            source={require('../../../assets/icon.png')} 
-            className="w-16 h-16"
-            resizeMode="contain"
-          />
+          <View className="w-16 h-16 bg-blue-100 rounded-full items-center justify-center">
+            <Ionicons name="fitness" size={32} color="#0091EA" />
+          </View>
           <Text className="text-2xl font-bold text-blue-600 mt-2">GymBuddy</Text>
         </View>
 
@@ -262,13 +233,15 @@ const HandleLogin = ({ navigation }: LoginScreenProps): JSX.Element => {
           {/* Login Button */}
           <TouchableOpacity
             className={`py-3 px-6 rounded-lg items-center justify-center ${
-              loading ? "bg-blue-400" : "bg-blue-600"
+              loading || !authAvailable ? "bg-blue-400" : "bg-blue-600"
             }`}
             onPress={handleSignIn}
-            disabled={loading}
+            disabled={loading || !authAvailable}
           >
             {loading ? (
               <ActivityIndicator color="#ffffff" />
+            ) : !authAvailable ? (
+              <Text className="text-white font-bold text-lg">INITIALIZING...</Text>
             ) : (
               <Text className="text-white font-bold text-lg">LOGIN</Text>
             )}
@@ -295,8 +268,6 @@ const HandleLogin = ({ navigation }: LoginScreenProps): JSX.Element => {
                 <Ionicons name="fitness-outline" size={20} color="#0091EA" />
                 <Text className="ml-2 text-blue-700 font-medium">Gym Owner</Text>
               </TouchableOpacity>
-              
-              {/* Removed trainer registration option */}
             </View>
           </View>
         </View>

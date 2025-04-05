@@ -1,12 +1,10 @@
-import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { GOOGLE_PLACES_API_KEY } from '@env';
 import {
   View,
   Text,
   SafeAreaView,
   TouchableOpacity,
-  TextInput,
-  ImageBackground,
   ScrollView,
   Image,
   StatusBar,
@@ -14,17 +12,19 @@ import {
   ActivityIndicator,
   Dimensions,
   Pressable,
-  Alert
+  Alert,
+  ImageBackground
 } from "react-native";
-import { Ionicons, MaterialIcons } from '@expo/vector-icons';
-import { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { FireBase_Auth, FireBase_DB } from "../../Backend/firebase";
-import { collection, getDocs, query, limit, orderBy, where, getDoc, doc } from "firebase/firestore";
+import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import axios from 'axios';
-import {API_URL} from '@env';
+import { API_URL } from '@env';
 import * as Location from 'expo-location';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+
+// Import Firebase
+import { FireBase_Auth, FireBase_DB, isFirebaseReady } from "../../Backend/firebase";
+import { collection, getDocs, query, limit, orderBy, getDoc, doc } from "firebase/firestore";
 
 // Import our components and utilities
 import { GymCard } from './components/GymCard';
@@ -39,12 +39,42 @@ import { getRandomItem, getGreetingByTime } from './utils/helpers';
 import { GYM_IMAGES, WORKOUT_IMAGES } from './constants/assetUrls';
 
 // Types
-import { GymData, WorkoutData, NavigationProps } from '../../types';
+interface GymData {
+  id: string;
+  gymName: string;
+  location: {
+    address: string;
+    city: string;
+    state: string;
+  };
+  rating: number;
+  imageUrl: string;
+  facilities?: any;
+  distance?: string;
+  source?: string;
+  isRegistered?: boolean;
+  trainers?: any[];
+  membershipType?: string;
+}
+
+interface WorkoutData {
+  id: string;
+  title: string;
+  duration: string;
+  level: string;
+  imageUrl: string;
+  trainer: string;
+  description: string;
+}
 
 interface UserLocation {
   latitude: number;
   longitude: number;
   timestamp: number;
+}
+
+interface NavigationProps {
+  navigation: any;
 }
 
 const { width } = Dimensions.get('window');
@@ -99,6 +129,7 @@ const UserHome: React.FC<NavigationProps> = ({ navigation }) => {
   const [loading, setLoading] = useState<boolean>(true);
   const [locationLoading, setLocationLoading] = useState<boolean>(false);
   const [userLocation, setUserLocation] = useState<UserLocation | null>(null);
+  const [servicesReady, setServicesReady] = useState<boolean>(false);
   
   // Data states
   const [registeredGyms, setRegisteredGyms] = useState<GymData[]>([]);
@@ -109,19 +140,42 @@ const UserHome: React.FC<NavigationProps> = ({ navigation }) => {
   // Memoized values
   const greeting = useMemo(() => getGreetingByTime(), []);
   const motivationalQuote = useMemo(() => getRandomItem(QUOTES), []);
+
+  // Check if Firebase services are available
+  useEffect(() => {
+    const checkServices = () => {
+      const services = isFirebaseReady();
+      if (services.auth && services.db) {
+        console.log("Firebase services are available in UserHome");
+        setServicesReady(true);
+      } else {
+        console.log("Firebase services not fully available in UserHome");
+      }
+    };
+
+    // Check immediately and then every second
+    checkServices();
+    const interval = setInterval(checkServices, 1000);
+    
+    return () => clearInterval(interval);
+  }, []);
   
   // Fetch user data on component mount
   useEffect(() => {
-    getUserInfo();
-    loadUserLocation();
-    loadAllData();
-  }, []);
+    if (servicesReady) {
+      getUserInfo();
+      loadUserLocation();
+      loadAllData();
+    }
+  }, [servicesReady]);
   
   // Refresh data when screen is focused
   useFocusEffect(
     useCallback(() => {
-      loadAllData();
-    }, [])
+      if (servicesReady) {
+        loadAllData();
+      }
+    }, [servicesReady])
   );
   
   // Load user location - this is now the central location request
@@ -196,6 +250,11 @@ const UserHome: React.FC<NavigationProps> = ({ navigation }) => {
   
   // Get user info from auth
   const getUserInfo = async () => {
+    if (!FireBase_Auth || !FireBase_Auth.currentUser || !FireBase_DB) {
+      setUserName('Fitness Enthusiast');
+      return;
+    }
+
     try {
       const currentUser = FireBase_Auth.currentUser;
       if (!currentUser?.uid) {
@@ -218,6 +277,8 @@ const UserHome: React.FC<NavigationProps> = ({ navigation }) => {
 
   // Load all data in parallel
   const loadAllData = async () => {
+    if (!servicesReady) return;
+    
     setLoading(true);
     try {
       await Promise.all([
@@ -235,13 +296,26 @@ const UserHome: React.FC<NavigationProps> = ({ navigation }) => {
 
   // Fetch gyms the user has registered with - Updated to use axios
   const fetchRegisteredGyms = async () => {
+    if (!FireBase_Auth || !FireBase_Auth.currentUser) {
+      setRegisteredGyms([]);
+      return;
+    }
+
     try {
       const currentUser = FireBase_Auth.currentUser;
       if (!currentUser) {
         setRegisteredGyms([]);
         return;
       }
-      const token = await currentUser.getIdToken();
+      
+      let token;
+      try {
+        token = await currentUser.getIdToken();
+      } catch (tokenError) {
+        console.error("Error getting token:", tokenError);
+        setRegisteredGyms([]);
+        return;
+      }
     
       console.log("Making API request to:", `${API_URL}/Register/Gyms/${currentUser.uid}`);
       
@@ -296,7 +370,7 @@ const UserHome: React.FC<NavigationProps> = ({ navigation }) => {
   const fetchNearbyGyms = async (location?: UserLocation) => {
     try {
       // First try to get from Google Places API with location if available
-      if (location) {
+      if (location && GOOGLE_PLACES_API_KEY) {
         try {
           const placesUrl = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${location.latitude},${location.longitude}&radius=5000&type=gym&key=${GOOGLE_PLACES_API_KEY}`;
           
@@ -351,6 +425,11 @@ const UserHome: React.FC<NavigationProps> = ({ navigation }) => {
       }
       
       // Fall back to Firebase gyms if no location or Google Places failed
+      if (!FireBase_DB) {
+        setNearbyGyms(getMockNearbyGyms());
+        return;
+      }
+      
       const gymsRef = collection(FireBase_DB, 'gyms');
       const gymsQuery = query(gymsRef, limit(5));
       const querySnapshot = await getDocs(gymsQuery);
@@ -408,6 +487,11 @@ const UserHome: React.FC<NavigationProps> = ({ navigation }) => {
 
   // Fetch popular gyms - optimized with proper error handling
   const fetchPopularGyms = async () => {
+    if (!FireBase_DB) {
+      setPopularGyms(getMockPopularGyms());
+      return;
+    }
+    
     try {
       const gymsRef = collection(FireBase_DB, 'gyms');
       const gymsQuery = query(gymsRef, orderBy('rating', 'desc'), limit(5));
@@ -440,6 +524,11 @@ const UserHome: React.FC<NavigationProps> = ({ navigation }) => {
 
   // Fetch popular workouts
   const fetchPopularWorkouts = async () => {
+    if (!FireBase_DB) {
+      setPopularWorkouts(getMockWorkouts());
+      return;
+    }
+    
     try {
       const workoutsRef = collection(FireBase_DB, 'workouts');
       const workoutsQuery = query(workoutsRef, orderBy('popularity', 'desc'), limit(4));
@@ -675,6 +764,16 @@ const UserHome: React.FC<NavigationProps> = ({ navigation }) => {
     </View>
   );
 
+  // If Firebase services are not ready
+  if (!servicesReady) {
+    return (
+      <SafeAreaView className="flex-1 bg-gray-50 justify-center items-center">
+        <ActivityIndicator size="large" color="#0091EA" />
+        <Text className="mt-4 text-gray-600">Initializing services...</Text>
+      </SafeAreaView>
+    );
+  }
+
   // Main component render
   return (
     <SafeAreaView className="flex-1 bg-gray-50">
@@ -763,35 +862,6 @@ const UserHome: React.FC<NavigationProps> = ({ navigation }) => {
             />
             
             {registeredGyms.length > 0 ? (
-              <ScrollView 
-                horizontal 
-                showsHorizontalScrollIndicator={false}
-                className="pl-6"
-              >
-                {registeredGyms.map((gym) => (
-                  <GymCard 
-                    key={gym.id} 
-                    gym={gym} 
-                    onPress={() => handleGymPress(gym.id)} 
-                  />
-                ))}
-              </ScrollView>
-            ) : (
-              <EmptyState 
-                icon="fitness-center" 
-                message="You haven't registered with any gyms yet. Find a gym to get started!" 
-              />
-            )}
-          </View>
-
-          {/* Nearby Gyms Section */}
-          <View className="mb-6">
-            <SectionHeader 
-              title="Gyms Near You" 
-              onSeeAllPress={handleSeeAllNearbyGyms} 
-            />
-            
-            {userLocation ? (
               <ScrollView 
                 horizontal 
                 showsHorizontalScrollIndicator={false}

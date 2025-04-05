@@ -1,71 +1,227 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
   TextInput,
-  Button,
+  TouchableOpacity,
   KeyboardAvoidingView,
-  Alert,
+  ActivityIndicator,
+  StyleSheet,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { NavigationProp } from "@react-navigation/native";
-import { FireBase_Auth } from "../../Backend/firebase";
+import { FirebaseError } from "firebase/app";
+import { FireBase_Auth, isFirebaseReady } from "../../Backend/firebase";
 import { sendPasswordResetEmail } from "firebase/auth";
+import { Ionicons } from "@expo/vector-icons";
+import { showToast } from "../UserDashboard/components/ToastManager";
+import { ScreenProps } from "../../types/navigation";
 
-type ForgotPassProps = {
-  navigation: NavigationProp<any>;
-};
+const ForgotPass = ({ navigation }: ScreenProps<"Forgot_Password">) => {
+  const [email, setEmail] = useState<string>("");
+  const [error, setError] = useState<string>("");
+  const [loading, setLoading] = useState<boolean>(false);
+  const [authAvailable, setAuthAvailable] = useState<boolean>(false);
 
-const ForgotPass = ({ navigation }: ForgotPassProps) => {
-  const [email, setEmail] = useState("");
-  const [error, setError] = useState("");
+  // Check if Firebase Auth is available
+  useEffect(() => {
+    const checkAuth = () => {
+      const services = isFirebaseReady();
+      if (services.auth) {
+        console.log("Firebase Auth is available in ForgotPass");
+        setAuthAvailable(true);
+      } else {
+        console.log("Firebase Auth not available in ForgotPass");
+      }
+    };
+
+    // Check immediately and then every second
+    checkAuth();
+    const interval = setInterval(checkAuth, 1000);
+    
+    return () => clearInterval(interval);
+  }, []);
 
   // Function to handle the reset password
-  const handleResetPassword = async () => {
+  const handleResetPassword = async (): Promise<void> => {
+    if (!authAvailable || !FireBase_Auth) {
+      const errorMsg = "Authentication service is initializing. Please try again in a moment.";
+      setError(errorMsg);
+      showToast.warning("Service Unavailable", errorMsg);
+      return;
+    }
+    
     if (!email) {
-      setError("Please enter email");
+      setError("Please enter your email address");
+      return;
+    }
+
+    // Validate email format
+    const validateEmail = (email: string): boolean => {
+      return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+    };
+
+    if (!validateEmail(email)) {
+      setError("Please enter a valid email address");
       return;
     }
 
     setError("");
+    setLoading(true);
+    
     try {
-      // Send password reset email directly through Firebase Auth
+      // Send password reset email through Firebase Auth
       await sendPasswordResetEmail(FireBase_Auth, email);
-      Alert.alert("Success", "Password reset email sent!");
-      navigation.navigate("LoginScreen");
-    } catch (error: any) {
-      console.error("Reset password error:", error);
-      const errorMessage =
-        error.code === "auth/user-not-found"
-          ? "No account exists with this email"
-          : "Failed to reset password";
+      showToast.success("Success", "Password reset email sent! Please check your inbox.");
+      navigation.navigate("Login");
+    } catch (err) {
+      console.error("Reset password error:", err);
+      let errorMessage = "Failed to reset password. Please try again.";
+      
+      const error = err as FirebaseError;
+      
+      if (error.code === "auth/user-not-found") {
+        errorMessage = "No account exists with this email";
+      } else if (error.code === "auth/invalid-email") {
+        errorMessage = "Invalid email format";
+      } else if (error.code === "auth/too-many-requests") {
+        errorMessage = "Too many attempts. Please try again later.";
+      }
+      
       setError(errorMessage);
-      Alert.alert("Error", errorMessage);
+      showToast.error("Error", errorMessage);
+    } finally {
+      setLoading(false);
     }
   };
-  //   Return the Your Password Reset Screen
 
   return (
-    <SafeAreaView className="flex-1 justify-center items-center w-full h-full">
-      <KeyboardAvoidingView className="h-full w-full justify-center">
-        <View className="text-center border-2 border-black bg-blue-100 p-4 m-4">
-          <Text className="text-black text-center text-2xl mb-3">
-            Forgot Password
-          </Text>
+    <SafeAreaView style={styles.container}>
+      <KeyboardAvoidingView style={styles.keyboardView} behavior="padding">
+        <View style={styles.iconContainer}>
+          <Ionicons name="lock-open-outline" size={60} color="#0091EA" />
+        </View>
+        
+        <Text style={styles.title}>Forgot Password</Text>
+        <Text style={styles.subtitle}>
+          Enter your email address and we'll send you a link to reset your password
+        </Text>
+        
+        <View style={styles.inputContainer}>
+          <Ionicons name="mail-outline" size={22} color="#0091EA" style={styles.inputIcon} />
           <TextInput
-            className="text-sm border-2 border-black rounded-lg p-2 mb-4"
-            placeholder="Enter your Email"
+            style={styles.input}
+            placeholder="Enter your email"
             value={email}
-            onChangeText={setEmail}
+            onChangeText={(text:string) => {
+              setEmail(text);
+              if (error) setError("");
+            }}
             keyboardType="email-address"
             autoCapitalize="none"
           />
-          {error ? <Text className="text-red-500 mb-2">{error}</Text> : null}
-          <Button title="Submit" onPress={handleResetPassword} />
         </View>
+        
+        {error ? <Text style={styles.errorText}>{error}</Text> : null}
+        
+        <TouchableOpacity 
+          style={[styles.button, (loading || !authAvailable) ? styles.buttonDisabled : null]}
+          onPress={handleResetPassword}
+          disabled={loading || !authAvailable}
+        >
+          {loading ? (
+            <ActivityIndicator color="#fff" />
+          ) : !authAvailable ? (
+            <Text style={styles.buttonText}>INITIALIZING...</Text>
+          ) : (
+            <Text style={styles.buttonText}>RESET PASSWORD</Text>
+          )}
+        </TouchableOpacity>
+        
+        <TouchableOpacity 
+          style={styles.backButton}
+          onPress={() => navigation.goBack()}
+        >
+          <Text style={styles.backButtonText}>Back to Login</Text>
+        </TouchableOpacity>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
 };
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#fff',
+  },
+  keyboardView: {
+    flex: 1,
+    padding: 20,
+    justifyContent: 'center',
+  },
+  iconContainer: {
+    alignSelf: 'center',
+    marginBottom: 20,
+    backgroundColor: '#e1f5fe',
+    padding: 20,
+    borderRadius: 50,
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#333',
+    textAlign: 'center',
+    marginBottom: 10,
+  },
+  subtitle: {
+    fontSize: 14,
+    color: '#666',
+    textAlign: 'center',
+    marginBottom: 30,
+  },
+  inputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    backgroundColor: '#f5f5f5',
+    paddingHorizontal: 10,
+    marginBottom: 20,
+  },
+  inputIcon: {
+    marginRight: 10,
+  },
+  input: {
+    flex: 1,
+    paddingVertical: 12,
+  },
+  errorText: {
+    color: '#e53935',
+    marginBottom: 15,
+    textAlign: 'center',
+  },
+  button: {
+    backgroundColor: '#0091EA',
+    paddingVertical: 14,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  buttonDisabled: {
+    backgroundColor: '#64b5f6',
+  },
+  buttonText: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 16,
+  },
+  backButton: {
+    alignItems: 'center',
+  },
+  backButtonText: {
+    color: '#0091EA',
+    fontSize: 14,
+  },
+});
 
 export default ForgotPass;

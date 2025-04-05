@@ -1,17 +1,23 @@
-import 'react-native-gesture-handler'; // Add this at the very top
+// Import required libraries
+import 'react-native-gesture-handler';
 import { LogBox } from 'react-native';
 import { registerRootComponent } from 'expo';
-import App from './App';
+import { enableScreens } from 'react-native-screens';
 
-// Initialize Firebase before registering component
-import './Gym_App/Backend/firebase';
+// Enable optimizations
+enableScreens();
+
+// Import App component
+import App from './App';
 
 // Ignore non-critical warnings
 LogBox.ignoreLogs([
   'Setting a timer',
   'AsyncStorage has been extracted',
-  'Sending `onAnimatedValueUpdate`'
+  'Sending `onAnimatedValueUpdate`',
+  'componentWillReceiveProps',
+  'componentWillMount'
 ]);
 
-// Register the app as the main component
+// Register the app component
 registerRootComponent(App);

@@ -1,22 +1,18 @@
-import React, { JSX } from "react";
+import React from "react";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { Ionicons } from "@expo/vector-icons";
 import { Platform } from "react-native";
 
+// Import navigation types
+import { UserTabParamList } from "../types/navigation";
+
 // Screen imports
-import UserHome from "Gym_App/Screens/UserDashboard/UserHome";
-import UserProfile from "Gym_App/Screens/UserDashboard/US_profile";
-import UserChats from "Gym_App/Screens/UserDashboard/US_chats";
-import NewsScreen from "Gym_App/Screens/UserDashboard/Gym_related_news";
+import UserHome from "../Screens/UserDashboard/UserHome";
+import UserProfile from "../Screens/UserDashboard/US_profile";
+import UserChats from "../Screens/UserDashboard/US_chats";
+import NewsScreen from "../Screens/UserDashboard/Gym_related_news";
 
-// Type definitions
-type UserTabParamList = {
-  UserHome: undefined;
-  UserChats: undefined;
-  UserNews: undefined;
-  UserProfile: undefined;
-};
-
+// Create the navigator with type
 const Tab = createBottomTabNavigator<UserTabParamList>();
 
 /**
