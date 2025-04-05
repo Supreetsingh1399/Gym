@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from "react";
-import { NavigationContainer } from "@react-navigation/native";
+import React, { useEffect, useState } from "react";//@ts-ignore
+import { NavigationContainer } from "@react-navigation/native";//@ts-ignore
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { ActivityIndicator, View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
@@ -12,8 +12,8 @@ import { RootStackParamList } from "./Gym_App/types/navigation";
 import { FireBase_Auth, isFirebaseReady } from "./Gym_App/Backend/firebase";
 
 // Import toast manager for notifications
-import ToastManager from "./Gym_App/Screens/UserDashboard/components/ToastManager";
-import { showToast } from "./Gym_App/Screens/UserDashboard/components/ToastManager";
+import ToastManager from "./Gym_App/Screens/components/ToastManager";
+import { showToast } from "./Gym_App/Screens/components/ToastManager";
 
 // Screen imports
 import ForgotPass from "./Gym_App/Screens/Login/ForgotPass";
@@ -25,6 +25,8 @@ import Registered_Gyms from "./Gym_App/Screens/UserDashboard/User_home_touchable
 import HandleLogin from "./Gym_App/Screens/Login/LoginScreen";
 import SearchResults from "./Gym_App/Screens/UserDashboard/SearchResults";
 import ExternalGymDetails from "./Gym_App/Screens/UserDashboard/ExternalGymDetails";
+import WorkoutDetails from "./Gym_App/Screens/UserDashboard/WorkoutDetails";
+import ExerciseDetail from "./Gym_App/Screens/UserDashboard/ExerciseDetail";
 
 // Hooks
 import useAuth from "./Gym_App/Backend/hooks/Auth";
@@ -114,6 +116,7 @@ const StackNavigator = ({ user }: StackNavigatorProps): JSX.Element => {
             component={US_SignUp}
             options={{ title: "Create User Account" }}
           />
+           
           <Stack.Screen 
             //@ts-ignore
             name="Forgot_Password" 
@@ -157,6 +160,8 @@ const StackNavigator = ({ user }: StackNavigatorProps): JSX.Element => {
             component={ExternalGymDetails as any}
             options={{ title: "Gym Details" }}
           />
+          <Stack.Screen name="WorkoutDetails" component={WorkoutDetails} />
+          <Stack.Screen name="ExerciseDetail" component={ExerciseDetail} />
         </>
       )}
     </Stack.Navigator>
@@ -281,7 +286,9 @@ const App = (): JSX.Element => {
     <ErrorBoundary>
       <SafeAreaProvider>
         <NavigationContainer>
-          <StackNavigator user={user} />
+          <StackNavigator  
+          //@ts-ignore
+          user={user} />
         </NavigationContainer>
         <ToastManager />
       </SafeAreaProvider>

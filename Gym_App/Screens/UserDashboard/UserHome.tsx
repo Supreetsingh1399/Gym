@@ -1,3 +1,4 @@
+import { POPULAR_WORKOUTS, getMockWorkouts } from './constants/exerciseData';
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { GOOGLE_PLACES_API_KEY } from '@env';
 import {
@@ -15,7 +16,8 @@ import {
   Alert,
   ImageBackground
 } from "react-native";
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons'; 
+//@ts-ignore
 import { useFocusEffect } from '@react-navigation/native';
 import axios from 'axios';
 import { API_URL } from '@env';
@@ -24,15 +26,15 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Import Firebase
 import { FireBase_Auth, FireBase_DB, isFirebaseReady } from "../../Backend/firebase";
-import { collection, getDocs, query, limit, orderBy, getDoc, doc } from "firebase/firestore";
+import { collection, getDocs, query, limit, orderBy, getDoc, doc } from "@firebase/firestore";
 
 // Import our components and utilities
-import { GymCard } from './components/GymCard';
-import { WorkoutCard } from './components/WorkoutCard';
-import { SectionHeader } from './components/SectionHeader';
-import { LoadingSkeleton } from './components/LoadingSkeleton';
-import { EmptyState } from './components/EmptyState';
-import { QuickActionButton } from './components/QuickActionButton';
+import { GymCard } from '../components/GymCard';
+import { WorkoutCard } from '../components/WorkoutCard';
+import { SectionHeader } from '../components/SectionHeader';
+import { LoadingSkeleton } from '../components/LoadingSkeleton';
+import { EmptyState } from '../components/EmptyState';
+import { QuickActionButton } from '../components/QuickActionButton';
 import { THEME } from './constants/theme';
 import { QUOTES } from './constants/motivationalQuotes';
 import { getRandomItem, getGreetingByTime } from './utils/helpers';
@@ -146,7 +148,7 @@ const UserHome: React.FC<NavigationProps> = ({ navigation }) => {
     const checkServices = () => {
       const services = isFirebaseReady();
       if (services.auth && services.db) {
-        console.log("Firebase services are available in UserHome");
+        // console.log("Firebase services are available in UserHome");
         setServicesReady(true);
       } else {
         console.log("Firebase services not fully available in UserHome");
@@ -429,7 +431,6 @@ const UserHome: React.FC<NavigationProps> = ({ navigation }) => {
         setNearbyGyms(getMockNearbyGyms());
         return;
       }
-      
       const gymsRef = collection(FireBase_DB, 'gyms');
       const gymsQuery = query(gymsRef, limit(5));
       const querySnapshot = await getDocs(gymsQuery);
@@ -530,34 +531,39 @@ const UserHome: React.FC<NavigationProps> = ({ navigation }) => {
     }
     
     try {
-      const workoutsRef = collection(FireBase_DB, 'workouts');
-      const workoutsQuery = query(workoutsRef, orderBy('popularity', 'desc'), limit(4));
-      const querySnapshot = await getDocs(workoutsQuery);
       
-      if (querySnapshot.empty) {
-        setPopularWorkouts(getMockWorkouts());
-        return;
-      }
-      
-      const workouts: WorkoutData[] = querySnapshot.docs.map(doc => {
-        const data = doc.data();
-        return {
-          id: doc.id,
-          title: data.title || 'Untitled Workout',
-          duration: data.duration || '30 min',
-          level: data.level || 'Beginner',
-          imageUrl: data.imageUrl || getRandomItem(WORKOUT_IMAGES),
-          trainer: data.trainer || 'GymBuddy Coach',
-          description: data.description || 'A great workout for fitness enthusiasts'
-        };
-      });
-      
-      setPopularWorkouts(workouts);
-    } catch (error) {
-      console.error('Error fetching workouts:', error);
+       // First try to get from Firebase if available
+    const workoutsRef = collection(FireBase_DB, 'workouts');
+    const workoutsQuery = query(workoutsRef, orderBy('popularity', 'desc'), limit(4));
+    const querySnapshot = await getDocs(workoutsQuery);
+    
+    if (querySnapshot.empty) {
+      // If no Firebase data, use our hardcoded workouts
       setPopularWorkouts(getMockWorkouts());
+      return;
     }
-  };
+    
+       
+    const workouts: WorkoutData[] = querySnapshot.docs.map(doc => {
+      const data = doc.data();
+      return {
+        id: doc.id,
+        title: data.title || 'Untitled Workout',
+        duration: data.duration || '30 min',
+        level: data.level || 'Beginner',
+        imageUrl: data.imageUrl || getRandomItem(WORKOUT_IMAGES),
+        trainer: data.trainer || 'GymBuddy Coach',
+        description: data.description || 'A great workout for fitness enthusiasts'
+      };
+    });
+    
+    setPopularWorkouts(workouts);
+  } catch (error) {
+    console.error('Error fetching workouts:', error);
+    // Fallback to hardcoded workouts
+    setPopularWorkouts(getMockWorkouts());
+  }
+};
 
   // Get random distance - for mock data only
   const getRandomDistance = () => {
@@ -665,44 +671,10 @@ const UserHome: React.FC<NavigationProps> = ({ navigation }) => {
     },
   ];
 
-  const getMockWorkouts = (): WorkoutData[] => [
-    {
-      id: 'workout1',
-      title: 'Full Body Strength',
-      duration: '45 min',
-      level: 'Intermediate',
-      imageUrl: WORKOUT_IMAGES[0],
-      trainer: 'Alex Johnson',
-      description: 'Complete full body workout focusing on compound movements'
-    },
-    {
-      id: 'workout2',
-      title: 'HIIT Cardio Blast',
-      duration: '30 min',
-      level: 'Advanced',
-      imageUrl: WORKOUT_IMAGES[1],
-      trainer: 'Sarah Chen',
-      description: 'High-intensity interval training to maximize calorie burn'
-    },
-    {
-      id: 'workout3',
-      title: 'Core & Abs Builder',
-      duration: '20 min',
-      level: 'Beginner',
-      imageUrl: WORKOUT_IMAGES[2],
-      trainer: 'Mike Torres',
-      description: 'Focus on core strength with effective ab exercises'
-    },
-    {
-      id: 'workout4',
-      title: 'Upper Body Focus',
-      duration: '35 min',
-      level: 'Intermediate',
-      imageUrl: WORKOUT_IMAGES[3],
-      trainer: 'David Kim',
-      description: 'Build strength in arms, chest, back and shoulders'
-    },
-  ];
+  // Also update getMockWorkouts to use the imported version:
+const getMockWorkouts = (): WorkoutData[] => {
+  return POPULAR_WORKOUTS.slice(0, 4);
+};
 
   // Handler for refreshing the screen
   const onRefresh = useCallback(async () => {
@@ -723,22 +695,17 @@ const UserHome: React.FC<NavigationProps> = ({ navigation }) => {
   const handleWorkoutPress = useCallback((workoutId: string) => {
     navigation.navigate('WorkoutDetails', { workoutId });
   }, [navigation]);
-  
-  const handleSeeAllGyms = useCallback(() => {
-    navigation.navigate('AllGyms');
+
+  const handleExercisePress = useCallback((exerciseId: string) => {
+    navigation.navigate('ExerciseDetail', { exerciseId });
   }, [navigation]);
   
-  const handleSeeAllNearbyGyms = useCallback(() => {
-    navigation.navigate('NearbyGyms');
-  }, [navigation]);
+  
   
   const handleSeeAllPopularGyms = useCallback(() => {
     navigation.navigate('PopularGyms');
   }, [navigation]);
   
-  const handleSeeAllWorkouts = useCallback(() => {
-    navigation.navigate('AllWorkouts');
-  }, [navigation]);
   
   const handleProfilePress = useCallback(() => {
     navigation.navigate('UserProfile');
@@ -748,6 +715,7 @@ const UserHome: React.FC<NavigationProps> = ({ navigation }) => {
   const handleSearchPress = useCallback(() => {
     navigation.navigate('SearchResults');
   }, [navigation]);
+  
 
   // Render quick action buttons
   const renderQuickActions = () => (
@@ -763,6 +731,7 @@ const UserHome: React.FC<NavigationProps> = ({ navigation }) => {
       ))}
     </View>
   );
+  
 
   // If Firebase services are not ready
   if (!servicesReady) {
@@ -791,7 +760,11 @@ const UserHome: React.FC<NavigationProps> = ({ navigation }) => {
             onPress={handleProfilePress}
             android_ripple={{ color: 'rgba(0, 0, 0, 0.1)' }}
           >
-            <Ionicons name="person" size={20} color={THEME.colors.primary} />
+                     <View className="w-[60px] h-[60px] bg-gray-200 rounded-full justify-center items-center">
+                       <Text className="text-2xl font-bold text-gray-700">
+                         {userName.charAt(0).toUpperCase() || "U"}
+                       </Text>
+            </View>
           </Pressable>
         </View>
         
@@ -916,25 +889,26 @@ const UserHome: React.FC<NavigationProps> = ({ navigation }) => {
           <View className="mb-6">
             <SectionHeader 
               title="Popular Workouts" 
-              onSeeAllPress={handleSeeAllWorkouts} 
             />
-            
             <ScrollView 
-              horizontal 
-              showsHorizontalScrollIndicator={false}
-              className="pl-6"
-            >
-              {popularWorkouts.map((workout) => (
-                <WorkoutCard 
-                  key={workout.id} 
-                  workout={{
-                    ...workout,
-                    description: workout.description || 'No description available'
-                  }} 
-                  onPress={() => handleWorkoutPress(workout.id)} 
-                />
-              ))}
-            </ScrollView>
+  horizontal 
+  showsHorizontalScrollIndicator={false}
+  className="pl-6"
+>
+  {popularWorkouts.map((workout) => (
+    <WorkoutCard 
+      key={workout.id} 
+      workout={{
+        ...workout,
+        description: workout.description || 'No description available',
+        // Add the count of exercises if available
+        //@ts-ignore
+        exerciseCount: workout.exercises?.length || 0
+      }} 
+      onPress={() => handleWorkoutPress(workout.id)}
+    />
+  ))}
+</ScrollView>
           </View>
 
           {/* Motivational Quote Section */}

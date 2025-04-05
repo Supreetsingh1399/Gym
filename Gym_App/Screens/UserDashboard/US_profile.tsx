@@ -13,7 +13,7 @@ import {
 import { FireBase_Auth, isFirebaseReady } from "Gym_App/Backend/firebase";
 import { Ionicons } from '@expo/vector-icons';
 import axios from 'axios';
-import { API_URL } from '@env';
+import { API_URL } from '@env';//@ts-ignore
 import { NavigationProps } from '../../types/navigation';
 
 // Define interfaces for our data structure
@@ -59,7 +59,7 @@ export default function UserProfile({ navigation }: NavigationProps<'Profile'>) 
     const checkAuth = () => {
       const services = isFirebaseReady();
       if (services.auth) {
-        console.log("Firebase Auth is available in UserProfile");
+        // console.log("Firebase Auth is available in UserProfile");
         setAuthAvailable(true);
       } else {
         console.log("Firebase Auth not available in UserProfile");

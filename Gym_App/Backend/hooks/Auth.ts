@@ -4,7 +4,7 @@ import { FireBase_Auth } from "../firebase";
 
 /**
  * Custom hook for Firebase authentication state management
- * Simplified version that doesn't rely on authReady state
+ * Improved version with better timeout handling
  * @returns {Object} Authentication state with user and loading status
  */
 const useAuth = () => {
@@ -15,6 +15,7 @@ const useAuth = () => {
   // Track if component is mounted
   const isMounted = useRef<boolean>(true);
   const unsubscribeRef = useRef<(() => void) | null>(null);
+  const authInitializedRef = useRef<boolean>(false);
   
   // Cleanup on unmount
   useEffect(() => {
@@ -51,8 +52,18 @@ const useAuth = () => {
             if (!isMounted.current) return;
             
             console.log("[Auth Hook] Auth state changed:", currentUser ? "User logged in" : "No user");
+            authInitializedRef.current = true; // Mark auth as initialized
             setUser(currentUser);
             setLoading(false);
+            setError(null); // Clear any previous errors
+          },
+          (authError) => {
+            // Error handler for onAuthStateChanged
+            console.error("[Auth Hook] Auth state error:", authError);
+            if (isMounted.current) {
+              setError(authError.message || "Authentication error occurred");
+              setLoading(false);
+            }
           }
         );
       } catch (authError) {
@@ -64,13 +75,18 @@ const useAuth = () => {
       }
       
       // Set a timeout to prevent infinite loading
+      // This will only fire if onAuthStateChanged doesn't complete in time
       timeoutId = setTimeout(() => {
-        if (isMounted.current && loading) {
+        if (isMounted.current && loading && !authInitializedRef.current) {
           console.log("[Auth Hook] Auth check timeout reached");
           setLoading(false);
-          setError("Authentication check timed out");
+          
+          // Only set error if auth hasn't been initialized yet
+          if (!authInitializedRef.current) {
+            setError("Authentication check timed out - please check your network connection");
+          }
         }
-      }, 5000);
+      }, 7000); // Increased timeout to give more time for initialization
       
     } catch (setupError) {
       console.error("[Auth Hook] Auth setup error:", setupError);

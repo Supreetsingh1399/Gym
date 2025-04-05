@@ -1,7 +1,7 @@
 {
   "compilerOptions": {
     "target": "es2017",
-    "module": "commonjs",
+    "module": "Node16",
     "allowJs": true,
     "outDir": "build",
     "rootDir": ".",
@@ -18,11 +18,11 @@
     },
     "noEmit": true,
     "isolatedModules": true,
-    "moduleResolution": "node",
+    "moduleResolution": "node16",
     "allowSyntheticDefaultImports": true,
     "resolveJsonModule": true
   },
-  "include": ["**/*.ts", "**/*.tsx", "Gym_App/Screens/TrainerDashboard", "Gym_App/Screens/UserDashboard/utils/helpers.tsx", "Gym_App/Screens/UserDashboard/components/FilterChip.jsx", "index.js"],
+  "include": ["**/*.ts", "**/*.tsx", "Gym_App/Screens/TrainerDashboard", "Gym_App/Screens/UserDashboard/utils/helpers.tsx", "Gym_App/Screens/components/FilterChip.jsx", "index.js"],
   "exclude": ["node_modules"],
   "extends": "expo/tsconfig.base"
 }

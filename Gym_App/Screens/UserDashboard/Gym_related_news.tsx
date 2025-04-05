@@ -89,7 +89,7 @@ const NewsScreen = () => {
         <FlatList
           data={news}
           renderItem={renderNewsItem}
-          keyExtractor={(item, index) => index.toString()}
+          keyExtractor={(item:string, index:string) => index.toString()}
           className="flex-1"
           refreshControl={
             <RefreshControl

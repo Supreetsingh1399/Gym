@@ -48,5 +48,4 @@ export type ScreenProps<T extends keyof RootStackParamList> = {
   route: AppRouteProp<T>;
   UserTabParamList: RootStackParamList;
 
-
 }; 

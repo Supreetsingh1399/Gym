@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { 
   View, 
   Text, 
@@ -13,13 +13,13 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import { FireBase_Auth, isFirebaseReady } from "../../Backend/firebase";
+import { FireBase_Auth } from "../../Backend/firebase";
 import { createUserWithEmailAndPassword, sendEmailVerification } from "firebase/auth";
 import { getFirestore, setDoc, doc } from "firebase/firestore";
 import axios from "axios";
 
 // Define API_URL or import it from a config file
-const API_URL = process.env.API_URL || "https://your-api-url.com"; // Update with your actual API URL
+const API_URL = process.env.API_URL || "localhost:3000";// Replace with your actual API URL
 
 interface GymData {
   gymName: string;
@@ -52,7 +52,7 @@ interface GymData {
 }
 
 //@ts-ignore
-const GymRegistrationWizard = ({ navigation}) => {
+const GymRegistrationWizard = ({ navigation }) => {
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -60,7 +60,6 @@ const GymRegistrationWizard = ({ navigation}) => {
   const [showPassword, setShowPassword] = useState(false);
   const [tempTrainerName, setTempTrainerName] = useState("");
   const [tempTrainerSpecialization, setTempTrainerSpecialization] = useState("");
-  const [servicesReady, setServicesReady] = useState(false);
   
   const [gymData, setGymData] = useState<GymData>({
     gymName: "",
@@ -79,25 +78,6 @@ const GymRegistrationWizard = ({ navigation}) => {
     pricing: { planName: "", price: "", duration: "" },
     status: "pending",
   });
-  
-  // Check if Firebase services are available
-  useEffect(() => {
-    const checkServices = () => {
-      const services = isFirebaseReady();
-      if (services.auth && services.firestore) {
-        console.log("Firebase services are available in GymRegistrationWizard");
-        setServicesReady(true);
-      } else {
-        console.log("Firebase services not fully available in GymRegistrationWizard");
-      }
-    };
-
-    // Check immediately and then every second
-    checkServices();
-    const interval = setInterval(checkServices, 1000);
-    
-    return () => clearInterval(interval);
-  }, []);
 
   const togglePasswordVisibility = () => {
     setShowPassword(!showPassword);
@@ -270,32 +250,24 @@ const GymRegistrationWizard = ({ navigation}) => {
   };
 
   const handleSubmit = async () => {
-    if (!servicesReady || !FireBase_Auth) {
-      Alert.alert(
-        "Service Unavailable", 
-        "Firebase services are initializing. Please try again in a moment."
-      );
-      return;
-    }
-    
     setLoading(true);
     setError("");
   
     try {
       // First, send gym registration to MongoDB for admin approval
       const response = await axios.post(`${API_URL}/Register/Gyms`, {
-        gymName: gymData.gymName,
-        ownerName: gymData.ownerName,
-        contactNumber: gymData.contactNumber,
-        email: gymData.email,
-        password: gymData.password, // Will be encrypted on server
-        description: gymData.description,
-        location: gymData.location,
-        facilities: gymData.facilities,
-        pricing: gymData.pricing,
-        status: "pending", // Gyms need approval
-        createdAt: new Date().toISOString(),
-      });
+          gymName: gymData.gymName,
+          ownerName: gymData.ownerName,
+          contactNumber: gymData.contactNumber,
+          email: gymData.email,
+          password: gymData.password, // Will be encrypted on server
+          description: gymData.description,
+          location: gymData.location,
+          facilities: gymData.facilities,
+          pricing: gymData.pricing,
+          status: "pending", // Gyms need approval
+          createdAt: new Date().toISOString(),
+        });
   
       const result = response.data;
   
@@ -316,7 +288,7 @@ const GymRegistrationWizard = ({ navigation}) => {
       );
     } catch (error: any) {
       console.error("Gym registration error:", error);
-      if (error.message?.includes("email already in use")) {
+      if (error.message.includes("email already in use")) {
         setError("This email is already registered. Please login instead.");
       } else {
         setError(error.message || "Failed to create account. Please try again.");
@@ -325,16 +297,6 @@ const GymRegistrationWizard = ({ navigation}) => {
       setLoading(false);
     }
   };
-
-  // If Firebase services are not ready
-  if (!servicesReady) {
-    return (
-      <SafeAreaView className="flex-1 bg-white justify-center items-center">
-        <ActivityIndicator size="large" color="#0091EA" />
-        <Text className="mt-4 text-gray-600">Initializing services...</Text>
-      </SafeAreaView>
-    );
-  }
 
   const renderBasicInfoForm = () => (
     <View className="w-full">
@@ -354,7 +316,7 @@ const GymRegistrationWizard = ({ navigation}) => {
             className="flex-1 py-3 px-2 text-gray-700"
             placeholder="Enter gym name"
             value={gymData.gymName}
-            onChangeText={(text:string) => handleChange("gymName", text)}
+            onChangeText={(text) => handleChange("gymName", text)}
           />
         </View>
       </View>
@@ -368,7 +330,7 @@ const GymRegistrationWizard = ({ navigation}) => {
             className="flex-1 py-3 px-2 text-gray-700"
             placeholder="Enter owner name"
             value={gymData.ownerName}
-            onChangeText={(text:string) => handleChange("ownerName", text)}
+            onChangeText={(text) => handleChange("ownerName", text)}
           />
         </View>
       </View>
@@ -382,7 +344,7 @@ const GymRegistrationWizard = ({ navigation}) => {
             className="flex-1 py-3 px-2 text-gray-700"
             placeholder="Enter 10-digit contact number"
             value={gymData.contactNumber}
-            onChangeText={(text:string) => handleChange("contactNumber", text)}
+            onChangeText={(text) => handleChange("contactNumber", text)}
             keyboardType="phone-pad"
             maxLength={10}
           />
@@ -398,7 +360,7 @@ const GymRegistrationWizard = ({ navigation}) => {
             className="flex-1 py-3 px-2 text-gray-700"
             placeholder="Enter email address"
             value={gymData.email}
-            onChangeText={(text:string) => handleChange("email", text)}
+            onChangeText={(text) => handleChange("email", text)}
             keyboardType="email-address"
             autoCapitalize="none"
           />
@@ -413,7 +375,7 @@ const GymRegistrationWizard = ({ navigation}) => {
             className="w-full py-3 px-2 text-gray-700"
             placeholder="Describe your gym (facilities, specialties, etc.)"
             value={gymData.description}
-            onChangeText={(text:string) => handleChange("description", text)}
+            onChangeText={(text) => handleChange("description", text)}
             multiline
             numberOfLines={3}
             textAlignVertical="top"
@@ -431,7 +393,7 @@ const GymRegistrationWizard = ({ navigation}) => {
             placeholder="Enter password (min 6 characters)"
             secureTextEntry={!showPassword}
             value={gymData.password}
-            onChangeText={(text:string) => handleChange("password", text)}
+            onChangeText={(text) => handleChange("password", text)}
           />
           <TouchableOpacity onPress={togglePasswordVisibility}>
             <Ionicons
@@ -488,7 +450,7 @@ const GymRegistrationWizard = ({ navigation}) => {
             className="flex-1 py-3 px-2 text-gray-700"
             placeholder="Enter street address"
             value={gymData.location.address}
-            onChangeText={(text:string) => handleNestedChange("location", "address", text)}
+            onChangeText={(text) => handleNestedChange("location", "address", text)}
           />
         </View>
       </View>
@@ -502,7 +464,7 @@ const GymRegistrationWizard = ({ navigation}) => {
             className="flex-1 py-3 px-2 text-gray-700"
             placeholder="Enter city"
             value={gymData.location.city}
-            onChangeText={(text:string) => handleNestedChange("location", "city", text)}
+            onChangeText={(text) => handleNestedChange("location", "city", text)}
           />
         </View>
       </View>
@@ -516,7 +478,7 @@ const GymRegistrationWizard = ({ navigation}) => {
             className="flex-1 py-3 px-2 text-gray-700"
             placeholder="Enter state"
             value={gymData.location.state}
-            onChangeText={(text:string) => handleNestedChange("location", "state", text)}
+            onChangeText={(text) => handleNestedChange("location", "state", text)}
           />
         </View>
       </View>
@@ -530,10 +492,144 @@ const GymRegistrationWizard = ({ navigation}) => {
             className="flex-1 py-3 px-2 text-gray-700"
             placeholder="Enter zip code"
             value={gymData.location.zipCode}
-            onChangeText={(text:string) => handleNestedChange("location", "zipCode", text)}
+            onChangeText={(text) => handleNestedChange("location", "zipCode", text)}
             keyboardType="number-pad"
           />
         </View>
+      </View>
+
+      {/* Navigation Buttons */}
+      <View className="flex-row justify-between">
+        <TouchableOpacity
+          className="bg-gray-300 py-3 rounded-lg items-center flex-1 mr-2"
+          onPress={handleBack}
+        >
+          <Text className="text-gray-700 font-bold">Back</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          className="bg-blue-600 py-3 rounded-lg items-center flex-1 ml-2"
+          onPress={handleNext}
+        >
+          <Text className="text-white font-bold">Next</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+
+  const renderFacilitiesForm = () => (
+    <View className="w-full">
+      <Text className="text-2xl font-bold text-center text-gray-800 mb-2">
+        Gym Registration
+      </Text>
+      <Text className="text-base text-gray-600 mb-6 text-center">
+        Step 3: Facilities Information
+      </Text>
+
+      {/* Gym Type */}
+      <View className="mb-4">
+        <Text className="text-gray-700 mb-2 font-medium">Gym Type <Text className="text-red-500">*</Text></Text>
+        <View className="flex-row items-center border border-gray-300 rounded-lg bg-gray-50 px-3">
+          <Ionicons name="barbell-outline" size={20} color="#0091EA" />
+          <TextInput
+            className="flex-1 py-3 px-2 text-gray-700"
+            placeholder="e.g., CrossFit, Bodybuilding, Yoga"
+            value={gymData.facilities.gymType}
+            onChangeText={(text) => handleNestedChange("facilities", "gymType", text)}
+          />
+        </View>
+      </View>
+      
+      {/* Equipment List */}
+      <View className="mb-4">
+        <Text className="text-gray-700 mb-2 font-medium">Equipment List</Text>
+        <View className="border border-gray-300 rounded-lg bg-gray-50 px-3">
+          <TextInput
+            className="w-full py-3 px-2 text-gray-700"
+            placeholder="List major equipment available (e.g., Squat racks, Treadmills, etc.)"
+            value={gymData.facilities.equipmentList}
+            onChangeText={(text) => handleNestedChange("facilities", "equipmentList", text)}
+            multiline
+            numberOfLines={3}
+            textAlignVertical="top"
+          />
+        </View>
+      </View>
+
+      {/* Operating Hours - Weekdays */}
+      <View className="mb-4">
+        <Text className="text-gray-700 mb-2 font-medium">Operating Hours (Weekdays) <Text className="text-red-500">*</Text></Text>
+        <View className="flex-row items-center border border-gray-300 rounded-lg bg-gray-50 px-3">
+          <Ionicons name="time-outline" size={20} color="#0091EA" />
+          <TextInput
+            className="flex-1 py-3 px-2 text-gray-700"
+            placeholder="e.g., 6:00 AM - 10:00 PM"
+            value={gymData.facilities.operatingHours.weekdays}
+            onChangeText={(text) => handleDoubleNestedChange("facilities", "operatingHours", "weekdays", text)}
+          />
+        </View>
+      </View>
+
+      {/* Operating Hours - Weekends */}
+      <View className="mb-4">
+        <Text className="text-gray-700 mb-2 font-medium">Operating Hours (Weekends)</Text>
+        <View className="flex-row items-center border border-gray-300 rounded-lg bg-gray-50 px-3">
+          <Ionicons name="time-outline" size={20} color="#0091EA" />
+          <TextInput
+            className="flex-1 py-3 px-2 text-gray-700"
+            placeholder="e.g., 8:00 AM - 8:00 PM"
+            value={gymData.facilities.operatingHours.weekends}
+            onChangeText={(text) => handleDoubleNestedChange("facilities", "operatingHours", "weekends", text)}
+          />
+        </View>
+      </View>
+      
+      {/* Trainer Management Section */}
+      <View className="mb-6 border border-gray-200 rounded-lg p-3 bg-blue-50">
+        <Text className="text-gray-700 font-bold mb-3">Gym Trainers</Text>
+        
+        {/* Add new trainer */}
+        <View className="mb-2">
+          <Text className="text-gray-700 mb-1 text-sm">Trainer Name</Text>
+          <TextInput
+            className="bg-white border border-gray-300 rounded-lg py-2 px-3 mb-2"
+            placeholder="Enter trainer name"
+            value={tempTrainerName}
+            onChangeText={setTempTrainerName}
+          />
+          
+          <Text className="text-gray-700 mb-1 text-sm">Specialization</Text>
+          <TextInput
+            className="bg-white border border-gray-300 rounded-lg py-2 px-3 mb-2"
+            placeholder="e.g., Cardio, Strength, Yoga"
+            value={tempTrainerSpecialization}
+            onChangeText={setTempTrainerSpecialization}
+          />
+          
+          <TouchableOpacity 
+            className="bg-green-600 py-2 rounded-lg items-center mt-1"
+            onPress={addTrainer}
+          >
+            <Text className="text-white font-medium">Add Trainer</Text>
+          </TouchableOpacity>
+        </View>
+        
+        {/* Trainer list */}
+        {gymData.facilities.trainers.length > 0 && (
+          <View className="mt-3">
+            <Text className="text-gray-700 font-medium mb-2">Added Trainers:</Text>
+            {gymData.facilities.trainers.map((trainer, index) => (
+              <View key={index} className="flex-row items-center justify-between bg-white p-2 rounded-lg mb-2 border border-gray-200">
+                <View className="flex-1">
+                  <Text className="font-medium">{trainer.name}</Text>
+                  <Text className="text-gray-600 text-sm">{trainer.specialization}</Text>
+                </View>
+                <TouchableOpacity onPress={() => removeTrainer(index)}>
+                  <Ionicons name="close-circle" size={22} color="#ff4d4d" />
+                </TouchableOpacity>
+              </View>
+            ))}
+          </View>
+        )}
       </View>
 
       {/* Navigation Buttons */}
@@ -572,7 +668,7 @@ const GymRegistrationWizard = ({ navigation}) => {
             className="flex-1 py-3 px-2 text-gray-700"
             placeholder="e.g., Basic, Premium, Gold"
             value={gymData.pricing.planName}
-            onChangeText={(text:string) => handleNestedChange("pricing", "planName", text)}
+            onChangeText={(text) => handleNestedChange("pricing", "planName", text)}
           />
         </View>
       </View>
@@ -586,7 +682,7 @@ const GymRegistrationWizard = ({ navigation}) => {
             className="flex-1 py-3 px-2 text-gray-700"
             placeholder="e.g., $49.99"
             value={gymData.pricing.price}
-            onChangeText={(text: string) => handleNestedChange("pricing", "price", text)}
+            onChangeText={(text) => handleNestedChange("pricing", "price", text)}
             keyboardType="decimal-pad"
           />
         </View>
@@ -601,7 +697,7 @@ const GymRegistrationWizard = ({ navigation}) => {
             className="flex-1 py-3 px-2 text-gray-700"
             placeholder="e.g., Monthly, Yearly"
             value={gymData.pricing.duration}
-            onChangeText={(text:string) => handleNestedChange("pricing", "duration", text)}
+            onChangeText={(text) => handleNestedChange("pricing", "duration", text)}
           />
         </View>
       </View>
@@ -727,7 +823,7 @@ const GymRegistrationWizard = ({ navigation}) => {
           {/* Form Steps */}
           {step === 1 && renderBasicInfoForm()}
           {step === 2 && renderLocationForm()}
-          {/* {step === 3 && renderFacilitiesForm()} */}
+          {step === 3 && renderFacilitiesForm()}
           {step === 4 && renderPricingForm()}
 
           {/* Login Link */}

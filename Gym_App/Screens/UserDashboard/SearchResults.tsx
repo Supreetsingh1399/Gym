@@ -10,7 +10,7 @@ import * as Location from 'expo-location';
 import { GOOGLE_PLACES_API_KEY } from '@env';
 import { GYM_IMAGES } from './constants/assetUrls';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import GymSplineView from './components/GymSplineView';
+import GymSplineView from '../components/GymSplineView';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../types';
 

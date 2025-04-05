@@ -17,11 +17,12 @@ import { Ionicons } from '@expo/vector-icons';
 import { GOOGLE_PLACES_API_KEY } from '@env';
 import MapView, { Marker } from 'react-native-maps';
 import axios from 'axios';
+//@ts-ignore
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 import { GYM_IMAGES } from './constants/assetUrls';
 import { getRandomItem } from './utils/helpers';
-import GymSplineView from './components/GymSplineView';
+import GymSplineView from '../components/GymSplineView';
 import { RootStackParamList } from '../../types';
 
 // Define types for Google Places API response
