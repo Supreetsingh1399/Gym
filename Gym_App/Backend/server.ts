@@ -15,8 +15,9 @@ import {
   getAllGyms,
   registerGym,
   getUserGyms,
-} from "./controllers/Gym_controls";// Import the Gym model
+} from "./controllers/Gym_controls"; // Import the Gym model
 import Gym from "./Models/Gym_Register";
+import User from "./Models/User_models"; // Import the User model
 
 dotenv.config({ path: path.resolve(__dirname, "../../.env") });
 const router = express.Router();
@@ -79,11 +80,28 @@ router.get("/Register/Gyms/:userId", async (req: Request, res: Response) => {
   try {
     const { userId } = req.params;
     const userGyms = await Gym.find({ userId: userId });
-    
+
     res.status(200).json({ gyms: userGyms });
   } catch (error) {
     console.error("Error fetching user gyms:", error);
     res.status(500).json({ error: "Failed to fetch user gyms" });
+  }
+});
+// Add this route to get a specific user by ID
+//@ts-ignore
+router.get("/Register/Users/:id", async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;//@ts-ignore
+    const user = await User.findOne({ uid: id });
+    
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+    
+    res.status(200).json(user);
+  } catch (error) {
+    console.error("Error fetching user:", error);
+    res.status(500).json({ error: "Failed to fetch user" });
   }
 });
 

@@ -1,26 +1,26 @@
-declare module '*.png';
-declare module '*.jpg';
-declare module '*.jpeg';
-declare module '*.gif';
-declare module '*.svg' {
-  import React from 'react';
-  import { SvgProps } from 'react-native-svg';
+declare module "*.png";
+declare module "*.jpg";
+declare module "*.jpeg";
+declare module "*.gif";
+declare module "*.svg" {
+  import React from "react";
+  import { SvgProps } from "react-native-svg";
   const content: React.FC<SvgProps>;
   export default content;
 }
 
 // For NativeWind/TailwindCSS
-declare module 'nativewind/types' {
-  import type { ViewProps } from 'react-native';
+declare module "nativewind/types" {
+  import type { ViewProps } from "react-native";
   export interface NativeWindProps extends ViewProps {
     className?: string;
   }
 }
 
 // Add className to React Native components
-declare module 'react-native' {
-  import type { NativeWindProps } from 'nativewind/types';
-  
+declare module "react-native" {
+  import type { NativeWindProps } from "nativewind/types";
+
   export interface ViewProps extends NativeWindProps {}
   export interface TextProps extends NativeWindProps {}
   export interface ImageProps extends NativeWindProps {}
@@ -31,9 +31,9 @@ declare module 'react-native' {
 }
 
 // Firebase auth global type augmentations
-declare module 'firebase/auth' {
+declare module "firebase/auth" {
   interface User {
-    userType?: 'user' | 'trainer' | 'gym_owner';
+    userType?: "user" | "trainer" | "gym_owner";
   }
 }
 
@@ -45,4 +45,4 @@ interface Window {
 
 interface Console {
   tron: any;
-} 
+}

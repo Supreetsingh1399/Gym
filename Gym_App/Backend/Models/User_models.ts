@@ -4,9 +4,44 @@ const userSchema = new mongoose.Schema({
   email: { type: String, required: true, unique: true },
   password: { type: String, required: true },
   name: { type: String, required: true },
+  fitnessGoal: { type: String, required: true },
+  gender: { type: String, required: true },
+  age: {
+    type: Number,
+    required: true,
+    validate: {
+      validator: function (v: number) {
+        return v > 0 && v < 120;
+      },
+      message: "Age must be a positive number less than 120",
+    },
+  },
+  weight: {
+    type: Number,
+    required: true,
+    validate: {
+      validator: function (v: number) {
+        return v > 0;
+      },
+      message: "Weight must be a positive number",
+    },
+  },
+  height: {
+    type: String,
+    required: true,
+    validate: {
+      validator: function (v: string) {
+        return /^\d+(\.\d+)?(cm|m)$/.test(v);
+      },
+      message: "Height must be in cm or m format",
+    },
+    // Example: 180cm or 1.8m
+    // where cm is centimeters and m is meters
+  },
   phone: {
     type: String,
     required: true,
+    unique: true,
     validate: {
       validator: function (v: string) {
         return /^\d{10}$/.test(v);

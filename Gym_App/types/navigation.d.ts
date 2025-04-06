@@ -1,4 +1,4 @@
-import { NavigationProp, RouteProp } from '@react-navigation/native';
+import { NavigationProp, RouteProp } from "@react-navigation/native";
 
 // Define the root stack parameter list
 export type RootStackParamList = {
@@ -13,30 +13,32 @@ export type RootStackParamList = {
   Settings: undefined;
   Notifications: undefined;
   Chats: undefined;
-  ExternalGymDetails: { 
+  ExternalGymDetails: {
     gymId: string;
     gymName?: string;
   };
-  SearchResults: { 
+  SearchResults: {
     query: string;
     filters?: Record<string, any>;
   };
   GymNews: undefined;
-  WorkoutDetails: { 
+  WorkoutDetails: {
     workoutId: string;
   };
 };
 
 // Navigation prop types
-export type AppNavigationProp<T extends keyof RootStackParamList> = 
+export type AppNavigationProp<T extends keyof RootStackParamList> =
   NavigationProp<RootStackParamList, T>;
 
 // Route prop types
-export type AppRouteProp<T extends keyof RootStackParamList> = 
-  RouteProp<RootStackParamList, T>;
+export type AppRouteProp<T extends keyof RootStackParamList> = RouteProp<
+  RootStackParamList,
+  T
+>;
 
 // Props with navigation
-export interface NavigationProps<T extends keyof RootStackParamList = 'Home'> {
+export interface NavigationProps<T extends keyof RootStackParamList = "Home"> {
   navigation: AppNavigationProp<T>;
   route?: AppRouteProp<T>;
 }
@@ -47,5 +49,4 @@ export type ScreenProps<T extends keyof RootStackParamList> = {
   navigation: AppNavigationProp<T>;
   route: AppRouteProp<T>;
   UserTabParamList: RootStackParamList;
-
-}; 
+};

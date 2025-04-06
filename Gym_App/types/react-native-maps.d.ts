@@ -1,20 +1,20 @@
-declare module 'react-native-maps' {
-  import React from 'react';
-  
+declare module "react-native-maps" {
+  import React from "react";
+
   export interface Region {
     latitude: number;
     longitude: number;
     latitudeDelta: number;
     longitudeDelta: number;
   }
-  
+
   export interface LatLng {
     latitude: number;
     longitude: number;
   }
-  
+
   export interface MapViewProps {
-    provider?: 'google' | 'apple' | undefined;
+    provider?: "google" | "apple" | undefined;
     initialRegion?: Region;
     region?: Region;
     onRegionChange?: (region: Region) => void;
@@ -48,7 +48,7 @@ declare module 'react-native-maps' {
       left: number;
     };
   }
-  
+
   export interface MarkerProps {
     coordinate: LatLng;
     title?: string;
@@ -68,7 +68,7 @@ declare module 'react-native-maps' {
     image?: any;
     className?: string;
   }
-  
+
   export default class MapView extends React.Component<MapViewProps, any> {
     static Marker: React.ComponentType<MarkerProps>;
     static Callout: React.ComponentType<any>;
@@ -78,16 +78,16 @@ declare module 'react-native-maps' {
     static Heatmap: React.ComponentType<any>;
     static Overlay: React.ComponentType<any>;
   }
-  
+
   export class Marker extends React.Component<MarkerProps, any> {
     // Marker component
   }
-  
+
   export class Callout extends React.Component<any, any> {
     // Callout component
   }
-  
+
   export class Overlay extends React.Component<any, any> {
     // Overlay component
   }
-} 
+}

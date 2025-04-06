@@ -73,7 +73,7 @@
 //     if (!TrainerData.gymName || !TrainerData.gymAddress || !TrainerData.gymCity || !TrainerData.gymState) {
 //       return "Please provide gym name, address, city and state";
 //     }
-    
+
 //     if (TrainerData.gymPhone && !/^\d{10}$/.test(TrainerData.gymPhone)) {
 //       return "Please enter a valid gym phone number";
 //     }
@@ -89,13 +89,13 @@
 //     if (!TrainerData.experience) {
 //       return "Please provide your experience";
 //     }
-    
+
 //     return null; // No errors
 //   };
 
 //   const handleNext = async () => {
 //     setError("");
-    
+
 //     if (step === 1) {
 //       const validationError = await validate();
 //       if (validationError) {
@@ -115,7 +115,7 @@
 //         return;
 //       }
 //     }
-    
+
 //     setStep(step + 1);
 //   };
 

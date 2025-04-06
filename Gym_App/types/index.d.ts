@@ -1,19 +1,19 @@
 // We don't need to export navigation types here now that they are in a .ts file
 
 // Extend Firebase types
-import './firebase';
+import "./firebase";
 
 // Extend React Native types
-import './react-native';
+import "./react-native";
 
 // Extend React Native Maps types
-import './react-native-maps';
+import "./react-native-maps";
 
 // Extend React Native Toast Message types
-import './react-native-toast-message';
+import "./react-native-toast-message";
 
 // Export environment variable types
-declare module '@env' {
+declare module "@env" {
   export const API_URL: string;
   export const FIREBASE_API_KEY: string;
   export const FIREBASE_AUTH_DOMAIN: string;
@@ -29,6 +29,6 @@ declare module '@env' {
 declare global {
   namespace ReactNavigation {
     // Import directly from the ts file
-    interface RootParamList extends import('./navigation').RootStackParamList {}
+    interface RootParamList extends import("./navigation").RootStackParamList {}
   }
-} 
+}

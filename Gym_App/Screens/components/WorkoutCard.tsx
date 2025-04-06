@@ -1,8 +1,8 @@
 // components/WorkoutCard.tsx
-import React from 'react';
-import { View, Text, Image, TouchableOpacity, StyleSheet } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { THEME } from '../UserDashboard/constants/theme';
+import React from "react";
+import { View, Text, Image, TouchableOpacity, StyleSheet } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import { THEME } from "../UserDashboard/constants/theme";
 
 // Types
 interface Exercise {
@@ -33,38 +33,53 @@ interface WorkoutCardProps {
   compact?: boolean;
 }
 
-export const WorkoutCard: React.FC<WorkoutCardProps> = ({ workout, onPress, compact = false }) => {
+export const WorkoutCard: React.FC<WorkoutCardProps> = ({
+  workout,
+  onPress,
+  compact = false,
+}) => {
   // Count how many exercises the workout contains
   const exerciseCount = workout.exercises?.length || 0;
 
   return (
     <TouchableOpacity
       onPress={onPress}
-      className={`mr-4 bg-white rounded-xl overflow-hidden shadow-sm ${compact ? 'w-36' : 'w-64'}`}
+      className={`mr-4 bg-white rounded-xl overflow-hidden shadow-sm ${compact ? "w-36" : "w-64"}`}
       style={compact ? styles.compactCard : styles.card}
     >
       <Image
         source={{ uri: workout.imageUrl }}
-        className={compact ? 'h-20 w-full' : 'h-36 w-full'}
+        className={compact ? "h-20 w-full" : "h-36 w-full"}
         style={styles.image}
       />
 
       <View className="p-3">
-        <Text className={`font-bold text-gray-800 ${compact ? 'text-sm' : 'text-base'}`} numberOfLines={1}>
+        <Text
+          className={`font-bold text-gray-800 ${compact ? "text-sm" : "text-base"}`}
+          numberOfLines={1}
+        >
           {workout.title}
         </Text>
 
         <View className="flex-row items-center mt-1">
           {/* Wrap Icon in View to prevent "text strings must be rendered within a <Text>" error */}
           <View>
-            <Ionicons name="time-outline" size={compact ? 12 : 14} color={THEME.colors.primary} />
+            <Ionicons
+              name="time-outline"
+              size={compact ? 12 : 14}
+              color={THEME.colors.primary}
+            />
           </View>
-          <Text className={`ml-1 text-gray-600 ${compact ? 'text-xs' : 'text-sm'}`}>
+          <Text
+            className={`ml-1 text-gray-600 ${compact ? "text-xs" : "text-sm"}`}
+          >
             {workout.duration}
           </Text>
 
           <View className="ml-2 px-2 py-0.5 bg-blue-50 rounded-full">
-            <Text className={`text-blue-600 ${compact ? 'text-xs' : 'text-xs'}`}>
+            <Text
+              className={`text-blue-600 ${compact ? "text-xs" : "text-xs"}`}
+            >
               {workout.level}
             </Text>
           </View>
@@ -75,7 +90,11 @@ export const WorkoutCard: React.FC<WorkoutCardProps> = ({ workout, onPress, comp
             <View className="flex-row items-center mt-2">
               {/* Wrap Icon in View */}
               <View>
-                <Ionicons name="fitness-outline" size={14} color={THEME.colors.primary} />
+                <Ionicons
+                  name="fitness-outline"
+                  size={14}
+                  color={THEME.colors.primary}
+                />
               </View>
               <Text className="ml-1 text-gray-600 text-sm">
                 {exerciseCount} exercises
@@ -83,7 +102,9 @@ export const WorkoutCard: React.FC<WorkoutCardProps> = ({ workout, onPress, comp
 
               {workout.category && (
                 <View className="ml-2 px-2 py-0.5 bg-purple-50 rounded-full">
-                  <Text className="text-purple-600 text-xs">{workout.category}</Text>
+                  <Text className="text-purple-600 text-xs">
+                    {workout.category}
+                  </Text>
                 </View>
               )}
             </View>
@@ -110,9 +131,9 @@ const styles = StyleSheet.create({
   card: {
     width: 260,
     borderRadius: 12,
-    backgroundColor: 'white',
+    backgroundColor: "white",
     marginRight: 16,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 2,
@@ -121,15 +142,15 @@ const styles = StyleSheet.create({
   compactCard: {
     width: 140,
     borderRadius: 10,
-    backgroundColor: 'white',
+    backgroundColor: "white",
     marginRight: 12,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 2,
     elevation: 1,
   },
   image: {
-    resizeMode: 'cover',
+    resizeMode: "cover",
   },
 });

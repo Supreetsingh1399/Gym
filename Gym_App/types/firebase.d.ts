@@ -1,4 +1,4 @@
-declare module 'firebase/app' {
+declare module "firebase/app" {
   export interface FirebaseApp {
     name: string;
     options: object;
@@ -17,7 +17,10 @@ declare module 'firebase/app' {
     measurementId?: string;
   }
 
-  export function initializeApp(options: FirebaseOptions, name?: string): FirebaseApp;
+  export function initializeApp(
+    options: FirebaseOptions,
+    name?: string,
+  ): FirebaseApp;
   export function getApp(name?: string): FirebaseApp;
   export function getApps(): FirebaseApp[];
   export function deleteApp(app: FirebaseApp): Promise<void>;
@@ -31,8 +34,8 @@ declare module 'firebase/app' {
   // Add any other functions you use from firebase/app
 }
 
-declare module 'firebase/auth' {
-  import { FirebaseApp } from 'firebase/app';
+declare module "firebase/auth" {
+  import { FirebaseApp } from "firebase/app";
 
   export interface Auth {
     app: FirebaseApp;
@@ -77,18 +80,32 @@ declare module 'firebase/auth' {
   }
 
   export function getAuth(app?: FirebaseApp): Auth;
-  export function createUserWithEmailAndPassword(auth: Auth, email: string, password: string): Promise<UserCredential>;
-  export function signInWithEmailAndPassword(auth: Auth, email: string, password: string): Promise<UserCredential>;
-  export function sendPasswordResetEmail(auth: Auth, email: string): Promise<void>;
+  export function createUserWithEmailAndPassword(
+    auth: Auth,
+    email: string,
+    password: string,
+  ): Promise<UserCredential>;
+  export function signInWithEmailAndPassword(
+    auth: Auth,
+    email: string,
+    password: string,
+  ): Promise<UserCredential>;
+  export function sendPasswordResetEmail(
+    auth: Auth,
+    email: string,
+  ): Promise<void>;
   export function sendEmailVerification(user: User): Promise<void>;
-  export function onAuthStateChanged(auth: Auth, callback: (user: User | null) => void): () => void;
+  export function onAuthStateChanged(
+    auth: Auth,
+    callback: (user: User | null) => void,
+  ): () => void;
   export function initializeAuth(app: FirebaseApp, options: any): Auth;
   export function getReactNativePersistence(storage: any): any;
   // Add any other functions you use from firebase/auth
 }
 
-declare module 'firebase/firestore' {
-  import { FirebaseApp } from 'firebase/app';
+declare module "firebase/firestore" {
+  import { FirebaseApp } from "firebase/app";
 
   export interface Firestore {
     app: FirebaseApp;
@@ -131,16 +148,43 @@ declare module 'firebase/firestore' {
   }
 
   export function getFirestore(app?: FirebaseApp): Firestore;
-  export function collection(firestore: Firestore, path: string): CollectionReference;
-  export function doc(firestore: Firestore, path: string, ...pathSegments: string[]): DocumentReference;
-  export function getDoc(reference: DocumentReference): Promise<DocumentSnapshot>;
-  export function getDocs(query: CollectionReference | any): Promise<QuerySnapshot>;
-  export function setDoc(reference: DocumentReference, data: any): Promise<void>;
-  export function updateDoc(reference: DocumentReference, data: any): Promise<void>;
+  export function collection(
+    firestore: Firestore,
+    path: string,
+  ): CollectionReference;
+  export function doc(
+    firestore: Firestore,
+    path: string,
+    ...pathSegments: string[]
+  ): DocumentReference;
+  export function getDoc(
+    reference: DocumentReference,
+  ): Promise<DocumentSnapshot>;
+  export function getDocs(
+    query: CollectionReference | any,
+  ): Promise<QuerySnapshot>;
+  export function setDoc(
+    reference: DocumentReference,
+    data: any,
+  ): Promise<void>;
+  export function updateDoc(
+    reference: DocumentReference,
+    data: any,
+  ): Promise<void>;
   export function deleteDoc(reference: DocumentReference): Promise<void>;
-  export function query(collectionRef: CollectionReference, ...constraints: QueryConstraint[]): any;
-  export function where(field: string, opStr: string, value: any): QueryConstraint;
-  export function orderBy(field: string, directionStr?: 'asc' | 'desc'): QueryConstraint;
+  export function query(
+    collectionRef: CollectionReference,
+    ...constraints: QueryConstraint[]
+  ): any;
+  export function where(
+    field: string,
+    opStr: string,
+    value: any,
+  ): QueryConstraint;
+  export function orderBy(
+    field: string,
+    directionStr?: "asc" | "desc",
+  ): QueryConstraint;
   export function limit(limit: number): QueryConstraint;
   export function startAfter(...fieldValues: any[]): QueryConstraint;
   export function startAt(...fieldValues: any[]): QueryConstraint;
@@ -149,8 +193,8 @@ declare module 'firebase/firestore' {
   // Add any other functions you use from firebase/firestore
 }
 
-declare module 'firebase/storage' {
-  import { FirebaseApp } from 'firebase/app';
+declare module "firebase/storage" {
+  import { FirebaseApp } from "firebase/app";
 
   export interface FirebaseStorage {
     app: FirebaseApp;
@@ -168,10 +212,20 @@ declare module 'firebase/storage' {
   }
 
   export function getStorage(app?: FirebaseApp): FirebaseStorage;
-  export function ref(storage: FirebaseStorage, path?: string): StorageReference;
-  export function uploadBytes(reference: StorageReference, data: Blob | Uint8Array | ArrayBuffer): Promise<any>;
-  export function uploadString(reference: StorageReference, value: string, format?: string): Promise<any>;
+  export function ref(
+    storage: FirebaseStorage,
+    path?: string,
+  ): StorageReference;
+  export function uploadBytes(
+    reference: StorageReference,
+    data: Blob | Uint8Array | ArrayBuffer,
+  ): Promise<any>;
+  export function uploadString(
+    reference: StorageReference,
+    value: string,
+    format?: string,
+  ): Promise<any>;
   export function getDownloadURL(reference: StorageReference): Promise<string>;
   export function deleteObject(reference: StorageReference): Promise<void>;
   // Add any other functions you use from firebase/storage
-} 
+}

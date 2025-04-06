@@ -1,9 +1,6 @@
-import React from 'react';
-import {
-  View,
-  Text
-} from 'react-native';
-import { MaterialIcons } from '@expo/vector-icons';
+import React from "react";
+import { View, Text } from "react-native";
+import { MaterialIcons } from "@expo/vector-icons";
 
 interface EmptyStateProps {
   icon: keyof typeof MaterialIcons.glyphMap; // MaterialIcons icon name

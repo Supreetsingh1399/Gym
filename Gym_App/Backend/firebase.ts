@@ -1,9 +1,9 @@
-import { initializeAuth, getReactNativePersistence } from '@firebase/auth';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { initializeApp, getApps, FirebaseApp } from '@firebase/app';
-import { Auth, getAuth } from '@firebase/auth';
-import { Firestore, getFirestore } from '@firebase/firestore';
-import { FirebaseStorage, getStorage } from '@firebase/storage';
+import { initializeAuth, getReactNativePersistence } from "@firebase/auth";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { initializeApp, getApps, FirebaseApp } from "@firebase/app";
+import { Auth, getAuth } from "@firebase/auth";
+import { Firestore, getFirestore } from "@firebase/firestore";
+import { FirebaseStorage, getStorage } from "@firebase/storage";
 
 // Firebase configuration
 const firebaseConfig = {
@@ -23,7 +23,7 @@ let FireBase_Storage: FirebaseStorage;
 
 try {
   console.log("Initializing Firebase services");
-  
+
   // Check if Firebase app already exists
   if (getApps().length === 0) {
     console.log("Creating new Firebase app instance");
@@ -32,16 +32,15 @@ try {
     console.log("Using existing Firebase app instance");
     app = getApps()[0];
   }
-  
-  
- // Initialize Firebase Auth with persistence
- FireBase_Auth = initializeAuth(app, {
-  persistence: getReactNativePersistence(AsyncStorage)
-});
+
+  // Initialize Firebase Auth with persistence
+  FireBase_Auth = initializeAuth(app, {
+    persistence: getReactNativePersistence(AsyncStorage),
+  });
   // Initialize other Firebase services
   FireBase_DB = getFirestore(app);
   FireBase_Storage = getStorage(app);
-  
+
   console.log("Firebase services initialized successfully");
 } catch (error) {
   console.error("Error initializing Firebase services:", error);
@@ -53,7 +52,7 @@ export const isFirebaseReady = () => {
     auth: !!FireBase_Auth,
     db: !!FireBase_DB,
     storage: !!FireBase_Storage,
-    app: !!app
+    app: !!app,
   };
 };
 

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -8,12 +8,17 @@ import {
   ActivityIndicator,
   Platform,
   StyleSheet,
-  Dimensions,//@ts-ignore
+  Dimensions, //@ts-ignore
   Animated,
   Alert,
   ScrollView,
 } from "react-native";
-import { signInWithEmailAndPassword, getAuth, signOut, AuthError } from "@firebase/auth";
+import {
+  signInWithEmailAndPassword,
+  getAuth,
+  signOut,
+  AuthError,
+} from "@firebase/auth";
 import { app, isFirebaseReady } from "../../Backend/firebase";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -25,9 +30,12 @@ import { FitnessSplineModel } from "../components/FitnessSplineModel";
 import ToastManager from "../components/ToastManager";
 
 // Import utilities
-import { isFirebaseError, getAuthErrorMessage } from "../../utils/errorHandling";
+import {
+  isFirebaseError,
+  getAuthErrorMessage,
+} from "../../utils/errorHandling";
 
-const { width, height } = Dimensions.get('window');
+const { width, height } = Dimensions.get("window");
 
 /**
  * Enhanced Login screen component with 3D elements
@@ -43,14 +51,14 @@ const Login = ({ navigation }: ScreenProps<"LoginScreen">): JSX.Element => {
   const [authInProgress, setAuthInProgress] = useState<boolean>(false);
   const [authAvailable, setAuthAvailable] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
-  
+
   // Animation values
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(50)).current;
-  
+
   // Get auth directly - no helper needed
   const FireBase_Auth = getAuth(app);
-  
+
   // Toast instance
   const toast = ToastManager;
 
@@ -69,7 +77,7 @@ const Login = ({ navigation }: ScreenProps<"LoginScreen">): JSX.Element => {
         console.error("Error during sign out:", error);
       }
     };
-    
+
     clearPreviousSession();
   }, []);
 
@@ -86,9 +94,9 @@ const Login = ({ navigation }: ScreenProps<"LoginScreen">): JSX.Element => {
         toValue: 0,
         duration: 800,
         useNativeDriver: true,
-      })
+      }),
     ]).start();
-    
+
     return () => {
       isMounted.current = false;
     };
@@ -99,7 +107,7 @@ const Login = ({ navigation }: ScreenProps<"LoginScreen">): JSX.Element => {
     // One-time check for Firebase Auth availability
     const services = isFirebaseReady();
     setAuthAvailable(services.auth);
-    
+
     if (services.auth) {
       // console.log("Firebase Auth is available in LoginScreen");
     } else {
@@ -162,16 +170,17 @@ const Login = ({ navigation }: ScreenProps<"LoginScreen">): JSX.Element => {
   const handleSignIn = async (): Promise<void> => {
     // Prevent multiple submissions
     if (loading || authInProgress) return;
-    
+
     // Validate the form
     if (!validateForm()) return;
-    
+
     // Clear any previous errors
     setError(null);
-    
+
     // Check if Auth is available
-    if (!authAvailable || !FireBase_Auth){ //@ts-ignore
-      if (toast && typeof toast.error === 'function') {
+    if (!authAvailable || !FireBase_Auth) {
+      //@ts-ignore
+      if (toast && typeof toast.error === "function") {
         //@ts-ignore
         toast.error("Authentication service is not available");
       } else {
@@ -180,54 +189,54 @@ const Login = ({ navigation }: ScreenProps<"LoginScreen">): JSX.Element => {
       }
       return;
     }
-    
+
     try {
       setLoading(true);
       setAuthInProgress(true);
-      
+
       // Sign out any existing user first to prevent cached login issues
       if (FireBase_Auth.currentUser) {
         await signOut(FireBase_Auth);
       }
-      
+
       // Now attempt to sign in with the provided credentials
       const userCredential = await signInWithEmailAndPassword(
         FireBase_Auth,
         email.trim(),
-        password
+        password,
       );
-      
+
       // Log successful authentication
       console.log("Sign in successful for:", userCredential.user.email);
-      
+
       // Show success message
       //@ts-ignore
-      if (toast && typeof toast.success === 'function') { //@ts-ignore
+      if (toast && typeof toast.success === "function") {
+        //@ts-ignore
         toast.success("Login successful!");
       } else {
         Alert.alert("Success", "Login successful!");
       }
-      
+
       // Clear form fields after successful login
       setEmail("");
       setPassword("");
-      
     } catch (error) {
       console.error("Login error:", error);
-      
-      const errorMessage = isFirebaseError(error) 
-        ? getAuthErrorMessage(error) 
+
+      const errorMessage = isFirebaseError(error)
+        ? getAuthErrorMessage(error)
         : "An unexpected error occurred";
-      
+
       setError(errorMessage);
-         
+
       //@ts-ignore
-      if (toast && typeof toast.error === 'function') { //@ts-ignore
+      if (toast && typeof toast.error === "function") {
+        //@ts-ignore
         toast.error(errorMessage);
       } else {
         Alert.alert("Login Failed", errorMessage);
       }
-      
     } finally {
       if (isMounted.current) {
         setLoading(false);
@@ -236,11 +245,12 @@ const Login = ({ navigation }: ScreenProps<"LoginScreen">): JSX.Element => {
     }
   };
 
-  return (//@ts-ignore
+  return (
+    //@ts-ignore
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
           style={styles.keyboardView}
         >
           {/* 3D Model Header - Smaller and with a different design */}
@@ -248,51 +258,52 @@ const Login = ({ navigation }: ScreenProps<"LoginScreen">): JSX.Element => {
             <View style={styles.splineOverlay}>
               <Text style={styles.brandText}>FITNESS HUB</Text>
             </View>
-            <FitnessSplineModel 
-              style={styles.splineModel} 
+            <FitnessSplineModel
+              style={styles.splineModel}
               scene="https://prod.spline.design/example-fitness-scene" // Replace with your preferred scene
             />
           </View>
-          
-          <Animated.View 
+
+          <Animated.View
             style={[
               styles.formContainer,
               {
                 opacity: fadeAnim,
-                transform: [{ translateY: slideAnim }]
-              }
+                transform: [{ translateY: slideAnim }],
+              },
             ]}
           >
-            <Text style={styles.titleText}>
-              Welcome Back
-            </Text>
+            <Text style={styles.titleText}>Welcome Back</Text>
             <Text style={styles.subtitleText}>
               Login to continue your fitness journey
             </Text>
-            
+
             {/* Error message if auth is not available */}
             {!authAvailable && (
               <View style={styles.errorContainer}>
                 <Text style={styles.errorText}>
-                  Authentication service is initializing. Please wait or try again.
+                  Authentication service is initializing. Please wait or try
+                  again.
                 </Text>
               </View>
             )}
-            
+
             {/* General error display */}
             {error && (
               <View style={styles.errorContainer}>
                 <Text style={styles.errorText}>{error}</Text>
               </View>
             )}
-            
+
             {/* Email Input */}
             <View style={styles.inputContainer}>
               <Text style={styles.inputLabel}>Email</Text>
-              <View style={[
-                styles.inputWrapper,
-                emailError ? styles.inputError : null
-              ]}>
+              <View
+                style={[
+                  styles.inputWrapper,
+                  emailError ? styles.inputError : null,
+                ]}
+              >
                 <View style={styles.iconContainer}>
                   <Ionicons name="mail-outline" size={20} color="#777" />
                 </View>
@@ -305,16 +316,20 @@ const Login = ({ navigation }: ScreenProps<"LoginScreen">): JSX.Element => {
                   style={styles.textInput}
                 />
               </View>
-              {emailError ? <Text style={styles.errorMessage}>{emailError}</Text> : null}
+              {emailError ? (
+                <Text style={styles.errorMessage}>{emailError}</Text>
+              ) : null}
             </View>
-            
+
             {/* Password Input */}
             <View style={styles.inputContainer}>
               <Text style={styles.inputLabel}>Password</Text>
-              <View style={[
-                styles.inputWrapper,
-                passwordError ? styles.inputError : null
-              ]}>
+              <View
+                style={[
+                  styles.inputWrapper,
+                  passwordError ? styles.inputError : null,
+                ]}
+              >
                 <View style={styles.iconContainer}>
                   <Ionicons name="lock-closed-outline" size={20} color="#777" />
                 </View>
@@ -325,65 +340,78 @@ const Login = ({ navigation }: ScreenProps<"LoginScreen">): JSX.Element => {
                   secureTextEntry={!showPassword}
                   style={styles.textInput}
                 />
-                <TouchableOpacity onPress={togglePasswordVisibility} style={styles.iconContainer}>
+                <TouchableOpacity
+                  onPress={togglePasswordVisibility}
+                  style={styles.iconContainer}
+                >
                   <View>
-                    <Ionicons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={20} color="#777" />
+                    <Ionicons
+                      name={showPassword ? "eye-off-outline" : "eye-outline"}
+                      size={20}
+                      color="#777"
+                    />
                   </View>
                 </TouchableOpacity>
               </View>
-              {passwordError ? <Text style={styles.errorMessage}>{passwordError}</Text> : null}
+              {passwordError ? (
+                <Text style={styles.errorMessage}>{passwordError}</Text>
+              ) : null}
             </View>
-            
+
             {/* Forgot Password */}
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.forgotPasswordContainer}
-              onPress={() => navigation.navigate('Forgot_Password')}
+              onPress={() => navigation.navigate("Forgot_Password")}
             >
               <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
             </TouchableOpacity>
-            
+
             {/* Login Button */}
             <TouchableOpacity
               onPress={handleSignIn}
               disabled={loading || authInProgress || !authAvailable}
               style={[
                 styles.loginButton,
-                (loading || authInProgress || !authAvailable) ? styles.loginButtonDisabled : null
+                loading || authInProgress || !authAvailable
+                  ? styles.loginButtonDisabled
+                  : null,
               ]}
             >
               {loading ? (
                 <ActivityIndicator color="#fff" />
               ) : (
-                <Text style={styles.loginButtonText}>
-                  Log In
-                </Text>
+                <Text style={styles.loginButtonText}>Log In</Text>
               )}
             </TouchableOpacity>
-            
+
             {/* Or divider */}
             <View style={styles.dividerContainer}>
               <View style={styles.dividerLine} />
               <Text style={styles.dividerText}>OR</Text>
               <View style={styles.dividerLine} />
             </View>
-            
+
             {/* Register Links */}
             <View style={styles.registerOptions}>
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={styles.registerButton}
-                onPress={() => navigation.navigate('User_SignUp')}
+                onPress={() => navigation.navigate("User_SignUp")}
               >
                 <View style={styles.registerButtonIcon}>
-                  <Ionicons name="person-add-outline" size={18} color="#3498db" />
+                  <Ionicons
+                    name="person-add-outline"
+                    size={18}
+                    color="#3498db"
+                  />
                 </View>
                 <Text style={styles.registerButtonText}>Sign Up as User</Text>
               </TouchableOpacity>
-              
+
               <View style={styles.registerButtonSpacer} />
-              
-              <TouchableOpacity 
+
+              <TouchableOpacity
                 style={styles.registerButton}
-                onPress={() => navigation.navigate('Gym_rgn')}
+                onPress={() => navigation.navigate("Gym_rgn")}
               >
                 <View style={styles.registerButtonIcon}>
                   <Ionicons name="fitness-outline" size={18} color="#3498db" />
@@ -401,7 +429,7 @@ const Login = ({ navigation }: ScreenProps<"LoginScreen">): JSX.Element => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#ffffff'
+    backgroundColor: "#ffffff",
   },
   scrollContent: {
     flexGrow: 1,
@@ -412,14 +440,14 @@ const styles = StyleSheet.create({
   splineContainer: {
     top: 0,
     height: height * 0.16, // Reduced height by ~30%
-    width: '100%',
-    backgroundColor: '#2c3e50', // Different background color
-    justifyContent: 'center',
-    alignItems: 'center',
+    width: "100%",
+    backgroundColor: "#2c3e50", // Different background color
+    justifyContent: "center",
+    alignItems: "center",
     borderBottomLeftRadius: 30,
     borderBottomRightRadius: 30,
-    overflow: 'hidden',
-    shadowColor: '#000',
+    overflow: "hidden",
+    shadowColor: "#000",
     shadowOffset: {
       width: 0,
       height: 2,
@@ -427,32 +455,32 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.25,
     shadowRadius: 3,
     elevation: 80,
-    position: 'relative',
+    position: "relative",
   },
   splineOverlay: {
-    position: 'absolute',
+    position: "absolute",
     top: 0,
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.2)', // Slightly reduced opacity
+    backgroundColor: "rgba(0, 0, 0, 0.2)", // Slightly reduced opacity
     zIndex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   brandText: {
-    color: '#ffffff',
+    color: "#ffffff",
     fontSize: 24, // Smaller text
-    fontWeight: 'bold',
+    fontWeight: "bold",
     letterSpacing: 2,
-    textShadowColor: 'rgba(0, 0, 0, 0.5)',
+    textShadowColor: "rgba(0, 0, 0, 0.5)",
     textShadowOffset: { width: 1, height: 1 },
     textShadowRadius: 3,
   },
   splineModel: {
-    height: '110%', // Slightly reduced size
-    width: '110%', 
-    position: 'absolute',
+    height: "110%", // Slightly reduced size
+    width: "110%",
+    position: "absolute",
     opacity: 0.85,
   },
   formContainer: {
@@ -461,27 +489,27 @@ const styles = StyleSheet.create({
   },
   titleText: {
     fontSize: 26, // Slightly smaller
-    fontWeight: 'bold',
-    color: '#333',
-    textAlign: 'center',
+    fontWeight: "bold",
+    color: "#333",
+    textAlign: "center",
     marginBottom: 6,
   },
   subtitleText: {
     fontSize: 15, // Slightly smaller
-    color: '#666',
-    textAlign: 'center',
+    color: "#666",
+    textAlign: "center",
     marginBottom: 20, // Slightly reduced
   },
   errorContainer: {
     marginBottom: 14,
     padding: 10,
-    backgroundColor: '#ffeeee',
+    backgroundColor: "#ffeeee",
     borderRadius: 8,
     borderLeftWidth: 4,
-    borderLeftColor: '#ff4d4d',
+    borderLeftColor: "#ff4d4d",
   },
   errorText: {
-    color: '#d63031',
+    color: "#d63031",
     fontSize: 14,
   },
   inputContainer: {
@@ -490,20 +518,20 @@ const styles = StyleSheet.create({
   inputLabel: {
     marginBottom: 6, // Reduced
     fontSize: 14,
-    fontWeight: '600',
-    color: '#555',
+    fontWeight: "600",
+    color: "#555",
   },
   inputWrapper: {
-    flexDirection: 'row',
+    flexDirection: "row",
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: "#ddd",
     borderRadius: 8,
-    alignItems: 'center',
-    backgroundColor: '#f9f9f9',
+    alignItems: "center",
+    backgroundColor: "#f9f9f9",
   },
   inputError: {
-    borderColor: '#ff4d4d',
-    backgroundColor: '#fff8f8',
+    borderColor: "#ff4d4d",
+    backgroundColor: "#fff8f8",
   },
   iconContainer: {
     padding: 10, // Reduced
@@ -512,63 +540,63 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 10, // Reduced
     fontSize: 15, // Slightly smaller
-    color: '#333',
+    color: "#333",
   },
   errorMessage: {
-    color: '#ff4d4d',
+    color: "#ff4d4d",
     marginTop: 3,
     fontSize: 12,
   },
   forgotPasswordContainer: {
-    alignItems: 'flex-end',
+    alignItems: "flex-end",
     marginBottom: 20, // Reduced
   },
   forgotPasswordText: {
-    color: '#3498db',
+    color: "#3498db",
     fontSize: 14,
   },
   loginButton: {
-    backgroundColor: '#3498db',
+    backgroundColor: "#3498db",
     padding: 14, // Reduced
     borderRadius: 8,
-    alignItems: 'center',
+    alignItems: "center",
     marginBottom: 20, // Reduced
   },
   loginButtonDisabled: {
-    backgroundColor: '#a0cef5',
+    backgroundColor: "#a0cef5",
   },
   loginButtonText: {
-    color: '#fff',
-    fontWeight: 'bold',
+    color: "#fff",
+    fontWeight: "bold",
     fontSize: 16,
   },
   dividerContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     marginBottom: 20, // Reduced
   },
   dividerLine: {
     flex: 1,
     height: 1,
-    backgroundColor: '#ddd',
+    backgroundColor: "#ddd",
   },
   dividerText: {
     paddingHorizontal: 16,
-    color: '#999',
+    color: "#999",
     fontSize: 14,
   },
   registerOptions: {
     marginBottom: 20,
   },
   registerButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     padding: 12,
     borderWidth: 1,
-    borderColor: '#3498db',
+    borderColor: "#3498db",
     borderRadius: 8,
-    backgroundColor: '#ebf5ff',
+    backgroundColor: "#ebf5ff",
   },
   registerButtonSpacer: {
     height: 10,
@@ -577,8 +605,8 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   registerButtonText: {
-    color: '#3498db',
-    fontWeight: '600',
+    color: "#3498db",
+    fontWeight: "600",
     fontSize: 14,
   },
 });

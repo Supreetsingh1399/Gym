@@ -10,12 +10,12 @@ export type RootStackParamList = {
   User_SignUp: undefined;
   Forgot_Password: undefined;
   Gym_rgn: undefined;
-  
+
   // Main screens
   UserTabs: undefined;
   TrainerHome: undefined;
   RGN_Gyms: undefined;
-  
+
   // Feature screens
   SearchResults: {
     query?: string;

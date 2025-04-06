@@ -1,6 +1,6 @@
-declare module 'react-native' {
-  import React from 'react';
-  
+declare module "react-native" {
+  import React from "react";
+
   // Basic Components
   export const View: React.ComponentType<any>;
   export const Text: React.ComponentType<any>;
@@ -23,12 +23,17 @@ declare module 'react-native' {
 
   // APIs
   export const Platform: {
-    OS: 'ios' | 'android' | 'web';
+    OS: "ios" | "android" | "web";
     Version: number;
     select: <T extends Record<string, any>>(obj: T) => T[keyof T];
   };
   export const Alert: {
-    alert: (title: string, message?: string, buttons?: any[], options?: any) => void;
+    alert: (
+      title: string,
+      message?: string,
+      buttons?: any[],
+      options?: any,
+    ) => void;
   };
   export const Linking: {
     openURL: (url: string) => Promise<void>;
@@ -38,7 +43,7 @@ declare module 'react-native' {
     share: (content: ShareContent, options?: any) => Promise<any>;
   };
   export const Dimensions: {
-    get: (dimension: 'window' | 'screen') => { width: number; height: number };
+    get: (dimension: "window" | "screen") => { width: number; height: number };
   };
 
   // Types
@@ -52,4 +57,4 @@ declare module 'react-native' {
     create: <T extends Record<string, any>>(styles: T) => T;
     flatten: (style: any) => any;
   };
-} 
+}

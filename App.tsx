@@ -1,7 +1,13 @@
-import React, { useEffect, useState } from "react";//@ts-ignore
-import { NavigationContainer } from "@react-navigation/native";//@ts-ignore
+import React, { useEffect, useState } from "react"; //@ts-ignore
+import { NavigationContainer } from "@react-navigation/native"; //@ts-ignore
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
-import { ActivityIndicator, View, Text, TouchableOpacity, StyleSheet } from "react-native";
+import {
+  ActivityIndicator,
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+} from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { User } from "firebase/auth";
 
@@ -42,7 +48,10 @@ interface ErrorBoundaryState {
 }
 
 // Error Boundary component
-class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundaryState> {
+class ErrorBoundary extends React.Component<
+  ErrorBoundaryProps,
+  ErrorBoundaryState
+> {
   state: ErrorBoundaryState = { hasError: false, error: null };
 
   static getDerivedStateFromError(error: Error): ErrorBoundaryState {
@@ -51,12 +60,15 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo): void {
     console.error("Error caught by boundary:", error, errorInfo);
-    showToast?.error("App Error", error.message || "An unexpected error occurred");
+    showToast?.error(
+      "App Error",
+      error.message || "An unexpected error occurred",
+    );
   }
 
   resetError = (): void => {
     this.setState({ hasError: false, error: null });
-  }
+  };
 
   render(): React.ReactNode {
     if (this.state.hasError) {
@@ -66,7 +78,10 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
           <Text style={styles.errorMessage}>
             {this.state.error?.toString() || "An unknown error occurred"}
           </Text>
-          <TouchableOpacity style={styles.retryButton} onPress={this.resetError}>
+          <TouchableOpacity
+            style={styles.retryButton}
+            onPress={this.resetError}
+          >
             <Text style={styles.retryText}>Retry</Text>
           </TouchableOpacity>
         </View>
@@ -89,43 +104,46 @@ interface StackNavigatorProps {
  * Stack Navigator component that handles navigation based on authentication state
  */
 const StackNavigator = ({ user }: StackNavigatorProps): JSX.Element => {
-  console.log("[Navigation] Rendering StackNavigator with user:", user ? "Logged in" : "Not logged in");
-  
+  console.log(
+    "[Navigation] Rendering StackNavigator with user:",
+    user ? "Logged in" : "Not logged in",
+  );
+
   return (
     <Stack.Navigator
       initialRouteName={user ? "UserTabs" : "LoginScreen"}
       screenOptions={{
         headerShown: true,
         headerTitleStyle: {
-          fontWeight: 'bold',
+          fontWeight: "bold",
         },
-        headerTintColor: '#0091EA',
+        headerTintColor: "#0091EA",
       }}
     >
       {!user ? (
         // Authentication screens
         <>
-          <Stack.Screen 
-            name="LoginScreen" 
-            component={HandleLogin} 
-            options={{ title: "Login" }} 
+          <Stack.Screen
+            name="LoginScreen"
+            component={HandleLogin}
+            options={{ title: "Login" }}
           />
-          <Stack.Screen 
+          <Stack.Screen
             //@ts-ignore
-            name="User_SignUp" 
+            name="User_SignUp"
             component={US_SignUp}
             options={{ title: "Create User Account" }}
           />
-           
-          <Stack.Screen 
+
+          <Stack.Screen
             //@ts-ignore
-            name="Forgot_Password" 
+            name="Forgot_Password"
             component={ForgotPass}
             options={{ title: "Reset Password" }}
           />
-          <Stack.Screen 
+          <Stack.Screen
             //@ts-ignore
-            name="Gym_rgn" 
+            name="Gym_rgn"
             component={GymRegistrationWizard}
             options={{ title: "Register Gym" }}
           />
@@ -139,24 +157,24 @@ const StackNavigator = ({ user }: StackNavigatorProps): JSX.Element => {
             component={TabNavigator}
             options={{ headerShown: false }}
           />
-          <Stack.Screen 
+          <Stack.Screen
             //@ts-ignore
-            name="RGN_Gyms" 
+            name="RGN_Gyms"
             component={Registered_Gyms}
             options={{ title: "Registered Gyms" }}
           />
-          <Stack.Screen 
+          <Stack.Screen
             name="TrainerHome"
             component={TrainerHome}
             options={{ title: "Trainer Dashboard" }}
           />
-          <Stack.Screen 
-            name="SearchResults" 
+          <Stack.Screen
+            name="SearchResults"
             component={SearchResults as any}
             options={{ title: "Search Results" }}
           />
-          <Stack.Screen 
-            name="ExternalGymDetails" 
+          <Stack.Screen
+            name="ExternalGymDetails"
             component={ExternalGymDetails as any}
             options={{ title: "Gym Details" }}
           />
@@ -176,7 +194,7 @@ const App = (): JSX.Element => {
   const [servicesReady, setServicesReady] = useState<boolean>(false);
   const [initAttempts, setInitAttempts] = useState<number>(0);
   const { user, loading, error } = useAuth();
-  
+
   // Max number of initialization attempts before showing retry button
   const MAX_INIT_ATTEMPTS = 10;
 
@@ -184,35 +202,37 @@ const App = (): JSX.Element => {
   useEffect(() => {
     // Skip if services are already marked as ready
     if (servicesReady) return;
-    
+
     // Don't try more than MAX_INIT_ATTEMPTS times automatically
     if (initAttempts >= MAX_INIT_ATTEMPTS) return;
 
-    console.log(`[App] Checking Firebase services, attempt ${initAttempts + 1}/${MAX_INIT_ATTEMPTS}`);
-    
+    console.log(
+      `[App] Checking Firebase services, attempt ${initAttempts + 1}/${MAX_INIT_ATTEMPTS}`,
+    );
+
     const services = isFirebaseReady();
-    
+
     if (services.auth && services.db) {
       console.log("[App] Firebase services are ready");
       setServicesReady(true);
     } else {
       // Schedule next check
       const timer = setTimeout(() => {
-        setInitAttempts(prev => prev + 1);
+        setInitAttempts((prev) => prev + 1);
       }, 1000);
-      
+
       return () => clearTimeout(timer);
     }
   }, [initAttempts, servicesReady]);
 
   // Log important state changes
   useEffect(() => {
-    console.log("[App] Status:", { 
-      loading, 
+    console.log("[App] Status:", {
+      loading,
       error: error ? "Error present" : "No error",
       userExists: !!user,
       servicesReady,
-      initAttempts
+      initAttempts,
     });
   }, [loading, error, user, servicesReady, initAttempts]);
 
@@ -237,13 +257,15 @@ const App = (): JSX.Element => {
   // Show loading state if services aren't ready or auth is still loading
   if (!servicesReady || loading) {
     const showRetryButton = initAttempts >= MAX_INIT_ATTEMPTS || error;
-    
+
     return (
       <SafeAreaProvider>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#0091EA" />
           <Text style={styles.loadingText}>
-            {!servicesReady ? "Initializing services..." : "Loading user data..."}
+            {!servicesReady
+              ? "Initializing services..."
+              : "Loading user data..."}
           </Text>
           <Text style={styles.statusText}>
             Firebase Auth: {FireBase_Auth ? "Available" : "Initializing"}
@@ -253,7 +275,7 @@ const App = (): JSX.Element => {
               Initialization attempts: {initAttempts}/{MAX_INIT_ATTEMPTS}
             </Text>
           )}
-          
+
           {showRetryButton && (
             <TouchableOpacity style={styles.retryButton} onPress={handleRetry}>
               <Text style={styles.retryText}>Retry Connection</Text>
@@ -286,9 +308,10 @@ const App = (): JSX.Element => {
     <ErrorBoundary>
       <SafeAreaProvider>
         <NavigationContainer>
-          <StackNavigator  
-          //@ts-ignore
-          user={user} />
+          <StackNavigator
+            //@ts-ignore
+            user={user}
+          />
         </NavigationContainer>
         <ToastManager />
       </SafeAreaProvider>
@@ -299,51 +322,51 @@ const App = (): JSX.Element => {
 const styles = StyleSheet.create({
   loadingContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'white',
-    padding: 20
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "white",
+    padding: 20,
   },
   loadingText: {
     marginTop: 16,
     fontSize: 16,
-    color: '#666'
+    color: "#666",
   },
   statusText: {
     marginTop: 8,
     fontSize: 12,
-    color: '#999'
+    color: "#999",
   },
   errorContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'white',
-    padding: 20
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "white",
+    padding: 20,
   },
   errorTitle: {
     fontSize: 20,
-    fontWeight: 'bold',
-    color: '#e53935',
-    marginBottom: 12
+    fontWeight: "bold",
+    color: "#e53935",
+    marginBottom: 12,
   },
   errorMessage: {
     fontSize: 14,
-    color: '#666',
-    textAlign: 'center',
-    marginBottom: 20
+    color: "#666",
+    textAlign: "center",
+    marginBottom: 20,
   },
   retryButton: {
-    backgroundColor: '#0091EA',
+    backgroundColor: "#0091EA",
     paddingVertical: 12,
     paddingHorizontal: 24,
     borderRadius: 8,
-    marginTop: 16
+    marginTop: 16,
   },
   retryText: {
-    color: 'white',
-    fontWeight: 'bold'
-  }
+    color: "white",
+    fontWeight: "bold",
+  },
 });
 
 export default App;

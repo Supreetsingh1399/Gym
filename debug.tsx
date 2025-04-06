@@ -1,16 +1,16 @@
-import React from 'react';
-import { View, Text, Button, SafeAreaView, StyleSheet } from 'react-native';
-import { NavigationContainer } from '@react-navigation/native';
-import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import React from "react";
+import { View, Text, Button, SafeAreaView, StyleSheet } from "react-native";
+import { NavigationContainer } from "@react-navigation/native";
+import { createNativeStackNavigator } from "@react-navigation/native-stack";
 
 // A very basic home screen
 const HomeScreen = ({ navigation }) => (
   <SafeAreaView style={styles.container}>
     <Text style={styles.title}>Debug Home</Text>
     <View style={styles.buttonContainer}>
-      <Button 
-        title="Go to Details" 
-        onPress={() => navigation.navigate('Details')} 
+      <Button
+        title="Go to Details"
+        onPress={() => navigation.navigate("Details")}
       />
     </View>
   </SafeAreaView>
@@ -30,18 +30,18 @@ const Stack = createNativeStackNavigator();
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     padding: 20,
   },
   title: {
     fontSize: 24,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     marginBottom: 20,
   },
   buttonContainer: {
     marginTop: 20,
-  }
+  },
 });
 
 // Main debug component
@@ -54,4 +54,4 @@ export default function DebugApp() {
       </Stack.Navigator>
     </NavigationContainer>
   );
-} 
+}

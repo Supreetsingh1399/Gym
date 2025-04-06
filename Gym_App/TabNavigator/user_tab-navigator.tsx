@@ -28,8 +28,8 @@ const TabNavigator = (): JSX.Element => {
         tabBarActiveTintColor: "#0091EA",
         tabBarInactiveTintColor: "gray",
         tabBarStyle: {
-          paddingBottom: Platform.OS === 'ios' ? 5 : 8,
-          height: Platform.OS === 'ios' ? 60 : 65,
+          paddingBottom: Platform.OS === "ios" ? 5 : 8,
+          height: Platform.OS === "ios" ? 60 : 65,
           borderTopWidth: 1,
           borderTopColor: "#e0e0e0",
           shadowColor: "#000",
@@ -40,8 +40,8 @@ const TabNavigator = (): JSX.Element => {
         },
         tabBarLabelStyle: {
           fontSize: 12,
-          fontWeight: '500',
-          marginBottom: Platform.OS === 'ios' ? 0 : 4,
+          fontWeight: "500",
+          marginBottom: Platform.OS === "ios" ? 0 : 4,
         },
         tabBarItemStyle: {
           padding: 5,
@@ -54,10 +54,10 @@ const TabNavigator = (): JSX.Element => {
           elevation: 5,
         },
         headerTitleStyle: {
-          fontWeight: 'bold',
+          fontWeight: "bold",
           fontSize: 18,
         },
-        headerTintColor: '#0091EA',
+        headerTintColor: "#0091EA",
       }}
     >
       <Tab.Screen
@@ -73,7 +73,7 @@ const TabNavigator = (): JSX.Element => {
       />
 
       <Tab.Screen
-      //@ts-ignore
+        //@ts-ignore
         name="UserChats"
         component={UserChats}
         options={{
@@ -86,7 +86,7 @@ const TabNavigator = (): JSX.Element => {
       />
 
       <Tab.Screen
-      //@ts-ignore
+        //@ts-ignore
         name="UserNews"
         component={NewsScreen}
         options={{
@@ -99,7 +99,7 @@ const TabNavigator = (): JSX.Element => {
       />
 
       <Tab.Screen
-      //@ts-ignore
+        //@ts-ignore
         name="UserProfile"
         //@ts-ignore
         component={UserProfile}
