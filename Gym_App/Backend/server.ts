@@ -15,6 +15,7 @@ import {
   getAllGyms,
   registerGym,
   getUserGyms,
+  getGymById,
 } from "./controllers/Gym_controls"; // Import the Gym model
 import Gym from "./Models/Gym_Register";
 import User from "./Models/User_models"; // Import the User model
@@ -58,6 +59,8 @@ router.post("/Register/Gyms", (req: Request, res: Response) =>
 router.get("/Register/Gyms", (req: Request, res: Response) =>
   getAllGyms(req, res),
 );
+// Get a specific gym by ID
+router.get('/Register/Gyms/:id', getGymById);
 router.put(
   "/Register/Gyms/:id/approve",
   async (req: Request, res: Response) => {
@@ -91,8 +94,10 @@ router.get("/Register/Gyms/:userId", async (req: Request, res: Response) => {
 //@ts-ignore
 router.get("/Register/Users/:id", async (req: Request, res: Response) => {
   try {
-    const { id } = req.params;//@ts-ignore
-    const user = await User.findOne({ uid: id });
+    const { id } = req.params;
+    
+    // Use findById instead of find for looking up by _id
+    const user = await User.findById(id);
     
     if (!user) {
       return res.status(404).json({ error: "User not found" });
@@ -101,6 +106,12 @@ router.get("/Register/Users/:id", async (req: Request, res: Response) => {
     res.status(200).json(user);
   } catch (error) {
     console.error("Error fetching user:", error);
+    
+    // Check if it's an invalid ID format error
+    if (error instanceof Error && error.name === 'CastError') {
+      return res.status(400).json({ error: "Invalid ID format" });
+    }
+    
     res.status(500).json({ error: "Failed to fetch user" });
   }
 });

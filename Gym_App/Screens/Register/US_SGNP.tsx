@@ -305,8 +305,8 @@ const US_SignUp = ({
       const userDataObj = {
         name: userData.name,
         email: userData.email,
-        phone: userData.phoneNumber, // CHANGE: Add this required field
-        phoneNumber: userData.phoneNumber, // Keep for Firestore compatibility
+        phone: userData.phoneNumber, 
+        phoneNumber: userData.phoneNumber, 
         fitnessGoal: userData.fitnessGoal,
         gender: userData.gender,
         // dateOfBirth: userData.dateOfBirth,
@@ -317,7 +317,7 @@ const US_SignUp = ({
         updatedAt: new Date().toISOString(),
         role: "user",
         uid: user.uid,
-        password: password, // CHANGE: Add this required field
+        password: password, 
       };
 
       // Store in Firestore

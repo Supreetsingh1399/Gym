@@ -127,3 +127,23 @@ export const getUserGyms = async (req: Request, res: Response) => {
     res.status(500).json({ error: "Failed to fetch user gyms" });
   }
 };
+export const getGymById = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    if (!id) {
+      return res.status(400).json({ error: "Gym ID is required" });
+    }
+
+    const gym = await Gym.findById(id);
+    
+    if (!gym) {
+      return res.status(404).json({ error: "Gym not found" });
+    }
+
+    res.status(200).json({ gym });
+  } catch (error) {
+    console.error("Error fetching gym:", error);
+    res.status(500).json({ error: "Failed to fetch gym" });
+  }
+};
