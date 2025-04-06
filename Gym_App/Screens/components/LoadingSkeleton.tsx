@@ -1,4 +1,4 @@
-import React from "react";
+import React from "react";//@ts-ignore
 import { View, Animated, Easing, StyleSheet } from "react-native";
 import { useEffect, useRef } from "react";
 

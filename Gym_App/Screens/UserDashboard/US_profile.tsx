@@ -76,98 +76,94 @@ export default function UserProfile({
   }, []);
 
   // Fetch user data from API
-  useEffect(() => {
-    const fetchUserData = async () => {
-      if (!authAvailable || !FireBase_Auth || !FireBase_Auth.currentUser) {
-        setLoading(false);
-        return;
-      }
+useEffect(() => {
+  const fetchUserData = async () => {
+    if (!authAvailable || !FireBase_Auth || !FireBase_Auth.currentUser) {
+      setLoading(false);
+      return;
+    }
+    
+    try {
+      setLoading(true);
+      setError(null);
       
-      try {
-        setLoading(true);
-        setError(null);
-        
-        // Get user ID from current user
-        const userId = FireBase_Auth.currentUser.uid;
-        
-        // Get token for authentication
-        const token = await FireBase_Auth.currentUser.getIdToken();
-        console.log("Got authentication token for API request");
-        
-        const response = await axios.get(`${API_URL}/Register/Users/${userId}`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-          timeout: 10000, // 10 second timeout
-        });
-        
-        console.log("API Response received");
-        
-        // Check if data is an array and has at least one item
-        const userData = Array.isArray(response.data)
-          ? response.data[0]
-          : Array.isArray(response.data.data)
-            ? response.data.data[0]
-            : response.data.data;
-        
-        if (!userData) {
-          throw new Error("No user data found");
-        }
-  
-        setUser({
-          profilePic: userData.profilePic || null,
-          name: userData.name || "No Name",
-          email: userData.email || "No Email",
-          phone: userData.phone || "No Phone",
-          height: userData.height || "N/A",
-          weight: userData.weight || "N/A",
-          fitnessGoal: userData.fitnessGoal || "No goal set",
-          membership: {
-            gym: userData.membership?.gym || "No gym",
-            type: userData.membership?.type || "Basic",
-            expiry: userData.membership?.expiry || "N/A",
-            active: userData.membership?.active || false,
-          },
-          trainer: {
-            name: userData.trainer?.name || "No trainer",
-            experience: userData.trainer?.experience || "N/A",
-            imageUrl:
-              userData.trainer?.imageUrl ||
-              "https://randomuser.me/api/portraits/men/41.jpg",
-          },
-        });
-      } catch (error) {
-        console.error("Error fetching user data:", error);
-        setError("Failed to fetch user data. Please try again.");
-  
-        // Set default user data for testing/fallback
-        setUser({
-          profilePic: "https://randomuser.me/api/portraits/men/32.jpg",
-          name: "John Doe",
-          email: FireBase_Auth.currentUser?.email || "user@example.com",
-          phone: "(123) 456-7890",
-          height: "5'10\"",
-          weight: "175 lbs",
-          fitnessGoal: "Build muscle and improve endurance",
-          membership: {
-            gym: "Fitness Plus",
-            type: "Premium",
-            expiry: "Dec 31, 2023",
-            active: true,
-          },
-          trainer: {
-            name: "Mike Johnson",
-            experience: "5 years",
-            imageUrl: "https://randomuser.me/api/portraits/men/41.jpg",
-          },
-        });
-      } finally {
-        setLoading(false);
+      // Get user ID from current user
+      const userId = FireBase_Auth.currentUser.uid;
+      
+      // Get token for authentication
+      const token = await FireBase_Auth.currentUser.getIdToken();
+      console.log("Got authentication token for API request");
+      
+      const response = await axios.get(`${API_URL}/Register/Users/${userId}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        timeout: 10000,
+      });
+      
+      console.log("API Response received:", response.status);
+      
+      // Use response.data directly - no nested access
+      const userData = response.data;
+      
+      if (!userData || typeof userData !== 'object') {
+        throw new Error("Invalid user data format");
       }
-    };
-  
-    fetchUserData();
-  }, [authAvailable]);
+
+      setUser({
+        profilePic: userData.profilePic || null,
+        name: userData.name || "No Name",
+        email: userData.email || "No Email",
+        phone: userData.phone || "No Phone",
+        height: userData.height || "N/A",
+        weight: userData.weight || "N/A",
+        fitnessGoal: userData.fitnessGoal || "No goal set",
+        membership: {
+          gym: userData.membership?.gym || "No gym",
+          type: userData.membership?.type || "Basic",
+          expiry: userData.membership?.expiry || "N/A",
+          active: userData.membership?.active || false,
+        },
+        trainer: {
+          name: userData.trainer?.name || "No trainer",
+          experience: userData.trainer?.experience || "N/A",
+          imageUrl:
+            userData.trainer?.imageUrl ||
+            "https://randomuser.me/api/portraits/men/41.jpg",
+        },
+      });
+    } catch (error) {
+      console.error("Error fetching user data:", error);
+      setError("Failed to fetch user data. Please try again.");
+
+      // Set default user data for testing/fallback
+      setUser({
+        profilePic: "https://randomuser.me/api/portraits/men/32.jpg",
+        name: "John Doe",
+        email: FireBase_Auth.currentUser?.email || "user@example.com",
+        phone: "(123) 456-7890",
+        height: "5'10\"",
+        weight: "175 lbs",
+        fitnessGoal: "Build muscle and improve endurance",
+        membership: {
+          gym: "Fitness Plus",
+          type: "Premium",
+          expiry: "Dec 31, 2023",
+          active: true,
+        },
+        trainer: {
+          name: "Mike Johnson",
+          experience: "5 years",
+          imageUrl: "https://randomuser.me/api/portraits/men/41.jpg",
+        },
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  fetchUserData();
+}, [authAvailable]);
   const handleLogout = async () => {
     if (!authAvailable || !FireBase_Auth) {
       Alert.alert(

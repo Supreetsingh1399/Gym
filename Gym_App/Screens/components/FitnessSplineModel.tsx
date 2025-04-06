@@ -8,7 +8,7 @@ import { View, StyleSheet, Platform } from "react-native";
 
 // This component will render a 3D fitness-themed model using Spline
 //@ts-ignore
-export const FitnessSplineModel = ({
+export const FitnessSplineModel = ({//@ts-ignore
   style,
   scene = "https://prod.spline.design/example-fitness-scene",
 }) => {

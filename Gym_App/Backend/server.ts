@@ -93,10 +93,15 @@ router.get("/Register/Gyms/:userId", async (req: Request, res: Response) => {
 router.get("/Register/Users/:id", async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    console.log("Looking for user with uid:", id);
+    console.log("Looking for user with id:", id);
     
-    const user = await User.findOne({ uid: id });
-    console.log("User query result:", user);
+    // Try to find by Firebase uid first
+    let user = await User.findOne({ uid: id });
+    
+    // If not found and ID looks like MongoDB ObjectId, try that too
+    if (!user && mongoose.Types.ObjectId.isValid(id)) {
+      user = await User.findById(id);
+    }
     
     if (!user) {
       return res.status(404).json({ error: "User not found" });
