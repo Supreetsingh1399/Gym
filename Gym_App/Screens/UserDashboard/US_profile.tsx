@@ -77,41 +77,43 @@ export default function UserProfile({
 
   // Fetch user data from API
   useEffect(() => {
-    const userId = FireBase_Auth.currentUser?.uid;
     const fetchUserData = async () => {
       if (!authAvailable || !FireBase_Auth || !FireBase_Auth.currentUser) {
         setLoading(false);
         return;
       }
-
+      
       try {
         setLoading(true);
         setError(null);
-
+        
+        // Get user ID from current user
+        const userId = FireBase_Auth.currentUser.uid;
+        
         // Get token for authentication
         const token = await FireBase_Auth.currentUser.getIdToken();
         console.log("Got authentication token for API request");
-
+        
         const response = await axios.get(`${API_URL}/Register/Users/${userId}`, {
           headers: {
             Authorization: `Bearer ${token}`,
           },
           timeout: 10000, // 10 second timeout
         });
-
+        
         console.log("API Response received");
-
+        
         // Check if data is an array and has at least one item
         const userData = Array.isArray(response.data)
           ? response.data[0]
           : Array.isArray(response.data.data)
             ? response.data.data[0]
             : response.data.data;
-
+        
         if (!userData) {
           throw new Error("No user data found");
         }
-
+  
         setUser({
           profilePic: userData.profilePic || null,
           name: userData.name || "No Name",
@@ -137,7 +139,7 @@ export default function UserProfile({
       } catch (error) {
         console.error("Error fetching user data:", error);
         setError("Failed to fetch user data. Please try again.");
-
+  
         // Set default user data for testing/fallback
         setUser({
           profilePic: "https://randomuser.me/api/portraits/men/32.jpg",
@@ -163,10 +165,9 @@ export default function UserProfile({
         setLoading(false);
       }
     };
-
+  
     fetchUserData();
   }, [authAvailable]);
-
   const handleLogout = async () => {
     if (!authAvailable || !FireBase_Auth) {
       Alert.alert(

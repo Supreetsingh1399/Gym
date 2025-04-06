@@ -95,7 +95,7 @@ router.get("/Register/Users/:id", async (req: Request, res: Response) => {
     const { id } = req.params;
     
     // Use findById instead of find for looking up by _id
-    const user = await User.findById(id);
+    const user = await User.findOne({ uid: id });
     
     if (!user) {
       return res.status(404).json({ error: "User not found" });
