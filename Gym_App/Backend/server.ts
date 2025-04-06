@@ -93,9 +93,10 @@ router.get("/Register/Gyms/:userId", async (req: Request, res: Response) => {
 router.get("/Register/Users/:id", async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
+    console.log("Looking for user with uid:", id);
     
-    // Use findById instead of find for looking up by _id
     const user = await User.findOne({ uid: id });
+    console.log("User query result:", user);
     
     if (!user) {
       return res.status(404).json({ error: "User not found" });
@@ -104,13 +105,7 @@ router.get("/Register/Users/:id", async (req: Request, res: Response) => {
     res.status(200).json(user);
   } catch (error) {
     console.error("Error fetching user:", error);
-    
-    // Check if it's an invalid ID format error
-    if (error instanceof Error && error.name === 'CastError') {
-      return res.status(400).json({ error: "Invalid ID format" });
-    }
-    
-    res.status(500).json({ error: "Failed to fetch user" });
+    res.status(500).json({ error: "Server error" });
   }
 });
 
