@@ -14,8 +14,6 @@ import {
   deleteGym,
   getAllGyms,
   registerGym,
-  getUserGyms,
-  getGymById,
 } from "./controllers/Gym_controls"; // Import the Gym model
 import Gym from "./Models/Gym_Register";
 import User from "./Models/User_models"; // Import the User model
@@ -59,8 +57,8 @@ router.post("/Register/Gyms", (req: Request, res: Response) =>
 router.get("/Register/Gyms", (req: Request, res: Response) =>
   getAllGyms(req, res),
 );
-// Get a specific gym by ID
-router.get('/Register/Gyms/:id', getGymById);
+// // Get a specific gym by ID
+// router.get('/Register/Gyms/:id', getGymById);
 router.put(
   "/Register/Gyms/:id/approve",
   async (req: Request, res: Response) => {

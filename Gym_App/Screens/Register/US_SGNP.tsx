@@ -305,21 +305,23 @@ const US_SignUp = ({
       const userDataObj = {
         name: userData.name,
         email: userData.email,
-        phone: userData.phoneNumber, 
-        phoneNumber: userData.phoneNumber, 
+        // Add missing required field
+        age: parseInt(userData.age) || 18, 
+        // Convert to number for MongoDB validation
+        weight: parseInt(userData.weight),
+        // Add proper format
+        height: userData.height + "cm",
+        // Remove non-digit characters if any
+        phone: userData.phoneNumber.replace(/\D/g, ''),
         fitnessGoal: userData.fitnessGoal,
         gender: userData.gender,
-        // dateOfBirth: userData.dateOfBirth,
-        weight: userData.weight,
-        height: userData.height,
         type: "user",
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
         role: "user",
         uid: user.uid,
-        password: password, 
+        password: password,
       };
-
       // Store in Firestore
       console.log("Saving user data to Firestore...");
       await setDoc(doc(db, "users", user.uid), userDataObj);
