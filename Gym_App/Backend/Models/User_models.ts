@@ -18,13 +18,13 @@ const userSchema = new mongoose.Schema({
     },
   },
   weight: {
-    type: Number,
+    type: String,
     required: true,
     validate: {
-      validator: function (v: number) {
-        return v > 0;
+      validator: function (v: string) {
+        return /^\d+(\.\d+)?(kg|lb)$/.test(v);
       },
-      message: "Weight must be a positive number",
+      message: "Weight must be in kg or lb format",
     },
   },
   height: {

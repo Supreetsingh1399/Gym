@@ -33,6 +33,7 @@ import SearchResults from "./Gym_App/Screens/UserDashboard/SearchResults";
 import ExternalGymDetails from "./Gym_App/Screens/UserDashboard/ExternalGymDetails";
 import WorkoutDetails from "./Gym_App/Screens/UserDashboard/WorkoutDetails";
 import ExerciseDetail from "./Gym_App/Screens/UserDashboard/ExerciseDetail";
+import ProfileUpdate from "Gym_App/Screens/UserDashboard/ProfileUpdate";
 
 // Hooks
 import useAuth from "./Gym_App/Backend/hooks/Auth";
@@ -180,6 +181,11 @@ const StackNavigator = ({ user }: StackNavigatorProps): JSX.Element => {
           />
           <Stack.Screen name="WorkoutDetails" component={WorkoutDetails} />
           <Stack.Screen name="ExerciseDetail" component={ExerciseDetail} />
+          <Stack.Screen
+            name="ProfileUpdate"
+            component={ProfileUpdate}
+            options={{ title: "Update Profile" }}
+          />
         </>
       )}
     </Stack.Navigator>

@@ -51,6 +51,8 @@ export default function UserProfile({
   const [loading, setLoading] = useState(true);
   const [authLoading, setAuthLoading] = useState(false);
   const [authAvailable, setAuthAvailable] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+
 
   // State for user data
   const [user, setUser] = useState<UserData | null>(null);
@@ -63,16 +65,28 @@ export default function UserProfile({
       if (services.auth) {
         // console.log("Firebase Auth is available in UserProfile");
         setAuthAvailable(true);
-      } else {
-        console.log("Firebase Auth not available in UserProfile");
-      }
-    };
+     // Update current user ID when available
+     if (FireBase_Auth.currentUser?.uid) {
+      setCurrentUserId(FireBase_Auth.currentUser.uid);
+    }
+  } else {
+    console.log("Firebase Auth not available in UserProfile");
+  }
+};
 
     // Check immediately and then every second
     checkAuth();
     const interval = setInterval(checkAuth, 1000);
 
-    return () => clearInterval(interval);
+     // Set up auth state change listener
+  const unsubscribe = FireBase_Auth.onAuthStateChanged((user) => {
+    console.log("Auth state changed:", user ? "User logged in" : "No user");
+    setCurrentUserId(user?.uid || null);
+  });
+  return () => {
+    clearInterval(interval);
+    unsubscribe();
+  };
   }, []);
 
   // Fetch user data from API
@@ -87,28 +101,48 @@ useEffect(() => {
       setLoading(true);
       setError(null);
       
-      // Get user ID from current user
-      const userId = FireBase_Auth.currentUser.uid;
+     // Use the tracked user ID instead of directly accessing
+     console.log("Fetching data for user ID:", currentUserId);
       
-      // Get token for authentication
-      const token = await FireBase_Auth.currentUser.getIdToken();
-      console.log("Got authentication token for API request");
-      
-      const response = await axios.get(`${API_URL}/Register/Users/${userId}`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-        timeout: 10000,
-      });
-      
-      console.log("API Response received:", response.status);
-      
-      // Use response.data directly - no nested access
-      const userData = response.data;
-      
-      if (!userData || typeof userData !== 'object') {
-        throw new Error("Invalid user data format");
+     // Get token for authentication with retry
+     let token;
+     try {
+      token = await FireBase_Auth.currentUser?.getIdToken(true);  // Force refresh token
+    } catch (tokenError) {
+      console.error("Error getting auth token:", tokenError);
+      throw new Error("Authentication error");
+    }
+    
+    // Add retry logic for network issues
+    let retries = 3;
+    let response;
+    
+    while (retries > 0) {
+      try {
+        response = await axios.get(`${API_URL}/Register/Users/${currentUserId}`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+          timeout: 10000,
+        });
+        break; // Success, exit retry loop
+      } catch (networkError) {
+        retries--;
+        if (retries === 0) throw networkError;
+        console.log(`Network request failed, retrying... (${retries} attempts left)`);
+        await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1s before retry
       }
+    }//@ts-ignore
+    console.log("API Response received:", response.status);
+      
+    // Process response data
+    //@ts-ignore
+    const userData = response.data;
+    
+    if (!userData || typeof userData !== 'object') {
+      throw new Error("Invalid user data format");
+    }
+
 
       setUser({
         profilePic: userData.profilePic || null,
@@ -163,7 +197,7 @@ useEffect(() => {
   };
 
   fetchUserData();
-}, [authAvailable]);
+}, [authAvailable, currentUserId]);
   const handleLogout = async () => {
     if (!authAvailable || !FireBase_Auth) {
       Alert.alert(
@@ -212,14 +246,87 @@ useEffect(() => {
         <Text className="mt-2 text-red-500 font-bold">Error</Text>
         <Text className="mt-2 text-gray-600 text-center px-6">{error}</Text>
         <TouchableOpacity
-          className="mt-4 bg-blue-500 px-6 py-2 rounded-lg"
-          onPress={() => setLoading(true)}
-        >
+  className="mt-4 bg-blue-500 px-6 py-2 rounded-lg"
+  onPress={() => {
+    setLoading(true);
+    // This will trigger a re-fetch
+    const fetchData = async () => {
+      try {
+        const token = await FireBase_Auth.currentUser?.getIdToken(true);
+        const response = await axios.get(`${API_URL}/Register/Users/${currentUserId}`, {
+          headers: { Authorization: `Bearer ${token}` },
+          timeout: 10000,
+        });
+        //@ts-ignore
+        setUser(/* process response data */);
+        setError(null);
+      } catch (error) {
+        setError("Failed to fetch user data. Please try again.");
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }}
+>
           <Text className="text-white font-bold">Retry</Text>
         </TouchableOpacity>
       </SafeAreaView>
     );
   }
+  // Add this function to your UserProfile component
+const calculateBMI = (): string => {
+  if (!user?.weight || !user?.height || 
+      user.weight === "N/A" || user.height === "N/A") {
+    return "N/A";
+  }
+
+  try {
+    // Extract numeric values and handle different formats
+    let weightValue: number;
+    let heightValue: number;
+    
+    // Parse weight
+    if (typeof user.weight === 'number') {
+      weightValue = user.weight;
+    } else {
+      const weightMatch = user.weight.match(/(\d+\.?\d*)/);
+      if (!weightMatch) return "N/A";
+      weightValue = parseFloat(weightMatch[0]);
+      
+      // Convert to kg if in pounds
+      if (user.weight.toLowerCase().includes('lb')) {
+        weightValue = weightValue * 0.453592;
+      }
+    }
+    
+    // Parse height
+    if (typeof user.height === 'number') {
+      heightValue = user.height / 100; // Assume cm
+    } else if (user.height.includes('cm')) {
+      heightValue = parseFloat(user.height.replace('cm', '')) / 100;
+    } else if (user.height.includes('m') && !user.height.includes('cm')) {
+      heightValue = parseFloat(user.height.replace('m', ''));
+    } else if (user.height.includes("'")) {
+      // Handle feet and inches format (e.g., 5'10")
+      const parts = user.height.split("'");
+      const feet = parseInt(parts[0]);
+      const inches = parts[1] ? parseFloat(parts[1]) : 0;
+      const totalInches = feet * 12 + inches;
+      heightValue = totalInches * 0.0254; // Convert inches to meters
+    } else {
+      // Default assume cm if just a number
+      heightValue = parseFloat(user.height) / 100;
+    }
+    
+    // Calculate BMI
+    const bmi = weightValue / (heightValue * heightValue);
+    return bmi.toFixed(1); // Round to 1 decimal place
+  } catch (error) {
+    console.error("Error calculating BMI:", error);
+    return "N/A";
+  }
+};
 
   return (
     <SafeAreaView className="flex-1 bg-white">
@@ -255,9 +362,21 @@ useEffect(() => {
               </Text>
             </View>
           </View>
-          <TouchableOpacity className="w-10 h-10 bg-gray-100 rounded-full justify-center items-center">
-            <Ionicons name="pencil" size={18} color="#0091EA" />
-          </TouchableOpacity>
+          <TouchableOpacity 
+  className="w-10 h-10 bg-gray-100 rounded-full justify-center items-center" 
+  onPress={() => {
+    if (user) {
+      navigation.navigate("ProfileUpdate", {
+        userData: user,
+        darkMode: darkMode
+      });
+    } else {
+      Alert.alert("Error", "User data is not available yet");
+    }
+  }}
+>
+  <Ionicons name="pencil" size={18} color="#0091EA" />
+</TouchableOpacity>
         </View>
 
         {/* Physical Stats */}
@@ -277,9 +396,11 @@ useEffect(() => {
           </View>
           <View className="h-[80%] w-px bg-gray-200" />
           <View className="flex-1 items-center">
-            <Text className="text-base font-bold text-gray-800 mb-1">22.1</Text>
-            <Text className="text-xs text-gray-600">BMI</Text>
-          </View>
+  <Text className="text-base font-bold text-gray-800 mb-1">
+    {calculateBMI()}
+  </Text>
+  <Text className="text-xs text-gray-600">BMI</Text>
+</View>
         </View>
 
         {/* Fitness Goal */}

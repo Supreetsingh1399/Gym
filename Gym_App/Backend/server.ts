@@ -112,7 +112,38 @@ router.get("/Register/Users/:id", async (req: Request, res: Response) => {
     console.error("Error fetching user:", error);
     res.status(500).json({ error: "Server error" });
   }
+});//@ts-ignore
+router.put("/Register/Users/:id", async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const updates = req.body;
+    
+    // Add update timestamp
+    updates.updatedAt = new Date();
+    
+    // Try to find by Firebase uid first
+    let user;
+    if (mongoose.Types.ObjectId.isValid(id)) {
+      user = await User.findByIdAndUpdate(id, updates, { new: true });
+    } else {
+      // If not a valid ObjectId, assume it's a Firebase UID
+      user = await User.findOneAndUpdate({ uid: id }, updates, { new: true });
+    }
+    
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+    
+    res.status(200).json({
+      message: "User updated successfully",
+      data: user
+    });
+  } catch (error) {
+    console.error("Error updating user:", error);
+    res.status(500).json({ error: "Failed to update user" });
+  }
 });
+
 
 // Use router
 app.use("/", router);

@@ -12,6 +12,14 @@
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
+    // "plugins": [
+    //   [
+    //     "expo-image-picker",
+    //     {
+    //       "photosPermission": "The app needs access to your photos to change your profile picture."
+    //     }
+    //   ]
+    // ],
     "assetBundlePatterns": ["**/*"],
     "ios": {
       "supportsTablet": true
