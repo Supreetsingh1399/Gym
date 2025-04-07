@@ -368,7 +368,8 @@ const calculateBMI = (): string => {
     if (user) {
       navigation.navigate("ProfileUpdate", {
         userData: user,
-        darkMode: darkMode
+        darkMode: darkMode,
+        
       });
     } else {
       Alert.alert("Error", "User data is not available yet");
