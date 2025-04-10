@@ -17,6 +17,7 @@ import { FireBase_Auth } from "Gym_App/Backend/firebase";
 import { Ionicons } from "@expo/vector-icons";
 import axios from "axios";
 import { API_URL } from "@env";
+import ToastManager,{showToast} from "../components/ToastManager";
 // import * as ImagePicker from "expo-image-picker";
 // import { Picker } from "@react-native-picker/picker";
 
@@ -55,7 +56,7 @@ export default function ProfileUpdate({ navigation, route }: ProfileUpdateProps)
   // Parsed numeric values
   const [heightValue, setHeightValue] = useState("");
   const [weightValue, setWeightValue] = useState("");
-  
+    const toast = ToastManager;
   // State for loading indicators
   const [isLoading, setIsLoading] = useState(false);
 
@@ -147,7 +148,7 @@ export default function ProfileUpdate({ navigation, route }: ProfileUpdateProps)
   const handleSaveChanges = async () => {
     // Validate inputs
     if (!name.trim()) {
-      Alert.alert("Error", "Name cannot be empty");
+      showToast.error("Error", "Name cannot be empty");
       return;
     }
     
@@ -194,10 +195,10 @@ export default function ProfileUpdate({ navigation, route }: ProfileUpdateProps)
         if (onProfileUpdate) {
           onProfileUpdate();
         }
-
+        showToast.success("Success", "Profile updated successfully");
         Alert.alert(
           "Success",
-          "Profile updated successfully",
+          undefined,
           [{ 
             text: "OK", 
             onPress: () => {
@@ -206,9 +207,9 @@ export default function ProfileUpdate({ navigation, route }: ProfileUpdateProps)
               if (navigation.getParent()) {
                 // This will force the parent navigator to refresh the current screen
                 navigation.getParent().setOptions({ refresh: Date.now() });
+              }
             } 
-          },}],
-
+          }]
         );
       }
     } catch (error) {

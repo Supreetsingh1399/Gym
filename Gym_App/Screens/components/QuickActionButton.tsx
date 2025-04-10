@@ -8,7 +8,6 @@ interface QuickActionButtonProps {
   color: string;
   onPress: () => void;
 }
-
 export const QuickActionButton: React.FC<QuickActionButtonProps> = memo(
   ({ icon, label, color, onPress }) => {
     return (

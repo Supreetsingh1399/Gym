@@ -5,6 +5,10 @@ import { MaterialIcons } from "@expo/vector-icons";
 interface EmptyStateProps {
   icon: keyof typeof MaterialIcons.glyphMap; // MaterialIcons icon name
   message: string;
+  title: string;
+  actionLabel: string;
+  // onAction:string;
+  onAction: () => void;
 }
 
 export const EmptyState: React.FC<EmptyStateProps> = ({ icon, message }) => {

@@ -16,6 +16,7 @@ import { RootStackParamList } from "./Gym_App/types/navigation";
 
 // Import Firebase first to ensure initialization
 import { FireBase_Auth, isFirebaseReady } from "./Gym_App/Backend/firebase";
+import { NearbyGymsScreen, RegisteredGymsScreen,PopularGymsScreen } from "Gym_App/Screens/UserDashboard/AllGymsScreen";
 
 // Import toast manager for notifications
 import ToastManager from "./Gym_App/Screens/components/ToastManager";
@@ -185,6 +186,21 @@ const StackNavigator = ({ user }: StackNavigatorProps): JSX.Element => {
             name="ProfileUpdate"
             component={ProfileUpdate}
             options={{ title: "Update Profile" }}
+          />
+          <Stack.Screen
+            name="NearbyGyms"
+            component={NearbyGymsScreen}
+            options={{ title: "Nearby Gyms" }}
+          />
+          <Stack.Screen
+            name="RegisteredGyms"
+            component={RegisteredGymsScreen}
+            options={{ title: "Registered Gyms" }}
+          />
+          <Stack.Screen
+            name="PopularGyms"
+            component={PopularGymsScreen}
+            options={{ title: "Popular Gyms" }}
           />
         </>
       )}

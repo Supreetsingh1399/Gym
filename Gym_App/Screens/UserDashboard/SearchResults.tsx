@@ -20,7 +20,7 @@ import * as Location from "expo-location";
 import { GOOGLE_PLACES_API_KEY } from "@env";
 import { GYM_IMAGES } from "./constants/assetUrls";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import GymSplineView from "../components/GymSplineView";
+import GymSplineView from "../components/GymSplineView";  //@ts-ignore
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../types";
 
@@ -501,7 +501,7 @@ const SearchResults: React.FC<SearchResultsProps> = ({ navigation, route }) => {
         <FlatList
           horizontal
           data={["all", "nearby", "highRated"]}
-          keyExtractor={(item) => item}
+          keyExtractor={(item:any) => item} //@ts-ignore
           renderItem={({ item }) => (
             <TouchableOpacity
               className={`px-3 py-1.5 mr-2 rounded-full ${
@@ -540,7 +540,7 @@ const SearchResults: React.FC<SearchResultsProps> = ({ navigation, route }) => {
       ) : searchResults.length > 0 ? (
         <FlatList
           data={searchResults}
-          keyExtractor={(item) => item.id}
+          keyExtractor={(item:any) => item.id} //@ts-ignore
           renderItem={({ item }) => (
             <TouchableOpacity
               className="mx-4 mb-4 bg-white rounded-lg overflow-hidden shadow"

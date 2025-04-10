@@ -51,6 +51,7 @@ import { THEME } from "./constants/theme";
 import { QUOTES } from "./constants/motivationalQuotes";
 import { getRandomItem, getGreetingByTime } from "./utils/helpers";
 import { GYM_IMAGES, WORKOUT_IMAGES } from "./constants/assetUrls";
+import { MaterialIcons } from '@expo/vector-icons';
 
 // Types
 interface GymData {
@@ -70,7 +71,46 @@ interface GymData {
   trainers?: any[];
   membershipType?: string;
 }
+interface Location {
+  latitude: number;
+  longitude: number;
+}
 
+interface GymResult {
+  id: string;
+  gymName: string;
+  location: {
+    address: string;
+    city: string;
+    state: string;
+  };
+  rating: number;
+  imageUrl: string;
+  distance?: string;
+  source: "google" | "internal";
+  geometry?: {
+    location: {
+      lat: number;
+      lng: number;
+    };
+  };
+  gymType?: string; // Added gymType property
+}
+
+interface GooglePlace {
+  place_id?: string;
+  name: string;
+  vicinity?: string;
+  formatted_address?: string;
+  rating?: number;
+  photos?: Array<{ photo_reference: string }>;
+  geometry?: {
+    location: {
+      lat: number;
+      lng: number;
+    };
+  };
+}
 interface WorkoutData {
   id: string;
   title: string;
@@ -118,7 +158,7 @@ const QUICK_ACTIONS: Array<{
     icon: "person-outline",
     label: "Trainers",
     color: THEME.colors.green,
-    screen: "Trainers",
+    screen: "WorkoutTrainers",
   },
   {
     id: "plans",
@@ -144,6 +184,7 @@ const UserHome: React.FC<NavigationProps> = ({ navigation }) => {
   const [locationLoading, setLocationLoading] = useState<boolean>(false);
   const [userLocation, setUserLocation] = useState<UserLocation | null>(null);
   const [servicesReady, setServicesReady] = useState<boolean>(false);
+  const [locationError, setLocationError] = useState<boolean>(false);
 
   // Data states
   const [registeredGyms, setRegisteredGyms] = useState<GymData[]>([]);
@@ -196,7 +237,7 @@ const UserHome: React.FC<NavigationProps> = ({ navigation }) => {
   const loadUserLocation = async () => {
     try {
       setLocationLoading(true);
-
+      
       // First try to get from AsyncStorage
       const storedLocation = await AsyncStorage.getItem(LOCATION_STORAGE_KEY);
       if (storedLocation) {
@@ -208,7 +249,7 @@ const UserHome: React.FC<NavigationProps> = ({ navigation }) => {
           return;
         }
       }
-
+      
       // If no recent stored location, request new location
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== "granted") {
@@ -220,57 +261,152 @@ const UserHome: React.FC<NavigationProps> = ({ navigation }) => {
         setLocationLoading(false);
         return;
       }
-
+      
       const location = await Location.getCurrentPositionAsync({
         accuracy: Location.Accuracy.Balanced,
       });
-
+      
       const newLocation = {
         latitude: location.coords.latitude,
         longitude: location.coords.longitude,
         timestamp: Date.now(),
       };
-
+      
       // Save to state and AsyncStorage
       setUserLocation(newLocation);
       await AsyncStorage.setItem(
         LOCATION_STORAGE_KEY,
         JSON.stringify(newLocation),
       );
-
+      
       // Refresh nearby gyms with the new location
       fetchNearbyGyms(newLocation);
     } catch (error) {
       console.error("Error getting location:", error);
+      // Handle the error state in UI
+      setLocationError(true);
     } finally {
       setLocationLoading(false);
     }
   };
-
+  
   // Calculate distance between coordinates
   const calculateDistance = (
     lat1: number,
     lon1: number,
     lat2: number,
     lon2: number,
-  ): number => {
+  ): string => {
     const R = 3958.8; // Earth's radius in miles
-    const dLat = toRad(lat2 - lat1);
-    const dLon = toRad(lon2 - lon1);
+    const dLat = ((lat2 - lat1) * Math.PI) / 180;
+    const dLon = ((lon2 - lon1) * Math.PI) / 180;
     const a =
       Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-      Math.cos(toRad(lat1)) *
-        Math.cos(toRad(lat2)) *
+      Math.cos((lat1 * Math.PI) / 180) *
+        Math.cos((lat2 * Math.PI) / 180) *
         Math.sin(dLon / 2) *
         Math.sin(dLon / 2);
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    return R * c;
+    const distance = R * c;
+    return distance.toFixed(1) + " mi";
   };
-
-  // Convert degrees to radians
-  const toRad = (value: number): number => {
-    return (value * Math.PI) / 180;
+  
+  // Generate unique ID for places without place_id
+  const generateId = (): string => {
+    return Math.random().toString(36).substring(2, 15);
   };
+  
+  // Process place into gym result with types
+  const processPlaceToGym = (
+    place: {
+      place_id?: string;
+      name: string;
+      vicinity?: string;
+      formatted_address?: string;
+      rating?: number;
+      photos?: { photo_reference: string }[];
+      geometry?: {
+        location: {
+          lat: number;
+          lng: number;
+        };
+      };
+      types?: string[];
+    },
+    distance?: string,
+  ): GymResult => {
+    // Default coordinates if geometry is missing
+    const coordinates = place.geometry?.location || { lat: 0, lng: 0 };
+    
+    return {
+      id: place.place_id ? `google-${place.place_id}` : `google-${generateId()}`,
+      gymName: place.name,
+      location: {
+        address: place.vicinity || place.formatted_address || "",
+        city: extractCityFromAddress(place.vicinity || place.formatted_address || ""),
+        state: extractStateFromAddress(place.vicinity || place.formatted_address || ""),
+      },
+      rating: place.rating || 4.0,
+      imageUrl: place.photos?.[0]?.photo_reference
+        ? `https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photoreference=${place.photos[0].photo_reference}&key=${GOOGLE_PLACES_API_KEY}`
+        : getRandomItem(GYM_IMAGES),
+      distance: distance || "",
+      source: "google",
+      geometry: {
+        location: {
+          lat: coordinates.lat,
+          lng: coordinates.lng
+        }
+      },
+      gymType: determineGymType(place.types || [])
+    };
+  };
+  
+  // Extract city from address string
+  const extractCityFromAddress = (address: string): string => {
+    // Simple extraction - would need refinement for production
+    const parts = address.split(",");
+    return parts.length > 1 ? parts[parts.length - 2].trim() : "";
+  };
+  
+  // Extract state from address string
+  const extractStateFromAddress = (address: string): string => {
+    // Simple extraction - would need refinement for production
+    const parts = address.split(",");
+    if (parts.length > 1) {
+      const statePart = parts[parts.length - 1].trim();
+      const stateMatch = statePart.match(/[A-Z]{2}/);
+      return stateMatch ? stateMatch[0] : "";
+    }
+    return "";
+  };
+  
+  // Determine gym type based on Google Place types
+  // Better gym type classification
+const determineGymType = (types: string[]): string => {
+  const typeMap = {
+    gym: "Fitness Center",
+    health: "Health Club",
+    fitness_center: "Fitness Center",
+    sports_center: "Sports Center"
+  };
+  
+  // Check for specific gym types first
+  if (types.some(t => t.includes("yoga"))) return "Yoga Studio";
+  if (types.some(t => t.includes("pilates"))) return "Pilates Studio";
+  if (types.some(t => t.includes("crossfit"))) return "CrossFit";
+  if (types.some(t => t.includes("boxing"))) return "Boxing Gym";
+  if (types.some(t => t.includes("martial"))) return "Martial Arts";
+  
+  // Then look for general gym types
+  for (const type of types) {
+    for (const [key, value] of Object.entries(typeMap)) {
+      if (type.includes(key)) return value;
+    }
+  }
+  
+  return "Fitness Facility";
+};
 
   // Get user info from auth
   const getUserInfo = async () => {
@@ -299,24 +435,6 @@ const UserHome: React.FC<NavigationProps> = ({ navigation }) => {
     }
   };
 
-  // Load all data in parallel
-  const loadAllData = async () => {
-    if (!servicesReady) return;
-
-    setLoading(true);
-    try {
-      await Promise.all([
-        fetchRegisteredGyms(),
-        userLocation ? fetchNearbyGyms(userLocation) : fetchNearbyGyms(),
-        fetchPopularGyms(),
-        fetchPopularWorkouts(),
-      ]);
-    } catch (error) {
-      console.error("Error loading data:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   // Fetch gyms the user has registered with - Updated to use axios
   const fetchRegisteredGyms = async () => {
@@ -398,168 +516,309 @@ const UserHome: React.FC<NavigationProps> = ({ navigation }) => {
   };
 
   // Fetch nearby gyms - now uses actual location if available
-  const fetchNearbyGyms = async (location?: UserLocation) => {
-    try {
-      // First try to get from Google Places API with location if available
-      if (location && GOOGLE_PLACES_API_KEY) {
-        try {
-          const placesUrl = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${location.latitude},${location.longitude}&radius=5000&type=gym&key=${GOOGLE_PLACES_API_KEY}`;
+  // Fetch nearby gyms - ONLY from Google Places API
+// Add new state for loading popular gyms
+const [popularGymsLoading, setPopularGymsLoading] = useState<boolean>(false);
 
-          const placesResponse = await fetch(placesUrl);
-
-          if (placesResponse.ok) {
-            const data = await placesResponse.json();
-
-            if (data.results && data.results.length > 0) {
-              const googleGyms: GymData[] = data.results
-                .filter(
-                  (place: any) =>
-                    place.types.includes("gym") ||
-                    place.name.toLowerCase().includes("gym") ||
-                    place.name.toLowerCase().includes("fitness"),
-                )
-                .slice(0, 5)
-                .map((place: any) => {
-                  // Calculate distance
-                  const distance = calculateDistance(
-                    location.latitude,
-                    location.longitude,
-                    place.geometry.location.lat,
-                    place.geometry.location.lng,
-                  );
-
-                  return {
-                    id: `google-${place.place_id}`,
-                    gymName: place.name,
-                    location: {
-                      address: place.vicinity || "No address",
-                      city: "",
-                      state: "",
-                    },
-                    rating: place.rating || 4.0,
-                    imageUrl: place.photos?.[0]?.photo_reference
-                      ? `https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photoreference=${place.photos[0].photo_reference}&key=${GOOGLE_PLACES_API_KEY}`
-                      : getRandomItem(GYM_IMAGES),
-                    facilities: {},
-                    distance: `${distance.toFixed(1)} mi`,
-                    source: "google",
-                  };
-                });
-
-              setNearbyGyms(googleGyms);
-              return;
-            }
-          }
-        } catch (error) {
-          console.error("Error fetching from Google Places:", error);
-          // Fall back to Firebase if Google Places fails
-        }
-      }
-
-      // Fall back to Firebase gyms if no location or Google Places failed
-      if (!FireBase_DB) {
-        setNearbyGyms(getMockNearbyGyms());
-        return;
-      }
-      const gymsRef = collection(FireBase_DB, "gyms");
-      const gymsQuery = query(gymsRef, limit(5));
-      const querySnapshot = await getDocs(gymsQuery);
-
-      if (querySnapshot.empty) {
-        setNearbyGyms(getMockNearbyGyms());
-        return;
-      }
-
-      const gyms: GymData[] = querySnapshot.docs.map((doc) => {
-        const data = doc.data();
-
-        // If we have location and gym has coordinates, calculate actual distance
-        let distance = "? mi";
-        if (location && data.coordinates) {
-          const actualDistance = calculateDistance(
-            location.latitude,
-            location.longitude,
-            data.coordinates.latitude,
-            data.coordinates.longitude,
-          );
-          distance = `${actualDistance.toFixed(1)} mi`;
-        } else {
-          // Otherwise use random distance for demo purposes
-          distance = getRandomDistance();
-        }
-
-        return {
-          id: doc.id,
-          gymName: data.gymName || "Unnamed Gym",
-          location: data.location || {
-            address: "No address",
-            city: "",
-            state: "",
-          },
-          rating: data.rating || 4.5,
-          imageUrl: data.imageUrl || getRandomItem(GYM_IMAGES),
-          facilities: data.facilities,
-          distance: distance,
-          source: "app",
-        };
-      });
-
-      // Sort by distance if available
-      if (location) {
-        gyms.sort((a, b) => {
-          const distA = parseFloat(a.distance?.replace(" mi", "") || "999");
-          const distB = parseFloat(b.distance?.replace(" mi", "") || "999");
-          return distA - distB;
-        });
-      }
-
-      setNearbyGyms(gyms);
-    } catch (error) {
-      console.error("Error fetching nearby gyms:", error);
-      setNearbyGyms(getMockNearbyGyms());
+// Fetch nearby gyms - ONLY from Google Places API
+// Enhanced fetchNearbyGyms function
+const fetchNearbyGyms = async (location?: UserLocation) => {
+  // Reset state before fetching
+  setNearbyGyms([]);
+  setLocationError(false);
+  
+  try {
+    if (!location || !GOOGLE_PLACES_API_KEY) {
+      console.log("Cannot fetch nearby gyms: missing location or API key");
+      return;
     }
-  };
+    
+    // Use more specific search parameters
+    const placesUrl = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${location.latitude},${location.longitude}&radius=10000&type=establishment&keyword=gym,fitness&rankby=distance&key=${GOOGLE_PLACES_API_KEY}`;
 
-  // Fetch popular gyms - optimized with proper error handling
-  const fetchPopularGyms = async () => {
-    if (!FireBase_DB) {
-      setPopularGyms(getMockPopularGyms());
+    const response = await fetch(placesUrl);
+    
+    if (!response.ok) {
+      console.error("Google Places API error:", response.status);
+      setLocationError(true);
+      return;
+    }
+    
+    const data = await response.json();
+    
+    if (!data.results || data.results.length === 0) {
+      console.log("No gyms found in Google Places API");
       return;
     }
 
-    try {
-      const gymsRef = collection(FireBase_DB, "gyms");
-      const gymsQuery = query(gymsRef, orderBy("rating", "desc"), limit(5));
-      const querySnapshot = await getDocs(gymsQuery);
+    // Better filtering for gym-related places
+    const googleGyms: GymData[] = data.results
+      .filter((place: any) => {//@ts-ignore
+        const isGymType = place.types?.some(type => 
+          ['gym', 'health', 'fitness_center', 'sports_center'].includes(type)
+        );
+        const nameContainsGym = 
+          place.name.toLowerCase().includes('gym') || 
+          place.name.toLowerCase().includes('fitness') ||
+          place.name.toLowerCase().includes('workout') ||
+          place.name.toLowerCase().includes('athletic');
+          
+        return isGymType || nameContainsGym;
+      })
+      .slice(0, 10)
+      .map((place: any) => {
+        // Calculate distance
+        const distance = calculateDistance(
+          location.latitude,
+          location.longitude,
+          place.geometry.location.lat,
+          place.geometry.location.lng,
+        );
 
-      if (querySnapshot.empty) {
-        setPopularGyms(getMockPopularGyms());
-        return;
-      }
-
-      const gyms: GymData[] = querySnapshot.docs.map((doc) => {
-        const data = doc.data();
         return {
-          id: doc.id,
-          gymName: data.gymName || "Unnamed Gym",
-          location: data.location || {
-            address: "No address",
-            city: "",
-            state: "",
+          id: `google-${place.place_id}`,
+          gymName: place.name,
+          location: {
+            address: place.vicinity || "No address",
+            city: extractCityFromAddress(place.vicinity || ""),
+            state: extractStateFromAddress(place.vicinity || ""),
           },
-          rating: data.rating || 4.7,
-          imageUrl: data.imageUrl || getRandomItem(GYM_IMAGES),
-          facilities: data.facilities,
-          source: "app",
+          rating: place.rating || 4.0,
+          imageUrl: place.photos?.[0]?.photo_reference
+            ? `https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photoreference=${place.photos[0].photo_reference}&key=${GOOGLE_PLACES_API_KEY}`
+            : getRandomItem(GYM_IMAGES),
+          facilities: {
+            gymType: determineGymType(place.types || []),
+          },
+          distance: distance,
+          source: "google",
         };
       });
 
-      setPopularGyms(gyms);
-    } catch (error) {
-      console.error("Error fetching popular gyms:", error);
-      setPopularGyms(getMockPopularGyms());
+    // Check if we need fallback results
+    if (googleGyms.length < 3) {
+      // Fallback to broader search parameters
+      try {
+        const fallbackUrl = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${location.latitude},${location.longitude}&radius=15000&keyword=fitness&key=${GOOGLE_PLACES_API_KEY}`;
+        
+        const fallbackResponse = await fetch(fallbackUrl);
+        const fallbackData = await fallbackResponse.json();
+        
+        if (fallbackData.status === "OK" && fallbackData.results.length > 0) {
+          const additionalGyms = fallbackData.results  //@ts-ignore
+            .filter(place => !googleGyms.some(gym => gym.id === `google-${place.place_id}`))
+            .slice(0, 5)  //@ts-ignore
+            .map(place => {
+              // Calculate distance
+              const distance = calculateDistance(
+                location.latitude,
+                location.longitude,
+                place.geometry.location.lat,
+                place.geometry.location.lng,
+              );
+
+              return {
+                id: `google-${place.place_id}`,
+                gymName: place.name,
+                location: {
+                  address: place.vicinity || "No address",
+                  city: extractCityFromAddress(place.vicinity || ""),
+                  state: extractStateFromAddress(place.vicinity || ""),
+                },
+                rating: place.rating || 4.0,
+                imageUrl: place.photos?.[0]?.photo_reference
+                  ? `https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photoreference=${place.photos[0].photo_reference}&key=${GOOGLE_PLACES_API_KEY}`
+                  : getRandomItem(GYM_IMAGES),
+                facilities: {
+                  gymType: determineGymType(place.types || []),
+                },
+                distance: distance,
+                source: "google",
+              };
+            });
+          
+          googleGyms.push(...additionalGyms);
+          // Re-sort by distance
+          googleGyms.sort((a, b) => {
+            const distA = parseFloat(a.distance?.replace(" mi", "") || "999");
+            const distB = parseFloat(b.distance?.replace(" mi", "") || "999");
+            return distA - distB;
+          });
+        }
+      } catch (fallbackError) {
+        console.error("Error in fallback search:", fallbackError);
+        // Continue with what we have
+      }
     }
-  };
+
+    // Sort by distance
+    googleGyms.sort((a, b) => {
+      const distA = parseFloat(a.distance?.replace(" mi", "") || "999");
+      const distB = parseFloat(b.distance?.replace(" mi", "") || "999");
+      return distA - distB;
+    });
+
+    setNearbyGyms(googleGyms);
+  } catch (error) {
+    console.error("Error fetching nearby gyms from Google:", error);
+    setLocationError(true);
+    setNearbyGyms([]);
+  }
+};
+
+// Enhanced fetchPopularGyms function
+const fetchPopularGyms = async (location?: UserLocation) => {
+  setPopularGyms([]);
+  setPopularGymsLoading(true);
+  
+  try {
+    if (!location || !GOOGLE_PLACES_API_KEY) {
+      console.log("Cannot fetch popular gyms: missing location or API key");
+      setPopularGymsLoading(false);
+      return;
+    }
+    
+    // Use more specific search parameters with prominence ranking
+    const placesUrl = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${location.latitude},${location.longitude}&radius=25000&type=establishment&keyword=gym,fitness&rankby=prominence&key=${GOOGLE_PLACES_API_KEY}`;
+
+    const response = await fetch(placesUrl);
+    
+    if (!response.ok) {
+      console.error("Google Places API error:", response.status);
+      setPopularGymsLoading(false);
+      return;
+    }
+    
+    const data = await response.json();
+    
+    if (!data.results || data.results.length === 0) {
+      console.log("No popular gyms found");
+      setPopularGymsLoading(false);
+      return;
+    }
+
+    // Filter for 4+ rated gyms with better type detection
+    const highRatedGyms = data.results
+      .filter((place: any) => {//@ts-ignore
+        const isGymType = place.types?.some(type => 
+          ['gym', 'health', 'fitness_center', 'sports_center'].includes(type)
+        );
+        const nameContainsGym = 
+          place.name.toLowerCase().includes('gym') || 
+          place.name.toLowerCase().includes('fitness');
+          
+        return (isGymType || nameContainsGym) && place.rating >= 4.0;
+      })
+      .slice(0, 10)
+      .map((place: any) => {
+        return {
+          id: `google-${place.place_id}`,
+          gymName: place.name,
+          location: {
+            address: place.vicinity || "No address",
+            city: extractCityFromAddress(place.vicinity || ""),
+            state: extractStateFromAddress(place.vicinity || ""),
+          },
+          rating: place.rating || 4.0,
+          imageUrl: place.photos?.[0]?.photo_reference
+            ? `https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photoreference=${place.photos[0].photo_reference}&key=${GOOGLE_PLACES_API_KEY}`
+            : getRandomItem(GYM_IMAGES),
+          facilities: {
+            gymType: determineGymType(place.types || []),
+          },
+          source: "google",
+        };
+      });
+
+    // Sort by rating (highest first)
+    highRatedGyms.sort((a:any, b:any) => b.rating - a.rating);
+    
+    setPopularGyms(highRatedGyms);
+  } catch (error) {
+    console.error("Error fetching popular gyms from Google:", error);
+    setPopularGyms([]);
+  } finally {
+    setPopularGymsLoading(false);
+  }
+};
+
+// Load all data in parallel - updated to pass location
+const loadAllData = async () => {
+  if (!servicesReady) return;
+
+  setLoading(true);
+  try {
+    await fetchRegisteredGyms();
+    
+    if (userLocation) {
+      await Promise.all([
+        fetchNearbyGyms(userLocation),
+        fetchPopularGyms(userLocation),
+      ]);
+    }
+    
+    await fetchPopularWorkouts();
+  } catch (error) {
+    console.error("Error loading data:", error);
+  } finally {
+    setLoading(false);
+  }
+};
+
+// Navigation handlers for "See All" screens
+const handleSeeAllNearbyGyms = useCallback(() => {
+  navigation.navigate("NearbyGyms", { userLocation });
+}, [navigation, userLocation]);
+
+const handleSeeAllPopularGyms = useCallback(() => {
+  navigation.navigate("PopularGyms", { userLocation });
+}, [navigation, userLocation]);
+
+const handleSeeAllRegisteredGyms = useCallback(() => {
+  navigation.navigate("RegisteredGyms");
+}, [navigation]);
+
+
+  // // Fetch popular gyms - optimized with proper error handling
+  // const fetchPopularGyms = async () => {
+  //   if (!FireBase_DB) {
+  //     setPopularGyms(getMockPopularGyms());
+  //     return;
+  //   }
+
+  //   try {
+  //     const gymsRef = collection(FireBase_DB, "gyms");
+  //     const gymsQuery = query(gymsRef, orderBy("rating", "desc"), limit(5));
+  //     const querySnapshot = await getDocs(gymsQuery);
+
+  //     if (querySnapshot.empty) {
+  //       setPopularGyms(getMockPopularGyms());
+  //       return;
+  //     }
+
+  //     const gyms: GymData[] = querySnapshot.docs.map((doc) => {
+  //       const data = doc.data();
+  //       return {
+  //         id: doc.id,
+  //         gymName: data.gymName || "Unnamed Gym",
+  //         location: data.location || {
+  //           address: "No address",
+  //           city: "",
+  //           state: "",
+  //         },
+  //         rating: data.rating || 4.7,
+  //         imageUrl: data.imageUrl || getRandomItem(GYM_IMAGES),
+  //         facilities: data.facilities,
+  //         source: "app",
+  //       };
+  //     });
+
+  //     setPopularGyms(gyms);
+  //   } catch (error) {
+  //     console.error("Error fetching popular gyms:", error);
+  //     setPopularGyms(getMockPopularGyms());
+  //   }
+  // };
 
   // Fetch popular workouts
   const fetchPopularWorkouts = async () => {
@@ -750,9 +1009,6 @@ const UserHome: React.FC<NavigationProps> = ({ navigation }) => {
     [navigation],
   );
 
-  const handleSeeAllPopularGyms = useCallback(() => {
-    navigation.navigate("PopularGyms");
-  }, [navigation]);
 
   const handleProfilePress = useCallback(() => {
     navigation.navigate("UserProfile");
@@ -875,68 +1131,156 @@ const UserHome: React.FC<NavigationProps> = ({ navigation }) => {
           {/* Quick Action Buttons */}
           {renderQuickActions()}
 
-          {/* Registered Gyms Section */}
-          <View className="mt-2 mb-6">
-            <SectionHeader
-              title="Your Gyms"
-              onSeeAllPress={() => navigation.navigate("RegisteredGyms")}
-            />
+       {/* Your Gyms Section - Shows gyms the user has signed up for */}
+<View className="mt-2 mb-6">
+  <SectionHeader
+    title="Your Gyms"
+    onSeeAllPress={() => navigation.navigate("RegisteredGyms")}
+  />
 
-            {registeredGyms.length > 0 ? (
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                className="pl-6"
-              >
-                {nearbyGyms.map((gym) => (
-                  <GymCard
-                    key={gym.id}
-                    gym={gym}
-                    onPress={() => handleGymPress(gym.id)}
-                  />
-                ))}
-              </ScrollView>
-            ) : (
-              <View className="px-6">
-                <TouchableOpacity
-                  className="bg-blue-50 py-3 px-4 rounded-lg flex-row items-center justify-center"
-                  onPress={loadUserLocation}
-                >
-                  <Ionicons
-                    name="location-outline"
-                    size={20}
-                    color={THEME.colors.blue}
-                  />
-                  <Text className="ml-2 text-blue-600">
-                    Enable location to see gyms near you
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            )}
-          </View>
+  {registeredGyms.length > 0 ? (
+    <ScrollView
+      horizontal
+      showsHorizontalScrollIndicator={false}
+      className="pl-6"
+    >
+      {registeredGyms.map((gym) => (
+        <GymCard
+          key={gym.id}
+          gym={gym}
+          onPress={() => handleGymPress(gym.id)}//@ts-ignore
+          showMembership={true}
+        />
+      ))}
+    </ScrollView>
+  ) : (
+    <View className="px-6">
+      <EmptyState  //@ts-ignore
+        icon="fitness-outline"
+        title="No registered gyms"
+        message="Register with your favorite gyms to see them here."
+        actionLabel="Find Gyms"
+        onAction={() => navigation.navigate("AllGyms")}
+      />
+    </View>
+  )}
+</View>
 
-          {/* Popular Gyms Section */}
-          <View className="mb-6">
-            <SectionHeader
-              title="Popular Gyms"
-              onSeeAllPress={handleSeeAllPopularGyms}
-            />
+{/* Nearby Gyms Section - Strictly from Google Maps */}
+<View className="mb-6">
+  <SectionHeader
+    title="Nearby Gyms"
+    onSeeAllPress={handleSeeAllNearbyGyms}
+  />
+  
+  {locationLoading ? (
+    <View className="pl-6 py-3 flex-row items-center">
+      <ActivityIndicator size="small" color={THEME.colors.primary} />
+      <Text className="ml-2 text-sm text-gray-500">Finding gyms near you...</Text>
+    </View>
+  ) : locationError || !userLocation ? (
+    <View className="px-6">
+      <TouchableOpacity
+        className="bg-blue-50 py-3 px-4 rounded-lg flex-row items-center justify-center"
+        onPress={loadUserLocation}
+      >
+        <Ionicons
+          name="location-outline"
+          size={20}
+          color={THEME.colors.blue}
+        />
+        <Text className="ml-2 text-blue-600">
+          Enable location to see gyms near you
+        </Text>
+      </TouchableOpacity>
+    </View>
+  ) : (
+    <ScrollView
+      horizontal
+      showsHorizontalScrollIndicator={false}
+      className="pl-6"
+    >
+      {nearbyGyms.length > 0 ? (
+        nearbyGyms.map((gym) => (
+          <GymCard
+            key={gym.id}
+            gym={gym}
+            onPress={() => handleGymPress(gym.id)}  //@ts-ignore
+            showDistance={true}
+          />
+        ))
+      ) : (
+        <View className="pl-6 pr-6 py-4">
+          <EmptyState   //@ts-ignore
+            icon="location-outline"
+            title="No gyms found nearby"
+            message="Try refreshing your location or expanding your search area."
+            actionLabel="Refresh Location"
+            onAction={loadUserLocation}
+          />
+        </View>
+      )}
+    </ScrollView>
+  )}
+</View>
 
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              className="pl-6"
-            >
-              {popularGyms.map((gym) => (
-                <GymCard
-                  key={gym.id}
-                  gym={gym}
-                  onPress={() => handleGymPress(gym.id)}
-                />
-              ))}
-            </ScrollView>
-          </View>
-
+{/* Popular Gyms Section - 4+ rated gyms from Google */}
+<View className="mb-6">
+  <SectionHeader
+    title="Popular Gyms"
+    onSeeAllPress={handleSeeAllPopularGyms}
+  />
+  
+  {!userLocation ? (
+    <View className="px-6">
+      <TouchableOpacity
+        className="bg-blue-50 py-3 px-4 rounded-lg flex-row items-center justify-center"
+        onPress={loadUserLocation}
+      >
+        <Ionicons
+          name="star-outline"
+          size={20}
+          color={THEME.colors.blue}
+        />
+        <Text className="ml-2 text-blue-600">
+          Enable location to see popular gyms
+        </Text>
+      </TouchableOpacity>
+    </View>
+  ) : popularGymsLoading ? (
+    <View className="pl-6 py-3 flex-row items-center">
+      <ActivityIndicator size="small" color={THEME.colors.primary} />
+      <Text className="ml-2 text-sm text-gray-500">Finding popular gyms...</Text>
+    </View>
+  ) : (
+    <ScrollView
+      horizontal
+      showsHorizontalScrollIndicator={false}
+      className="pl-6"
+    >
+      {popularGyms.length > 0 ? (
+        popularGyms.map((gym) => (
+          <GymCard
+            key={gym.id}
+            gym={gym}
+            onPress={() => handleGymPress(gym.id)}  //@ts-ignore
+            showRating={true}
+          />
+        ))
+      ) : (
+        <View className="pl-6 pr-6 py-4">
+          <EmptyState
+            icon="star-outline"
+            title="No popular gyms found"
+            message="Try again later or change your location."
+            actionLabel="Refresh"
+            onAction={() => fetchPopularGyms(userLocation)}
+          />
+        </View>
+      )}
+    </ScrollView>
+  )}
+</View>
           {/* Workouts Section */}
           <View className="mb-6">
             <SectionHeader title="Popular Workouts" />

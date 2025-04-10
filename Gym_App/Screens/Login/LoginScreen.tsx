@@ -215,7 +215,7 @@ const Login = ({ navigation }: ScreenProps<"LoginScreen">): JSX.Element => {
         //@ts-ignore
         toast.success("Login successful!");
       } else {
-        Alert.alert("Success", "Login successful!");
+        console.log("Success", "Login successful!");
       }
 
       // Clear form fields after successful login
