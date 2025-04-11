@@ -62,15 +62,21 @@ export const GymListCard: React.FC<GymListCardProps> = ({
     for (let i = 0; i < 5; i++) {
       if (i < fullStars) {
         stars.push(
+          <View>
           <Ionicons key={i} name="star" size={14} color={THEME.colors.yellow} />
+          </View>
         );
       } else if (i === fullStars && halfStar) {
         stars.push(
+          <View>
           <Ionicons key={i} name="star-half" size={14} color={THEME.colors.yellow} />
+          </View>
         );
       } else {
         stars.push(
+          <View>
           <Ionicons key={i} name="star-outline" size={14} color={THEME.colors.yellow} />
+          </View>
         );
       }
     }
@@ -120,7 +126,9 @@ export const GymListCard: React.FC<GymListCardProps> = ({
             {/* Distance */}
             {showDistance && gym.distance && (
               <View className="flex-row items-center">
+                <View>
                 <Ionicons name="location" size={14} color={THEME.colors.blue} />
+                </View>
                 <Text className="ml-1 text-blue-600 font-medium">
                   {gym.distance}
                 </Text>
@@ -130,7 +138,9 @@ export const GymListCard: React.FC<GymListCardProps> = ({
             {/* Membership */}
             {showMembership && gym.isRegistered && (
               <View className="flex-row items-center">
+                <View>
                 <Ionicons name="checkmark-circle" size={14} color={THEME.colors.green} />
+                </View>
                 <Text className="ml-1 text-green-600 font-medium">
                   {gym.membershipType || "Member"}
                 </Text>
@@ -141,7 +151,9 @@ export const GymListCard: React.FC<GymListCardProps> = ({
         
         {/* Arrow */}
         <View className="justify-center pr-3">
+        <View>
           <Ionicons name="chevron-forward" size={20} color="#6b7280" />
+          </View>
         </View>
       </View>
     </TouchableOpacity>

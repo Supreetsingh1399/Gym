@@ -41,7 +41,9 @@ export const GymCard: React.FC<GymCardProps> = memo(({ gym, onPress }) => (
 
       <View className="flex-row items-center justify-between">
         <View className="flex-row items-center">
+          <View>
           <Ionicons name="star" size={14} color="#FFD700" />
+          </View>
           <Text className="text-xs text-gray-700 font-medium ml-1">
             {gym.rating?.toFixed(1) || "4.5"}
           </Text>

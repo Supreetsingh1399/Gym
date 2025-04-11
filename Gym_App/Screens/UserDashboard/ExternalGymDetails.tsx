@@ -591,7 +591,7 @@ const ExternalGymDetails: React.FC<ExternalGymDetailsProps> = ({
         {/* Reviews Section */}
         {renderReviews()}
 
-        {/* Register/Check-in Prompt */}
+        {/* Register/Check-in Prompt
         <View className="m-5 p-4 bg-gray-50 rounded-lg">
           <Text className="text-lg font-semibold text-gray-800 mb-2">
             Interested in this gym?
@@ -603,7 +603,7 @@ const ExternalGymDetails: React.FC<ExternalGymDetailsProps> = ({
           <TouchableOpacity className="bg-blue-600 py-3 rounded-lg items-center">
             <Text className="text-white font-semibold">Add to My Gyms</Text>
           </TouchableOpacity>
-        </View>
+        </View> */}
 
         {/* Footer */}
         <View className="items-center pb-6 pt-2">

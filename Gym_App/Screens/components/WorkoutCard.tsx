@@ -28,6 +28,7 @@ interface WorkoutCardProps {
     category?: string;
     calories?: string;
     exercises?: Exercise[];
+    exerciseCount?: number;
   };
   onPress: () => void;
   compact?: boolean;

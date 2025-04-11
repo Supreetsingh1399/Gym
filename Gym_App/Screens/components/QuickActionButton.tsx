@@ -20,7 +20,9 @@ export const QuickActionButton: React.FC<QuickActionButtonProps> = memo(
           style={{ backgroundColor: color }}
           className="w-14 h-14 rounded-full items-center justify-center mb-1 shadow-sm"
         >
+          <View>
           <Ionicons name={icon} size={24} color="#fff" />
+          </View>
         </View>
         <Text className="text-xs text-gray-700 font-medium">{label}</Text>
       </TouchableOpacity>

@@ -390,11 +390,13 @@ const GymSplineView: React.FC<{ gym: GymViewProps }> = ({ gym }) => {
           }}
           onPress={handleToggleRoute}
         >
+          <View>
           <Ionicons
             name="navigate"
             size={24}
             color={showingRoute ? "#ff00ff" : "white"}
           />
+          </View>
         </Pressable>
 
         <Pressable
@@ -408,7 +410,8 @@ const GymSplineView: React.FC<{ gym: GymViewProps }> = ({ gym }) => {
           }}
           onPress={handleToggleHelp}
         >
-          <Ionicons name="help" size={24} color="white" />
+          <View>
+          <Ionicons name="help" size={24} color="white" /></View>
         </Pressable>
       </View>
 

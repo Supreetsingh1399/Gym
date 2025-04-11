@@ -50,7 +50,7 @@ export const LoadingSkeleton: React.FC = () => {
         <Animated.View style={[styles.headerSubtitle, animatedStyle]} />
       </View>
 
-      {/* Quick Actions Skeleton */}
+      {/* Quick Actions Skeleton
       <View style={styles.quickActions}>
         {[...Array(4)].map((_, i) => (
           <Animated.View
@@ -58,7 +58,7 @@ export const LoadingSkeleton: React.FC = () => {
             style={[styles.actionButton, animatedStyle]}
           />
         ))}
-      </View>
+      </View> */}
 
       {/* Section Title Skeleton */}
       <View style={styles.sectionHeader}>
