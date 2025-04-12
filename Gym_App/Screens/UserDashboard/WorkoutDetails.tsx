@@ -219,7 +219,6 @@ const WorkoutDetails = ({ route, navigation }: any) => {
             <Text className="text-gray-600 mt-1">{workout.description}</Text>
           </View>
         </View>
-        // In WorkoutDetails.tsx, update the exercise rendering section:
         {/* Exercise List */}
         <View className="mt-4 px-4">
           <Text className="text-gray-800 font-bold text-lg mb-4">

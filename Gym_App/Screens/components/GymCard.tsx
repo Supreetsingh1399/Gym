@@ -6,6 +6,7 @@ import { GymData } from "Gym_App/types";
 interface GymCardProps {
   gym: GymData;
   onPress: () => void;
+  showDistance?: boolean; 
 }
 
 export const GymCard: React.FC<GymCardProps> = memo(({ gym, onPress }) => (
@@ -56,12 +57,6 @@ export const GymCard: React.FC<GymCardProps> = memo(({ gym, onPress }) => (
             </Text>
           </View>
         )}
-          // In your GymCard component
-        {/* {gym.source === "google" && (
-          <View className="absolute top-2 right-2 py-1 px-2 bg-black bg-opacity-60 rounded-md">
-            <Text className="text-xs text-white font-bold">Google</Text>
-          </View>
-        )} */}
       </View>
     </View>
   </TouchableOpacity>

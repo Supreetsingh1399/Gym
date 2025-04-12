@@ -24,13 +24,33 @@ import { API_URL } from "@env";
 import axios from "axios";
 import { FireBase_Auth } from "../../Backend/firebase";
 
+interface GymData {
+  id: string;
+  gymName: string;
+  location: {
+    address: string;
+    city: string;
+    state: string;
+  };
+  rating: number;
+  imageUrl: string;
+  facilities?: {
+    gymType: string;
+    [key: string]: any;
+  };
+  distance?: string;
+  source?: string;
+}
+
 const NearbyGymsScreen: React.FC<{ route: any; navigation: any }> = ({
   route,
   navigation,
 }) => {
   const [loading, setLoading] = useState<boolean>(true);
   const [refreshing, setRefreshing] = useState<boolean>(false);
-  const [gyms, setGyms] = useState<any[]>([]);
+  const [gyms, setGyms] = useState<GymData[]>([]);
+  const [filteredGyms, setFilteredGyms] = useState<GymData[]>([]);
+  const [searchQuery, setSearchQuery] = useState<string>("");
   const [userLocation, setUserLocation] = useState<any>(route.params?.userLocation || null);
   
   // Get more detailed user location on component mount
@@ -41,6 +61,23 @@ const NearbyGymsScreen: React.FC<{ route: any; navigation: any }> = ({
       fetchNearbyGyms();
     }
   }, [userLocation]);
+
+  // Update filtered gyms whenever gyms or search query changes
+  useEffect(() => {
+    if (searchQuery.trim() === "") {
+      setFilteredGyms(gyms);
+    } else {
+      const query = searchQuery.toLowerCase();
+      const filtered = gyms.filter(
+        gym => 
+          gym.gymName.toLowerCase().includes(query) ||
+          gym.location.address.toLowerCase().includes(query) ||
+          gym.location.city.toLowerCase().includes(query) ||
+          (gym.facilities?.gymType && gym.facilities.gymType.toLowerCase().includes(query))
+      );
+      setFilteredGyms(filtered);
+    }
+  }, [gyms, searchQuery]);
 
   // Get current location
   const getCurrentLocation = async () => {
@@ -111,11 +148,16 @@ const NearbyGymsScreen: React.FC<{ route: any; navigation: any }> = ({
 
   // Determine gym type based on Google Place types
   const determineGymType = (types: string[]): string => {
-    if (types.includes("gym")) return "Fitness Center";
+    if (types.some(t => t.includes("crossfit"))) return "CrossFit";
+    if (types.some(t => t.includes("yoga"))) return "Yoga Studio";
+    if (types.includes("gym") || types.includes("fitness_center")) return "Fitness Center";
     if (types.includes("health")) return "Health Club";
-    if (types.some(type => type.includes("yoga"))) return "Yoga Studio";
-    if (types.some(type => type.includes("crossfit"))) return "CrossFit";
     return "Fitness Facility";
+  };
+
+  // Get random item from array
+  const getRandomItem = (array: any[]): any => {
+    return array[Math.floor(Math.random() * array.length)];
   };
 
   // Fetch nearby gyms from Google Places API
@@ -150,7 +192,9 @@ const NearbyGymsScreen: React.FC<{ route: any; navigation: any }> = ({
       const googleGyms = data.results
         .filter(
           (place: any) =>
-            place.types?.includes("gym") ||
+            place.types?.some((type: string) => 
+              ['gym', 'health', 'fitness_center', 'sports_center'].includes(type)
+            ) ||
             place.name.toLowerCase().includes("gym") ||
             place.name.toLowerCase().includes("fitness")
         )
@@ -191,6 +235,7 @@ const NearbyGymsScreen: React.FC<{ route: any; navigation: any }> = ({
       });
       
       setGyms(googleGyms);
+      setFilteredGyms(googleGyms);
     } catch (error) {
       console.error("Error fetching nearby gyms:", error);
     } finally {
@@ -202,16 +247,40 @@ const NearbyGymsScreen: React.FC<{ route: any; navigation: any }> = ({
   // Handle refreshing
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
+    setSearchQuery("");
     await fetchNearbyGyms();
   }, [userLocation]);
 
-  // Handle gym press
+  // Handle gym press - FIXED to navigate properly based on gym source
   const handleGymPress = (gymId: string) => {
-    navigation.navigate("GymDetails", { gymId });
+    // Extract the actual place ID if it starts with "google-"
+    if (gymId.startsWith("google-")) {
+      const placeId = gymId.substring(7); // Remove "google-" prefix
+      const selectedGym = gyms.find(gym => gym.id === gymId);
+      
+      navigation.navigate("ExternalGymDetails", { 
+        placeId: placeId,
+        sourceType: "google",
+        gymData: selectedGym
+      });
+    } else {
+      // For internally registered gyms
+      navigation.navigate("GymDetails", { gymId });
+    }
+  };
+
+  // Handle search query change
+  const handleSearchChange = (text: string) => {
+    setSearchQuery(text);
+  };
+
+  // Clear search query
+  const clearSearch = () => {
+    setSearchQuery("");
   };
 
   // Render list item
-  const renderGymItem = ({ item }: { item: any }) => (
+  const renderGymItem = ({ item }: { item: GymData }) => (
     <GymListCard 
       gym={item} 
       onPress={() => handleGymPress(item.id)} 
@@ -229,10 +298,12 @@ const NearbyGymsScreen: React.FC<{ route: any; navigation: any }> = ({
           onPress={() => navigation.goBack()}
           className="mr-4"
         >
-          <Ionicons name="arrow-back" size={24} color="#000" />
+          <View>
+          <Ionicons name="arrow-back" size={24} color="#000" /></View>
         </TouchableOpacity>
         <Text className="text-xl font-bold">Nearby Gyms</Text>
       </View>
+      
       
       {/* Content */}
       {loading ? (
@@ -240,9 +311,9 @@ const NearbyGymsScreen: React.FC<{ route: any; navigation: any }> = ({
           <ActivityIndicator size="large" color={THEME.colors.primary} />
           <Text className="mt-4 text-gray-600">Finding gyms near you...</Text>
         </View>
-      ) : gyms.length > 0 ? (
+      ) : filteredGyms.length > 0 ? (
         <FlatList
-          data={gyms}
+          data={filteredGyms}
           renderItem={renderGymItem}
           keyExtractor={(item:any) => item.id}
           contentContainerStyle={{ padding: 16 }}
@@ -257,13 +328,23 @@ const NearbyGymsScreen: React.FC<{ route: any; navigation: any }> = ({
         />
       ) : (
         <View className="flex-1 justify-center items-center px-6">
-          <EmptyState //@ts-ignore
-            icon="location-outline"
-            title="No gyms found nearby"
-            message="Try refreshing your location or expanding your search area."
-            actionLabel="Refresh"
-            onAction={fetchNearbyGyms}
-          />
+          {searchQuery ? (
+            <EmptyState
+              icon="search-outline"
+              title="No matching gyms found"
+              message="Try adjusting your search or check for gyms in a wider area."
+              actionLabel="Clear Search"
+              onAction={clearSearch}
+            />
+          ) : (
+            <EmptyState
+              icon="location-outline"
+              title="No gyms found nearby"
+              message="Try refreshing your location or expanding your search area."
+              actionLabel="Refresh"
+              onAction={fetchNearbyGyms}
+            />
+          )}
         </View>
       )}
     </SafeAreaView>
