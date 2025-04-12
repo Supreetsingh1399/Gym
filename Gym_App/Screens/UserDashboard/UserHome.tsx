@@ -348,6 +348,9 @@ const UserHome: React.FC<NavigationProps> = ({ navigation }) => {
       setLocationError(true);
       setNearbyGyms([]);
     }
+    finally {
+      setLoading(false);
+      setRefreshing(false);}
   };
 
   // Enhanced fetchPopularGyms function
@@ -431,6 +434,7 @@ const UserHome: React.FC<NavigationProps> = ({ navigation }) => {
     if (!servicesReady) return;
 
     setLoading(true);
+    setRefreshing(true);
     
     // Local data holders - will only update state once at the end
     let localRegisteredGyms: GymData[] = [];
@@ -764,6 +768,36 @@ const UserHome: React.FC<NavigationProps> = ({ navigation }) => {
   const loadUserLocation = async () => {
     try {
       setLocationLoading(true);
+      setLocationError(false);
+      
+      // Request new location immediately
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== "granted") {
+        setLocationError(true);
+        setLocationLoading(false);
+        return;
+      }
+      
+      const location = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.Balanced,
+      });
+      
+      const newLocation = {
+        latitude: location.coords.latitude,
+        longitude: location.coords.longitude,
+        timestamp: Date.now(),
+      };
+      
+      // Save to state and AsyncStorage
+      setUserLocation(newLocation);
+      await AsyncStorage.setItem(LOCATION_STORAGE_KEY, JSON.stringify(newLocation));
+      
+      // Force fetch gyms with the new location
+      console.log("Forcing gym data refresh with new location");
+      await Promise.all([
+        fetchNearbyGyms(newLocation),
+        fetchPopularGyms(newLocation)
+      ]);
       
       // First try to get from AsyncStorage
       const storedLocation = await AsyncStorage.getItem(LOCATION_STORAGE_KEY);
@@ -778,7 +812,7 @@ const UserHome: React.FC<NavigationProps> = ({ navigation }) => {
       }
       
       // If no recent stored location, request new location
-      const { status } = await Location.requestForegroundPermissionsAsync();
+     
       if (status !== "granted") {
         Alert.alert(
           "Location Access Required",
@@ -788,16 +822,6 @@ const UserHome: React.FC<NavigationProps> = ({ navigation }) => {
         setLocationLoading(false);
         return;
       }
-      
-      const location = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.Balanced,
-      });
-      
-      const newLocation = {
-        latitude: location.coords.latitude,
-        longitude: location.coords.longitude,
-        timestamp: Date.now(),
-      };
       
       // Save to state and AsyncStorage
       setUserLocation(newLocation);
@@ -1278,20 +1302,7 @@ const UserHome: React.FC<NavigationProps> = ({ navigation }) => {
     navigation.navigate("SearchResults");
   }, [navigation]);
 
-  // Render quick action buttons
-  const renderQuickActions = () => (
-    <View className="flex-row justify-between px-6 py-4">
-      {QUICK_ACTIONS.map((action) => (
-        <QuickActionButton
-          key={action.id}
-          icon={action.icon}
-          label={action.label}
-          color={action.color}
-          onPress={() => navigation.navigate(action.screen)}
-        />
-      ))}
-    </View>
-  );
+
 
   // If Firebase services are not ready
   if (!servicesReady) {
@@ -1302,6 +1313,17 @@ const UserHome: React.FC<NavigationProps> = ({ navigation }) => {
       </SafeAreaView>
     );
   }
+//   // Add this useEffect to debug loading issues
+// useEffect(() => {
+//   console.log("DATA STATE CHECK:", {
+//     userLocation: !!userLocation,
+//     nearbyGyms: nearbyGyms.length,
+//     popularGyms: popularGyms.length,
+//     locationError,
+//     servicesReady,
+//     loading
+//   });
+// }, [userLocation, nearbyGyms, popularGyms, locationError, servicesReady, loading]);
 
   // Main component render
   return (
@@ -1324,10 +1346,10 @@ const UserHome: React.FC<NavigationProps> = ({ navigation }) => {
             android_ripple={{ color: "rgba(0, 0, 0, 0.1)" }}
           >
             <View className="w-[60px] h-[60px] bg-gray-200 rounded-full justify-center items-center">
-              <Text className="text-2xl font-bold text-gray-700">
-                {userName.charAt(0).toUpperCase() || "U"}
-              </Text>
-            </View>
+  <Text className="text-2xl font-bold text-gray-700">
+    {userName.charAt(0).toUpperCase() || "U"}
+  </Text>
+</View>
           </Pressable>
         </View>
 
@@ -1381,19 +1403,19 @@ const UserHome: React.FC<NavigationProps> = ({ navigation }) => {
 
       {/* Main Content */}
       {loading ? (
-        <LoadingSkeleton />
-      ) : (
-        <ScrollView
-          className="flex-1"
-          showsVerticalScrollIndicator={false}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={onRefresh}
-              colors={[THEME.colors.primary]}
-            />
-          }
-        >
+      <LoadingSkeleton />
+    ) : (
+      <ScrollView
+        className="flex-1"
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={[THEME.colors.primary]}
+          />
+        }
+      >
 
           {/* Your Gyms Section - Shows gyms the user has signed up for */}
           <View className="mt-2 mb-6">
@@ -1433,10 +1455,11 @@ const UserHome: React.FC<NavigationProps> = ({ navigation }) => {
 
           {/* Nearby Gyms Section - Strictly from Google Maps */}
           <View className="mb-6">
-    <SectionHeader
-      title="Nearby Gyms"
-      onSeeAllPress={handleSeeAllNearbyGyms}
-    />
+          <SectionHeader
+            title="Nearby Gyms"
+            onSeeAllPress={handleSeeAllNearbyGyms}
+          />
+          
     
     {locationLoading ? (
       <View className="pl-6 py-3 flex-row items-center">
@@ -1461,7 +1484,7 @@ const UserHome: React.FC<NavigationProps> = ({ navigation }) => {
           </Text>
         </TouchableOpacity>
       </View>
-    ) : (
+    ) :  (
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
@@ -1473,7 +1496,6 @@ const UserHome: React.FC<NavigationProps> = ({ navigation }) => {
               key={gym.id}
               gym={gym}
               onPress={() => handleGymPress(gym.id)}
-              //@ts-ignore
               showDistance={true}
             />
           ))
@@ -1491,14 +1513,13 @@ const UserHome: React.FC<NavigationProps> = ({ navigation }) => {
       </ScrollView>
     )}
   </View>
-);
 
 {/* Popular Gyms Section - Fixed with proper icon wrapping and retry functionality */}
 <View className="mb-6">
-    <SectionHeader
-      title="Popular Gyms"
-      onSeeAllPress={handleSeeAllPopularGyms}
-    />
+          <SectionHeader
+            title="Popular Gyms"
+            onSeeAllPress={handleSeeAllPopularGyms}
+          />
     
     {!userLocation ? (
       <View className="px-6">
@@ -1552,7 +1573,8 @@ const UserHome: React.FC<NavigationProps> = ({ navigation }) => {
         )}
       </ScrollView>
     )}
-</View>
+        </View>
+
 
           {/* Workouts Section */}
           <View className="mb-6">
@@ -1582,7 +1604,7 @@ const UserHome: React.FC<NavigationProps> = ({ navigation }) => {
           <View className="mx-6 mb-8">
             <ImageBackground
               source={{
-                uri: "https://images.unsplash.com/photo-1526506118085-60ce8714f8c5?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxzZWFyY2h8Mnx8Z3ltJTIwbW90aXZhdGlvbnxlbnwwfHwwfHw%3D&auto=format&fit=crop&w=800&q=60",
+                uri: "https://images.unsplash.com/photo-1526506118085-60ce8714f8c5?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxzZWFyY2h8Mnx8Z3ltJTIwbW90aXZhdGlvbnxlbnwwfHwwfHw%3D&auto=format&fit=crop&w=800&q=60", 
               }}
               className="rounded-2xl overflow-hidden h-[180px] justify-center"
               imageStyle={{ opacity: 0.7, backgroundColor: "#000" }}

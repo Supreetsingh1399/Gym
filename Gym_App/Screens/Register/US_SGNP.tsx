@@ -320,7 +320,6 @@ const US_SignUp = ({
         updatedAt: new Date().toISOString(),
         role: "user",
         uid: user.uid,
-        password: password,
       };
       // Store in Firestore
       console.log("Saving user data to Firestore...");

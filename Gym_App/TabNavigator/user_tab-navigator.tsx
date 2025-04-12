@@ -6,6 +6,9 @@ import { Platform } from "react-native";
 // Import navigation types
 import { UserTabParamList } from "../types/navigation";
 
+// Import the new animated icon component
+import AnimatedTabIcon from "../Screens/components/AnimatedTabIcon";
+
 // Screen imports
 import UserHome from "../Screens/UserDashboard/UserHome";
 import UserProfile from "../Screens/UserDashboard/US_profile";
@@ -25,6 +28,14 @@ const TabNavigator = (): JSX.Element => {
     <Tab.Navigator
       initialRouteName="UserHome"
       screenOptions={{
+        tabBarIcon: ({ color, size, focused }) => (
+          <AnimatedTabIcon
+            name={focused ? 'ios-home' : 'ios-home-outline'} 
+            color={color}
+            size={size}
+            focused={focused}
+          />
+        ),
         tabBarActiveTintColor: "#0091EA",
         tabBarInactiveTintColor: "gray",
         tabBarStyle: {
@@ -57,7 +68,7 @@ const TabNavigator = (): JSX.Element => {
           fontWeight: "bold",
           fontSize: 18,
         },
-        headerTintColor: "#0091EA",
+        headerTintColor: "#143549",
       }}
     >
       <Tab.Screen
@@ -66,48 +77,44 @@ const TabNavigator = (): JSX.Element => {
         options={{
           title: "Home",
           tabBarLabel: "Home",
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="home" size={size} color={color} />
+          tabBarIcon: ({ color, size, focused }) => (
+            <AnimatedTabIcon name="home" size={size} color={color} focused={focused} />
           ),
         }}
       />
 
       <Tab.Screen
-        //@ts-ignore
         name="UserChats"
         component={UserChats}
         options={{
           title: "Messages",
           tabBarLabel: "Chats",
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="chatbubbles" size={size} color={color} />
+          tabBarIcon: ({ color, size, focused }) => (
+            <AnimatedTabIcon name="chatbubbles" size={size} color={color} focused={focused} />
           ),
         }}
       />
 
       <Tab.Screen
-        //@ts-ignore
         name="UserNews"
         component={NewsScreen}
         options={{
           title: "Fitness News",
           tabBarLabel: "News",
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="newspaper" size={size} color={color} />
+          tabBarIcon: ({ color, size, focused }) => (
+            <AnimatedTabIcon name="newspaper" size={size} color={color} focused={focused} />
           ),
         }}
       />
 
       <Tab.Screen
-        //@ts-ignore
         name="UserProfile"
-        //@ts-ignore
         component={UserProfile}
         options={{
           title: "My Profile",
           tabBarLabel: "Profile",
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="person" size={size} color={color} />
+          tabBarIcon: ({ color, size, focused }) => (
+            <AnimatedTabIcon name="person" size={size} color={color} focused={focused} />
           ),
         }}
       />
