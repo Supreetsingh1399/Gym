@@ -87,6 +87,23 @@ const getRandomItem = <T extends any>(items: T[]): T => {
   return items[Math.floor(Math.random() * items.length)];
 };
 
+const isWithinRadius = (
+  place: GooglePlace,
+  userLocation: Location | null,
+  radius: number = 50
+): boolean => {
+  if (!Location || !place.geometry?.location || !userLocation) return false;
+
+  const distance = calculateDistance(
+    userLocation.latitude,
+    userLocation.longitude,
+    place.geometry.location.lat,
+    place.geometry.location.lng
+  );
+
+  return parseFloat(distance.split(" ")[0]) <= radius;
+};
+
 const SearchResults: React.FC<SearchResultsProps> = ({ navigation, route }) => {
   // State with proper type annotations
   const [userLocation, setUserLocation] = useState<Location | null>(null);
@@ -195,16 +212,18 @@ const SearchResults: React.FC<SearchResultsProps> = ({ navigation, route }) => {
     setLoadingSuggestions(true);
 
     try {
-      // Search for gyms in the user's city
       const textSearchUrl = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=fitness+gym+in+${encodeURIComponent(
         city
-      )}&type=gym&key=${GOOGLE_PLACES_API_KEY}`;
+      )}&type=gym&key=${GOOGLE_PLACES_API_KEY}&radius=5000`; // Added radius parameter
 
       const response = await fetch(textSearchUrl);
       const data = await response.json();
 
       if (data.status === "OK" && data.results.length > 0) {
         const cityGyms: GymResult[] = data.results
+          .filter((place: GooglePlace) => {
+            return place.name && (place.vicinity || place.formatted_address);
+          })
           .slice(0, 5)
           .map((place: GooglePlace) => {
             let distance: string | undefined;
@@ -220,13 +239,17 @@ const SearchResults: React.FC<SearchResultsProps> = ({ navigation, route }) => {
             return processPlaceToGym(place, distance);
           });
 
-        setCitySuggestions(cityGyms);
-
-        // Update sectioned data
-        updateSectionData(searchResults, cityGyms);
+        if (cityGyms.length > 0) {
+          setCitySuggestions(cityGyms);
+          updateSectionData(searchResults, cityGyms);
+        } else {
+          setCitySuggestions([]);
+          setErrorMsg("No gyms found in your area. Try expanding your search.");
+        }
       }
     } catch (error) {
       console.error("Error fetching city suggestions:", error);
+      setCitySuggestions([]);
     } finally {
       setLoadingSuggestions(false);
     }
@@ -346,22 +369,39 @@ const SearchResults: React.FC<SearchResultsProps> = ({ navigation, route }) => {
     setErrorMsg(null);
 
     try {
-      // Direct search using text query
       const searchQuery = placeDetails.name || "";
-      const textSearchUrl = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(
+      let searchUrl = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(
         searchQuery
-      )}+gym&type=gym&key=${GOOGLE_PLACES_API_KEY}${
-        userLocation
-          ? `&location=${userLocation.latitude},${userLocation.longitude}&radius=50000`
-          : ""
-      }`;
+      )}+gym+fitness&type=gym&key=${GOOGLE_PLACES_API_KEY}`;
 
-      const response = await fetch(textSearchUrl);
+      if (userLocation) {
+        searchUrl += `&location=${userLocation.latitude},${userLocation.longitude}&radius=5000`; // Changed from 50000 to 5000
+      }
+
+      const response = await fetch(searchUrl);
       const data = await response.json();
 
-      if (data.status === "OK") {
-        const searchResults: GymResult[] = data.results.map(
-          (place: GooglePlace) => {
+      if (data.status === "OK" && data.results.length > 0) {
+        const searchResults: GymResult[] = data.results
+          .filter((place: GooglePlace) => {
+            // Enhanced filtering criteria
+            return (
+              place.name &&
+              (place.vicinity || place.formatted_address) &&
+              // Ensure the place has valid coordinates
+              place.geometry?.location?.lat &&
+              place.geometry?.location?.lng &&
+              // If we have user location, check if it's within 5km
+              (!userLocation ||
+                calculateDistance(
+                  userLocation.latitude,
+                  userLocation.longitude,
+                  place.geometry.location.lat,
+                  place.geometry.location.lng
+                ).split(" ")[0] <= "5")
+            );
+          })
+          .map((place: GooglePlace) => {
             let distance: string | undefined;
             if (userLocation && place.geometry?.location) {
               distance = calculateDistance(
@@ -373,29 +413,28 @@ const SearchResults: React.FC<SearchResultsProps> = ({ navigation, route }) => {
             }
 
             return processPlaceToGym(place, distance);
-          }
-        );
-
-        // Apply current filter
-        let filteredResults = searchResults;
-        if (selectedFilter === "nearby" && userLocation) {
-          filteredResults = filteredResults.sort((a, b) => {
+          })
+          .sort((a: GymResult, b: GymResult) => {
+            // Sort by distance first, then by rating
             const aDistance = a.distance
               ? parseFloat(a.distance.split(" ")[0])
               : 999;
             const bDistance = b.distance
               ? parseFloat(b.distance.split(" ")[0])
               : 999;
+            if (aDistance === bDistance) {
+              return (b.rating || 0) - (a.rating || 0);
+            }
             return aDistance - bDistance;
           });
-        } else if (selectedFilter === "highRated") {
-          filteredResults = filteredResults.filter((gym) => gym.rating >= 4.5);
-        }
 
-        setSearchResults(filteredResults);
-        updateSectionData(filteredResults, citySuggestions);
+        setSearchResults(searchResults);
+        updateSectionData(searchResults, citySuggestions);
       } else {
-        throw new Error(`API returned status: ${data.status}`);
+        setSearchResults([]);
+        setErrorMsg(
+          "No gyms found within 5km. Try a different location or search term."
+        );
       }
     } catch (error) {
       console.error("Error searching gyms:", error);
@@ -572,13 +611,29 @@ const SearchResults: React.FC<SearchResultsProps> = ({ navigation, route }) => {
               language: "en",
               types: "establishment",
               keyword: "gym fitness",
-              components: "country:us",
-              rankby: userLocation ? "distance" : "rating",
-              ...(userLocation && {
-                location: `${userLocation.latitude},${userLocation.longitude}`,
-                radius: "50000",
-              }),
+              location: userLocation
+                ? `${userLocation.latitude},${userLocation.longitude}`
+                : undefined,
+              radius: "5000",
+              strictbounds: true,
+              rankby: "distance",
+              // Remove the components restriction and use region bias instead
+              region: "in", // for India
             }}
+            nearbyPlacesAPI="GooglePlacesSearch"
+            predefinedPlacesAlwaysVisible={false}
+            minLength={2} // Only start searching after 2 characters
+            enableHighAccuracyLocation={true}
+            timeout={5000} // Timeout for location requests
+            GooglePlacesSearchQuery={{
+              // Additional search parameters
+              type: "gym",
+              rankby: "distance",
+            }}
+            suppressDefaultStyles={false}
+            onFail={(error) =>
+              console.error("PlacesAutoComplete Error:", error)
+            }
             styles={{
               container: {
                 flex: 1,
@@ -611,14 +666,27 @@ const SearchResults: React.FC<SearchResultsProps> = ({ navigation, route }) => {
                 backgroundColor: "rgb(229 231 235)",
               },
             }}
-            renderRow={(rowData) => {
+            renderRow={(rowData, index) => {
+              // Skip empty results
+              if (
+                !rowData ||
+                (!rowData.structured_formatting && !rowData.description)
+              ) {
+                return <View />;
+              }
+
               const mainText =
                 rowData.structured_formatting?.main_text || rowData.description;
               const secondaryText =
                 rowData.structured_formatting?.secondary_text || "";
 
+              // Skip results without a main text
+              if (!mainText) {
+                return <View />;
+              }
+
               return (
-                <View className="flex-row items-center p-3">
+                <View className="flex-row items-center p-3 border-b border-gray-100">
                   <View className="w-10 h-10 rounded-full bg-blue-50 items-center justify-center mr-3">
                     <Ionicons
                       name="fitness-outline"
@@ -636,28 +704,14 @@ const SearchResults: React.FC<SearchResultsProps> = ({ navigation, route }) => {
                       </Text>
                     ) : null}
                   </View>
+                  {(rowData as any)?.structured_formatting?.distance && (
+                    <Text className="text-sm text-blue-600 ml-2">
+                      {(rowData as any).structured_formatting.distance}
+                    </Text>
+                  )}
                 </View>
               );
             }}
-            renderLeftButton={() => (
-              <View className="pl-3 justify-center">
-                <Ionicons
-                  name="search-outline"
-                  size={20}
-                  color="rgb(107 114 128)"
-                />
-              </View>
-            )}
-            renderRightButton={() => (
-              <TouchableOpacity
-                className="px-3 justify-center"
-                onPress={searchNearbyGyms}
-              >
-                <Ionicons name="location-outline" size={20} color="#3b82f6" />
-              </TouchableOpacity>
-            )}
-            enablePoweredByContainer={false}
-            debounce={300}
           />
         </View>
       </View>
@@ -825,3 +879,21 @@ const SearchResults: React.FC<SearchResultsProps> = ({ navigation, route }) => {
 };
 
 export default SearchResults;
+function calculateDistance(
+  lat1: number,
+  lon1: number,
+  lat2: number,
+  lon2: number
+): string {
+  const R = 3958.8; // Earth's radius in miles
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLon = ((lon2 - lon1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return (R * c).toFixed(1) + " mi";
+}
