@@ -38,6 +38,8 @@ import ProfileUpdate from "Gym_App/Screens/UserDashboard/ProfileUpdate";
 
 // Hooks
 import useAuth from "./Gym_App/Backend/hooks/Auth";
+import { ThemeProvider } from "Gym_App/Screens/components/ThemeContext";
+import { UserProvider } from "Gym_App/Screens/components/UserContext";
 
 // Define interface for ErrorBoundary props and state
 interface ErrorBoundaryProps {
@@ -326,19 +328,23 @@ const App = (): JSX.Element => {
   }
 
   // Render the app when everything is ready
-  return (
-    <ErrorBoundary>
-      <SafeAreaProvider>
-        <NavigationContainer>
-          <StackNavigator
+return (
+  <ErrorBoundary>
+    <UserProvider>
+      <ThemeProvider>
+        <SafeAreaProvider>
+          <NavigationContainer>
+            <StackNavigator
             //@ts-ignore
-            user={user}
-          />
-        </NavigationContainer>
-        <ToastManager />
-      </SafeAreaProvider>
-    </ErrorBoundary>
-  );
+              user={user}
+            />
+          </NavigationContainer>
+          <ToastManager />
+        </SafeAreaProvider>
+      </ThemeProvider>
+    </UserProvider>
+  </ErrorBoundary>
+);
 };
 
 const styles = StyleSheet.create({

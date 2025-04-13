@@ -1,41 +1,137 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
-import { Ionicons } from "@expo/vector-icons";
 import { Platform } from "react-native";
+import * as Haptics from "expo-haptics";
+import { useIsFocused } from "@react-navigation/native";
 
-// Import navigation types
-import { UserTabParamList } from "../types/navigation";
-
-// Import the new animated icon component
+// Import your custom animated icon
 import AnimatedTabIcon from "../Screens/components/AnimatedTabIcon";
 
-// Screen imports
+// Screens
 import UserHome from "../Screens/UserDashboard/UserHome";
 import UserProfile from "../Screens/UserDashboard/US_profile";
 import UserChats from "../Screens/UserDashboard/US_chats";
 import NewsScreen from "../Screens/UserDashboard/Gym_related_news";
+import { TabBarIconProps } from "../types/navigation";
 
-// Create the navigator with type
+// Navigation types
+import { UserTabParamList } from "../types/navigation";
+
 const Tab = createBottomTabNavigator<UserTabParamList>();
 
-/**
- * Tab Navigator component for the user dashboard
- * Provides bottom tab navigation between main app screens
- * @returns {JSX.Element} Tab Navigator component
- */
-const TabNavigator = (): JSX.Element => {
+// Track focus states for all tabs
+const UserTabNavigator = {
+  previousFocusStates: {
+    home: false,
+    chats: false,
+    news: false,
+    profile: false
+  },
+  
+  updateFocusState(tabName: string, isFocused: boolean) {
+    this.previousFocusStates[tabName] = isFocused;
+  }
+};
+
+// Create wrapper components for tab icons to properly use hooks
+const HomeTabIcon = ({ color, size, focused }: TabBarIconProps) => {
+  const isFocused = useIsFocused();
+  
+  useEffect(() => {
+    if (isFocused) {
+      UserTabNavigator.updateFocusState('home', true);
+    } else {
+      UserTabNavigator.updateFocusState('home', false);
+    }
+  }, [isFocused]);
+  
+  return (
+    <AnimatedTabIcon 
+    key={`home-${Date.now()}`}
+      name="home" 
+      size={size}
+      color={color}
+      focused={focused} 
+      previouslyFocused={UserTabNavigator.previousFocusStates.home} 
+    />
+  );
+};
+
+const ChatsTabIcon = ({ color, size, focused }: TabBarIconProps) => {
+  const isFocused = useIsFocused();
+  
+  useEffect(() => {
+    if (isFocused) {
+      UserTabNavigator.updateFocusState('chats', true);
+    } else {
+      UserTabNavigator.updateFocusState('chats', false);
+    }
+  }, [isFocused]);
+  
+  return (
+    <AnimatedTabIcon 
+    key={`home-${Date.now()}`}
+      name="chatbubbles" 
+      size={size} 
+      color={color} 
+      focused={focused}
+      previouslyFocused={UserTabNavigator.previousFocusStates.chats}
+    />
+  );
+};
+
+const NewsTabIcon = ({ color, size, focused }: TabBarIconProps) => {
+  const isFocused = useIsFocused();
+  
+  useEffect(() => {
+    if (isFocused) {
+      UserTabNavigator.updateFocusState('news', true);
+    } else {
+      UserTabNavigator.updateFocusState('news', false);
+    }
+  }, [isFocused]);
+  
+  return (
+    <AnimatedTabIcon 
+    key={`home-${Date.now()}`}
+      name="newspaper" 
+      size={size} 
+      color={color} 
+      focused={focused}
+      previouslyFocused={UserTabNavigator.previousFocusStates.news}
+    />
+  );
+};
+
+const ProfileTabIcon = ({ color, size, focused }: TabBarIconProps) => {
+  const isFocused = useIsFocused();
+  
+  useEffect(() => {
+    if (isFocused) {
+      UserTabNavigator.updateFocusState('profile', true);
+    } else {
+      UserTabNavigator.updateFocusState('profile', false);
+    }
+  }, [isFocused]);
+  
+  return (
+    <AnimatedTabIcon 
+    key={`home-${Date.now()}`}
+      name="person" 
+      size={size} 
+      color={color} 
+      focused={focused}
+      previouslyFocused={UserTabNavigator.previousFocusStates.profile}
+    />
+  );
+};
+
+// Main Tab Navigator component
+const MainTabNavigator = (): JSX.Element => {
   return (
     <Tab.Navigator
       initialRouteName="UserHome"
       screenOptions={{
-        tabBarIcon: ({ color, size, focused }) => (
-          <AnimatedTabIcon
-            name={focused ? 'ios-home' : 'ios-home-outline'} 
-            color={color}
-            size={size}
-            focused={focused}
-          />
-        ),
         tabBarActiveTintColor: "#0091EA",
         tabBarInactiveTintColor: "gray",
         tabBarStyle: {
@@ -77,9 +173,10 @@ const TabNavigator = (): JSX.Element => {
         options={{
           title: "Home",
           tabBarLabel: "Home",
-          tabBarIcon: ({ color, size, focused }) => (
-            <AnimatedTabIcon name="home" size={size} color={color} focused={focused} />
-          ),
+          tabBarIcon: (props: TabBarIconProps) => <HomeTabIcon {...props} />
+        }}
+        listeners={{
+          tabPress: () => Haptics.selectionAsync(),
         }}
       />
 
@@ -89,9 +186,10 @@ const TabNavigator = (): JSX.Element => {
         options={{
           title: "Messages",
           tabBarLabel: "Chats",
-          tabBarIcon: ({ color, size, focused }) => (
-            <AnimatedTabIcon name="chatbubbles" size={size} color={color} focused={focused} />
-          ),
+          tabBarIcon: (props: TabBarIconProps) => <ChatsTabIcon {...props} />
+        }}
+        listeners={{
+          tabPress: () => Haptics.selectionAsync(),
         }}
       />
 
@@ -101,9 +199,10 @@ const TabNavigator = (): JSX.Element => {
         options={{
           title: "Fitness News",
           tabBarLabel: "News",
-          tabBarIcon: ({ color, size, focused }) => (
-            <AnimatedTabIcon name="newspaper" size={size} color={color} focused={focused} />
-          ),
+          tabBarIcon: (props: TabBarIconProps) => <NewsTabIcon {...props} />
+        }}
+        listeners={{
+          tabPress: () => Haptics.selectionAsync(),
         }}
       />
 
@@ -113,13 +212,15 @@ const TabNavigator = (): JSX.Element => {
         options={{
           title: "My Profile",
           tabBarLabel: "Profile",
-          tabBarIcon: ({ color, size, focused }) => (
-            <AnimatedTabIcon name="person" size={size} color={color} focused={focused} />
-          ),
+          tabBarIcon: (props: TabBarIconProps) => <ProfileTabIcon {...props} />
+        }}
+        listeners={{
+          tabPress: () => Haptics.selectionAsync(),
         }}
       />
     </Tab.Navigator>
   );
 };
 
-export default TabNavigator;
+export { UserTabNavigator };
+export default MainTabNavigator;
