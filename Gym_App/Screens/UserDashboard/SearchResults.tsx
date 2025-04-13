@@ -10,6 +10,8 @@ import {
   ActivityIndicator,
   Image,
   Pressable,
+  SectionList,
+  ScrollView,
 } from "react-native";
 import {
   GooglePlaceDetail,
@@ -20,7 +22,7 @@ import * as Location from "expo-location";
 import { GOOGLE_PLACES_API_KEY } from "@env";
 import { GYM_IMAGES } from "./constants/assetUrls";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import GymSplineView from "../components/GymSplineView";  //@ts-ignore
+import GymSplineView from "../components/GymSplineView"; //@ts-ignore
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../types";
 
@@ -65,6 +67,12 @@ interface GooglePlace {
   };
 }
 
+// New interface for section data
+interface SectionData {
+  title: string;
+  data: GymResult[];
+}
+
 type SearchResultsProps = NativeStackScreenProps<
   RootStackParamList,
   "SearchResults"
@@ -83,13 +91,17 @@ const SearchResults: React.FC<SearchResultsProps> = ({ navigation, route }) => {
   // State with proper type annotations
   const [userLocation, setUserLocation] = useState<Location | null>(null);
   const [searchResults, setSearchResults] = useState<GymResult[]>([]);
+  const [citySuggestions, setCitySuggestions] = useState<GymResult[]>([]);
+  const [userCity, setUserCity] = useState<string>("");
   const [loading, setLoading] = useState<boolean>(false);
+  const [loadingSuggestions, setLoadingSuggestions] = useState<boolean>(false);
   const [selectedFilter, setSelectedFilter] = useState<string>("all");
   const [locationPermissionStatus, setLocationPermissionStatus] =
     useState<string>("undetermined");
   const [showSplineView, setShowSplineView] = useState<boolean>(false);
   const [selectedGym, setSelectedGym] = useState<GymResult | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [sectionedData, setSectionedData] = useState<SectionData[]>([]);
 
   // Location permission and fetching with types
   const requestLocationPermission = async (): Promise<void> => {
@@ -105,6 +117,9 @@ const SearchResults: React.FC<SearchResultsProps> = ({ navigation, route }) => {
         };
         setUserLocation(newLocation);
         await AsyncStorage.setItem("userLocation", JSON.stringify(newLocation));
+
+        // Get city from coordinates
+        await getUserCityFromCoordinates(newLocation);
       }
     } catch (error) {
       setErrorMsg("Could not get your location. Please check permissions.");
@@ -112,13 +127,55 @@ const SearchResults: React.FC<SearchResultsProps> = ({ navigation, route }) => {
     }
   };
 
+  // Get city name from coordinates
+  const getUserCityFromCoordinates = async (
+    location: Location
+  ): Promise<void> => {
+    try {
+      const reverseGeocode = await Location.reverseGeocodeAsync({
+        latitude: location.latitude,
+        longitude: location.longitude,
+      });
+
+      if (reverseGeocode && reverseGeocode.length > 0) {
+        const cityName = reverseGeocode[0].city || "";
+        setUserCity(cityName);
+
+        // Cache city for future use
+        await AsyncStorage.setItem("userCity", cityName);
+
+        // Fetch city suggestions if we have a city name
+        if (cityName) {
+          await fetchCitySuggestions(cityName);
+        }
+      }
+    } catch (error) {
+      console.error("Error getting city from coordinates:", error);
+    }
+  };
+
   // Initialize location on mount
   useEffect(() => {
     const initLocation = async (): Promise<void> => {
       try {
+        // Try to get cached city first
+        const cachedCity = await AsyncStorage.getItem("userCity");
+        if (cachedCity) {
+          setUserCity(cachedCity);
+        }
+
         const storedLocation = await AsyncStorage.getItem("userLocation");
         if (storedLocation) {
-          setUserLocation(JSON.parse(storedLocation));
+          const parsedLocation = JSON.parse(storedLocation);
+          setUserLocation(parsedLocation);
+
+          // If we have location but no city, get city
+          if (!cachedCity) {
+            await getUserCityFromCoordinates(parsedLocation);
+          } else {
+            // If we already have the city, fetch suggestions
+            await fetchCitySuggestions(cachedCity);
+          }
         } else {
           requestLocationPermission();
         }
@@ -131,12 +188,80 @@ const SearchResults: React.FC<SearchResultsProps> = ({ navigation, route }) => {
     initLocation();
   }, []);
 
+  // Fetch gym suggestions based on city
+  const fetchCitySuggestions = async (city: string): Promise<void> => {
+    if (!city) return;
+
+    setLoadingSuggestions(true);
+
+    try {
+      // Search for gyms in the user's city
+      const textSearchUrl = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=fitness+gym+in+${encodeURIComponent(
+        city
+      )}&type=gym&key=${GOOGLE_PLACES_API_KEY}`;
+
+      const response = await fetch(textSearchUrl);
+      const data = await response.json();
+
+      if (data.status === "OK" && data.results.length > 0) {
+        const cityGyms: GymResult[] = data.results
+          .slice(0, 5)
+          .map((place: GooglePlace) => {
+            let distance: string | undefined;
+            if (userLocation && place.geometry?.location) {
+              distance = calculateDistance(
+                userLocation.latitude,
+                userLocation.longitude,
+                place.geometry.location.lat,
+                place.geometry.location.lng
+              );
+            }
+
+            return processPlaceToGym(place, distance);
+          });
+
+        setCitySuggestions(cityGyms);
+
+        // Update sectioned data
+        updateSectionData(searchResults, cityGyms);
+      }
+    } catch (error) {
+      console.error("Error fetching city suggestions:", error);
+    } finally {
+      setLoadingSuggestions(false);
+    }
+  };
+
+  // Update the sectioned data for the SectionList
+  const updateSectionData = (
+    results: GymResult[],
+    suggestions: GymResult[]
+  ): void => {
+    const sections: SectionData[] = [];
+
+    if (results.length > 0) {
+      sections.push({
+        title: "Search Results",
+        data: results,
+      });
+    }
+
+    if (suggestions.length > 0) {
+      sections.push({
+        title: `Popular Gyms in ${userCity}`,
+        data: suggestions,
+      });
+    }
+
+    setSectionedData(sections);
+  };
+
   // Distance calculation with types
   const calculateDistance = (
     lat1: number,
     lon1: number,
     lat2: number,
-    lon2: number,
+    lon2: number
   ): string => {
     const R = 3958.8; // Earth's radius in miles
     const dLat = ((lat2 - lat1) * Math.PI) / 180;
@@ -154,13 +279,13 @@ const SearchResults: React.FC<SearchResultsProps> = ({ navigation, route }) => {
   // Process place into gym result with types
   const processPlaceToGym = (
     place: GooglePlace,
-    distance?: string,
+    distance?: string
   ): GymResult => ({
     id: place.place_id ? `google-${place.place_id}` : `google-${generateId()}`,
     gymName: place.name,
     location: {
       address: place.vicinity || place.formatted_address || "",
-      city: "",
+      city: userCity,
       state: "",
     },
     rating: place.rating || 4.0,
@@ -197,13 +322,16 @@ const SearchResults: React.FC<SearchResultsProps> = ({ navigation, route }) => {
           userLocation.latitude,
           userLocation.longitude,
           place.geometry?.location.lat || 0,
-          place.geometry?.location.lng || 0,
+          place.geometry?.location.lng || 0
         );
 
         return processPlaceToGym(place, distance);
       });
 
       setSearchResults(nearbyGyms);
+
+      // Update sectioned data
+      updateSectionData(nearbyGyms, citySuggestions);
     } catch (error) {
       console.error("Error searching nearby gyms:", error);
       setErrorMsg("Could not load nearby gyms. Please try again.");
@@ -218,71 +346,57 @@ const SearchResults: React.FC<SearchResultsProps> = ({ navigation, route }) => {
     setErrorMsg(null);
 
     try {
-      const results: GymResult[] = [];
+      // Direct search using text query
+      const searchQuery = placeDetails.name || "";
+      const textSearchUrl = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(
+        searchQuery
+      )}+gym&type=gym&key=${GOOGLE_PLACES_API_KEY}${
+        userLocation
+          ? `&location=${userLocation.latitude},${userLocation.longitude}&radius=50000`
+          : ""
+      }`;
 
-      if (placeDetails) {
-        let distance: string | undefined;
-        if (userLocation && placeDetails.geometry?.location) {
-          distance = calculateDistance(
-            userLocation.latitude,
-            userLocation.longitude,
-            placeDetails.geometry.location.lat,
-            placeDetails.geometry.location.lng,
-          );
-        }
+      const response = await fetch(textSearchUrl);
+      const data = await response.json();
 
-        results.push(
-          processPlaceToGym(placeDetails as unknown as GooglePlace, distance),
-        );
-      }
+      if (data.status === "OK") {
+        const searchResults: GymResult[] = data.results.map(
+          (place: GooglePlace) => {
+            let distance: string | undefined;
+            if (userLocation && place.geometry?.location) {
+              distance = calculateDistance(
+                userLocation.latitude,
+                userLocation.longitude,
+                place.geometry.location.lat,
+                place.geometry.location.lng
+              );
+            }
 
-      // Add nearby gyms if we have user location and less than 5 results
-      if (userLocation && results.length < 5) {
-        try {
-          const nearbyUrl = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${userLocation.latitude},${userLocation.longitude}&radius=10000&type=gym&keyword=fitness&key=${GOOGLE_PLACES_API_KEY}`;
-
-          const response = await fetch(nearbyUrl);
-          const data = await response.json();
-
-          if (data.status === "OK") {
-            const nearbyGyms: GymResult[] = data.results.map(
-              (place: GooglePlace) => {
-                const distance = calculateDistance(
-                  userLocation.latitude,
-                  userLocation.longitude,
-                  place.geometry?.location.lat || 0,
-                  place.geometry?.location.lng || 0,
-                );
-
-                return processPlaceToGym(place, distance);
-              },
-            );
-
-            results.push(...nearbyGyms);
+            return processPlaceToGym(place, distance);
           }
-        } catch (nearbyError) {
-          console.error("Error fetching nearby gyms:", nearbyError);
-          // Continue with current results
+        );
+
+        // Apply current filter
+        let filteredResults = searchResults;
+        if (selectedFilter === "nearby" && userLocation) {
+          filteredResults = filteredResults.sort((a, b) => {
+            const aDistance = a.distance
+              ? parseFloat(a.distance.split(" ")[0])
+              : 999;
+            const bDistance = b.distance
+              ? parseFloat(b.distance.split(" ")[0])
+              : 999;
+            return aDistance - bDistance;
+          });
+        } else if (selectedFilter === "highRated") {
+          filteredResults = filteredResults.filter((gym) => gym.rating >= 4.5);
         }
-      }
 
-      // Apply filters
-      let filteredResults = results;
-      if (selectedFilter === "nearby" && userLocation) {
-        filteredResults = results.sort((a, b) => {
-          const aDistance = a.distance
-            ? parseFloat(a.distance.split(" ")[0])
-            : 999;
-          const bDistance = b.distance
-            ? parseFloat(b.distance.split(" ")[0])
-            : 999;
-          return aDistance - bDistance;
-        });
-      } else if (selectedFilter === "highRated") {
-        filteredResults = results.filter((gym) => gym.rating >= 4.5);
+        setSearchResults(filteredResults);
+        updateSectionData(filteredResults, citySuggestions);
+      } else {
+        throw new Error(`API returned status: ${data.status}`);
       }
-
-      setSearchResults(filteredResults);
     } catch (error) {
       console.error("Error searching gyms:", error);
       setErrorMsg("Could not complete your search. Please try again.");
@@ -319,6 +433,9 @@ const SearchResults: React.FC<SearchResultsProps> = ({ navigation, route }) => {
       }
 
       setSearchResults(filtered);
+
+      // Update sectioned data
+      updateSectionData(filtered, citySuggestions);
     } else {
       // If no results yet, search nearby when selecting "nearby" filter
       if (filterId === "nearby") {
@@ -357,6 +474,46 @@ const SearchResults: React.FC<SearchResultsProps> = ({ navigation, route }) => {
       });
     }
   };
+
+  // Render gym card
+  const renderGymCard = (item: GymResult) => (
+    <TouchableOpacity
+      className="mx-4 mb-4 bg-white rounded-lg overflow-hidden shadow-sm active:opacity-90"
+      onPress={() => handleGymSelect(item)}
+    >
+      <View className="relative h-36">
+        <Image source={{ uri: item.imageUrl }} className="w-full h-full" />
+        {item.source === "google" && (
+          <View className="absolute top-2 right-2 px-2 py-1 rounded-md bg-black/60">
+            <Text className="text-xs font-bold text-white">Google</Text>
+          </View>
+        )}
+        {item.distance && (
+          <View className="absolute bottom-2 right-2 px-2 py-1 rounded-md bg-blue-600">
+            <Text className="text-xs font-bold text-white">
+              {item.distance}
+            </Text>
+          </View>
+        )}
+      </View>
+      <View className="p-3">
+        <Text className="text-base font-bold text-gray-800 mb-1">
+          {item.gymName}
+        </Text>
+        <Text className="text-sm text-gray-500 mb-2">
+          {item.location.address}
+        </Text>
+        <View className="flex-row items-center">
+          <Text className="text-amber-500 mr-1">
+            {"★".repeat(Math.round(item.rating || 0))}
+          </Text>
+          <Text className="text-sm text-gray-800">
+            {item.rating.toFixed(1)}
+          </Text>
+        </View>
+      </View>
+    </TouchableOpacity>
+  );
 
   // Render 3D spline view modal
   if (showSplineView && selectedGym) {
@@ -403,7 +560,7 @@ const SearchResults: React.FC<SearchResultsProps> = ({ navigation, route }) => {
 
         <View className="flex-1">
           <GooglePlacesAutocomplete
-            placeholder="Search for gyms, fitness centers..."
+            placeholder="Search for gyms..."
             fetchDetails={true}
             onPress={(data, details = null) => {
               if (details) {
@@ -416,62 +573,91 @@ const SearchResults: React.FC<SearchResultsProps> = ({ navigation, route }) => {
               types: "establishment",
               keyword: "gym fitness",
               components: "country:us",
+              rankby: userLocation ? "distance" : "rating",
               ...(userLocation && {
                 location: `${userLocation.latitude},${userLocation.longitude}`,
                 radius: "50000",
               }),
             }}
             styles={{
-              container: { flex: 1 },
+              container: {
+                flex: 1,
+              },
               textInputContainer: {
-                backgroundColor: "#f3f4f6",
+                backgroundColor: "rgb(243 244 246)",
                 borderRadius: 8,
-                padding: 0,
               },
               textInput: {
-                height: 38,
-                color: "#1f2937",
+                height: 40,
+                color: "rgb(31 41 55)",
                 fontSize: 16,
-                backgroundColor: "#f3f4f6",
+                backgroundColor: "transparent",
               },
-              predefinedPlacesDescription: {
-                color: "#1e3a8a",
+              listView: {
+                position: "absolute",
+                top: 45,
+                left: 0,
+                right: 0,
+                backgroundColor: "white",
+                borderRadius: 8,
+                zIndex: 1000,
+                elevation: 3,
               },
               row: {
                 backgroundColor: "white",
-                padding: 13,
-                height: 44,
-                flexDirection: "row",
               },
               separator: {
                 height: 1,
-                backgroundColor: "#e5e7eb",
-              },
-              description: {
-                fontSize: 14,
-              },
-              loader: {
-                flexDirection: "row",
-                justifyContent: "flex-end",
-                height: 20,
+                backgroundColor: "rgb(229 231 235)",
               },
             }}
-            renderRow={(data) => (
-              <View className="flex-row items-center">
+            renderRow={(rowData) => {
+              const mainText =
+                rowData.structured_formatting?.main_text || rowData.description;
+              const secondaryText =
+                rowData.structured_formatting?.secondary_text || "";
+
+              return (
+                <View className="flex-row items-center p-3">
+                  <View className="w-10 h-10 rounded-full bg-blue-50 items-center justify-center mr-3">
+                    <Ionicons
+                      name="fitness-outline"
+                      size={20}
+                      color="#3b82f6"
+                    />
+                  </View>
+                  <View className="flex-1">
+                    <Text className="text-gray-900 font-medium">
+                      {mainText}
+                    </Text>
+                    {secondaryText ? (
+                      <Text className="text-gray-500 text-sm mt-0.5">
+                        {secondaryText}
+                      </Text>
+                    ) : null}
+                  </View>
+                </View>
+              );
+            }}
+            renderLeftButton={() => (
+              <View className="pl-3 justify-center">
                 <Ionicons
-                  name="location-outline"
-                  size={16}
-                  color="#6b7280"
-                  style={{ marginRight: 12 }}
+                  name="search-outline"
+                  size={20}
+                  color="rgb(107 114 128)"
                 />
-                <Text className="text-sm text-gray-700">
-                  {data.description || data.structured_formatting?.main_text}
-                </Text>
               </View>
+            )}
+            renderRightButton={() => (
+              <TouchableOpacity
+                className="px-3 justify-center"
+                onPress={searchNearbyGyms}
+              >
+                <Ionicons name="location-outline" size={20} color="#3b82f6" />
+              </TouchableOpacity>
             )}
             enablePoweredByContainer={false}
             debounce={300}
-            nearbyPlacesAPI="GooglePlacesSearch"
           />
         </View>
       </View>
@@ -501,7 +687,7 @@ const SearchResults: React.FC<SearchResultsProps> = ({ navigation, route }) => {
         <FlatList
           horizontal
           data={["all", "nearby", "highRated"]}
-          keyExtractor={(item:any) => item} //@ts-ignore
+          keyExtractor={(item: any) => item} //@ts-ignore
           renderItem={({ item }) => (
             <TouchableOpacity
               className={`px-3 py-1.5 mr-2 rounded-full ${
@@ -522,6 +708,56 @@ const SearchResults: React.FC<SearchResultsProps> = ({ navigation, route }) => {
         />
       </View>
 
+      {/* Quick Search Categories */}
+      <View className="px-4 py-2">
+        <Text className="text-base font-semibold text-gray-800 mb-2">
+          Quick Search
+        </Text>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          className="flex-row"
+        >
+          {[
+            { name: "Fitness Center", icon: "fitness" },
+            { name: "CrossFit", icon: "barbell" },
+            { name: "Yoga Studio", icon: "leaf" },
+            { name: "24/7 Gym", icon: "time" },
+          ].map((category) => (
+            <TouchableOpacity
+              key={category.name}
+              className="mr-2 px-4 py-2 bg-gray-100 rounded-full flex-row items-center active:bg-gray-200"
+              onPress={() => {
+                const searchQuery = `${category.name} near ${userCity || "me"}`;
+                searchGyms({
+                  name: searchQuery,
+                  formatted_address: "",
+                  geometry: userLocation
+                    ? {
+                        location: {
+                          lat: userLocation.latitude,
+                          lng: userLocation.longitude,
+                        },
+                      }
+                    : undefined,
+                } as GooglePlaceDetail);
+              }}
+            >
+              <View className="w-6 h-6 rounded-full bg-blue-100 items-center justify-center mr-2">
+                <Ionicons
+                  name={category.icon as any}
+                  size={14}
+                  color="#3b82f6"
+                />
+              </View>
+              <Text className="text-sm text-gray-700 font-medium">
+                {category.name}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      </View>
+
       {/* Error message */}
       {errorMsg && (
         <View className="mx-4 mb-2 p-2 bg-red-50 rounded">
@@ -530,131 +766,57 @@ const SearchResults: React.FC<SearchResultsProps> = ({ navigation, route }) => {
       )}
 
       {/* Results */}
-      {loading ? (
+      {loading && searchResults.length === 0 && citySuggestions.length === 0 ? (
         <View className="flex-1 justify-center items-center">
           <ActivityIndicator size="large" color="#3b82f6" />
           <Text className="mt-4 text-base text-gray-500">
             Searching for gyms...
           </Text>
         </View>
-      ) : searchResults.length > 0 ? (
-        <FlatList
-          data={searchResults}
-          keyExtractor={(item:any) => item.id} //@ts-ignore
-          renderItem={({ item }) => (
-            <TouchableOpacity
-              className="mx-4 mb-4 bg-white rounded-lg overflow-hidden shadow"
-              onPress={() => handleGymSelect(item)}
-            >
-              <View className="relative h-36">
-                <Image
-                  source={{ uri: item.imageUrl }}
-                  className="w-full h-full"
-                  style={{ width: "100%", height: "100%" }}
-                />
-                {item.source === "google" && (
-                  <View
-                    className="absolute top-2 right-2 px-2 py-1 rounded-md bg-black bg-opacity-60"
-                    style={{
-                      position: "absolute",
-                      top: 8,
-                      right: 8,
-                      paddingHorizontal: 8,
-                      paddingVertical: 4,
-                      borderRadius: 6,
-                      backgroundColor: "rgba(0,0,0,0.6)",
-                    }}
-                  >
-                    <Text
-                      className="text-xs font-bold text-white"
-                      style={{
-                        fontSize: 10,
-                        fontWeight: "bold",
-                        color: "white",
-                      }}
-                    >
-                      Google
-                    </Text>
-                  </View>
-                )}
-                {item.distance && (
-                  <View
-                    className="absolute bottom-2 right-2 px-2 py-1 rounded-md bg-blue-600"
-                    style={{
-                      position: "absolute",
-                      bottom: 8,
-                      right: 8,
-                      paddingHorizontal: 8,
-                      paddingVertical: 4,
-                      borderRadius: 6,
-                      backgroundColor: "#2563eb",
-                    }}
-                  >
-                    <Text
-                      className="text-xs font-bold text-white"
-                      style={{
-                        fontSize: 10,
-                        fontWeight: "bold",
-                        color: "white",
-                      }}
-                    >
-                      {item.distance}
-                    </Text>
-                  </View>
-                )}
-              </View>
-              <View className="p-3">
-                <Text
-                  className="text-base font-bold text-gray-800 mb-1"
-                  style={{
-                    fontSize: 16,
-                    fontWeight: "bold",
-                    color: "#1f2937",
-                    marginBottom: 4,
-                  }}
-                >
-                  {item.gymName}
-                </Text>
-                <Text
-                  className="text-sm text-gray-500 mb-2"
-                  style={{ fontSize: 14, color: "#6b7280", marginBottom: 8 }}
-                >
-                  {item.location.address}
-                </Text>
-                <View className="flex-row items-center">
-                  <Text
-                    className="text-amber-500 mr-1"
-                    style={{ color: "#f59e0b", marginRight: 4 }}
-                  >
-                    {"★".repeat(Math.round(item.rating || 0))}
-                  </Text>
-                  <Text
-                    className="text-sm text-gray-800"
-                    style={{ fontSize: 14, color: "#1f2937" }}
-                  >
-                    {item.rating.toFixed(1)}
-                  </Text>
-                </View>
-              </View>
-            </TouchableOpacity>
+      ) : sectionedData.length > 0 ? (
+        // Using SectionList to display both search results and city suggestions
+        <SectionList
+          sections={sectionedData}
+          keyExtractor={(item: GymResult) => item.id}
+          renderItem={({ item }: { item: GymResult }) => renderGymCard(item)}
+          renderSectionHeader={({ section }: { section: SectionData }) => (
+            <View className="px-4 pt-4 pb-2 bg-gray-100">
+              <Text className="text-lg font-bold text-gray-800">
+                {section.title}
+              </Text>
+            </View>
           )}
-          contentContainerStyle={{ paddingVertical: 16 }}
+          contentContainerStyle={{ paddingBottom: 16 }}
           showsVerticalScrollIndicator={false}
+          stickySectionHeadersEnabled={true}
         />
       ) : (
         <View className="flex-1 justify-center items-center px-8">
-          <Ionicons name="fitness-outline" size={64} color="#d1d5db" />
-          <Text className="mt-4 text-base text-gray-500 text-center">
-            Search for gyms by name, location, or tap "Nearby" to find gyms near
-            you
-          </Text>
-          {userLocation && (
-            <TouchableOpacity
-              className="mt-6 px-6 py-2 bg-blue-600 rounded-full"
-              onPress={searchNearbyGyms}
-            >
-              <Text className="text-white font-semibold">Find Nearby Gyms</Text>
-            </TouchableOpacity>
+          {loadingSuggestions ? (
+            <React.Fragment>
+              <ActivityIndicator size="small" color="#3b82f6" />
+              <Text className="mt-2 text-base text-gray-500">
+                Loading suggestions...
+              </Text>
+            </React.Fragment>
+          ) : (
+            <React.Fragment>
+              <Ionicons name="fitness-outline" size={64} color="#d1d5db" />
+              <Text className="mt-4 text-base text-gray-500 text-center">
+                Search for gyms by name, location, or tap "Nearby" to find gyms
+                near you
+              </Text>
+              {userLocation && (
+                <TouchableOpacity
+                  className="mt-6 px-6 py-2 bg-blue-600 rounded-full"
+                  onPress={searchNearbyGyms}
+                >
+                  <Text className="text-white font-semibold">
+                    Find Nearby Gyms
+                  </Text>
+                </TouchableOpacity>
+              )}
+            </React.Fragment>
           )}
         </View>
       )}
