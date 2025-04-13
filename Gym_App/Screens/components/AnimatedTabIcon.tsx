@@ -1,156 +1,202 @@
 import React, { useRef, useEffect } from 'react';
-import { View, Animated, Easing } from 'react-native';
+import { View, Platform } from 'react-native';
+import * as Animatable from 'react-native-animatable';
 import { Ionicons } from '@expo/vector-icons';
 
+// Enhanced discord-style bounce animation
+const discordBounce = {
+  0: { transform: [{ translateY: 0 }, { scale: 1 }] },
+  0.1: { transform: [{ translateY: -5 }, { scale: 1.2 }] },
+  0.2: { transform: [{ translateY: -15 }, { scale: 1.4 }] },
+  0.4: { transform: [{ translateY: -10 }, { scale: 1.3 }] },
+  0.6: { transform: [{ translateY: -4 }, { scale: 1.1 }] },
+  0.8: { transform: [{ translateY: -2 }, { scale: 1.05 }] },
+  1: { transform: [{ translateY: 0 }, { scale: 1 }] }
+};
+
+// Smoother icon pulse animation for when tab is already active and tapped again
+const iconPulse = {
+  0: { transform: [{ scale: 1 }] },
+  0.5: { transform: [{ scale: 1.2 }] },
+  1: { transform: [{ scale: 1 }] }
+};
+
+// Register all animations once
+Animatable.initializeRegistryWithDefinitions({
+  discordBounce2023: discordBounce,
+  iconPulse: iconPulse
+});
+
+// TypeScript interface for component props
 interface AnimatedTabIconProps {
-  name: string;
-  color: string;
-  size: number;
-  focused: boolean;
+  name?: string;
+  focused?: boolean;
+  size?: number;
+  color?: string;
+  previouslyFocused?: boolean; // Track previous focus state
 }
 
-const AnimatedTabIcon: React.FC<AnimatedTabIconProps> = ({ name, color, size, focused }) => {
-  // Create animated values
-  const scaleAnim = useRef(new Animated.Value(1)).current;
-  const translateYAnim = useRef(new Animated.Value(0)).current;
-  const bounceAnim = useRef(new Animated.Value(0)).current;
+const AnimatedTabIcon: React.FC<AnimatedTabIconProps> = ({
+  name = 'home',
+  focused = false,
+  size = 24,
+  color,
+  previouslyFocused = false
+}) => {
+  // Separate refs for icon and indicator animations
+  const iconRef = useRef<any>(null);
+  const indicatorRef = useRef<any>(null);
+  const activeColor = color || '#0091EA';
+  const inactiveColor = 'gray';
+  
+  // Track previous focus state with ref to detect repeat taps
+  const prevFocusedRef = useRef(previouslyFocused);
 
-  // Discord-style animation when tab becomes focused
   useEffect(() => {
+    // Handle animation when focus state changes
     if (focused) {
-      // Reset animation values
-      scaleAnim.setValue(1);
-      translateYAnim.setValue(0);
-      bounceAnim.setValue(0);
+      // If previously focused and tapped again, use pulse animation
+      if (prevFocusedRef.current && iconRef.current) {
+        try {
+          iconRef.current.animate('iconPulse', 500);
+        } catch (e) {
+          console.error('Pulse animation error:', e);
+        }
+      } 
+      // Otherwise use the full bounce animation for initial focus
+      else if (iconRef.current) {
+        try {
+          iconRef.current.stopAnimation();
+          iconRef.current.animate('discordBounce2023', 800);
+        } catch (e) {
+          console.error('Bounce animation error:', e);
+        }
+      }
       
-      // Discord animation sequence
-      // Phase 1: Quick pop down (anticipation)
-      Animated.timing(translateYAnim, {
-        toValue: 3, // Small down movement first
-        duration: 80,
-        easing: Easing.quad, // Fixed: use imported Easing
-        useNativeDriver: true,
-      }).start(() => {
-        // Phase 2: Dramatic overshoot up with scale increase (action)
-        Animated.parallel([
-          Animated.timing(translateYAnim, {
-            toValue: -10,
-            duration: 180,
-            easing: Easing.back(2.5), // Fixed: use imported Easing
-            useNativeDriver: true,
-          }),
-          Animated.timing(scaleAnim, {
-            toValue: 1.2,
-            duration: 180,
-            easing: Easing.quad, // Fixed: use imported Easing
-            useNativeDriver: true,
-          }),
-          Animated.timing(bounceAnim, {
-            toValue: 1,
-            duration: 180,
-            easing: Easing.quad, // Fixed: use imported Easing
-            useNativeDriver: true,
-          }),
-        ]).start(() => {
-          // Phase 3: Juicy elastic bounce back (recovery)
-          Animated.spring(translateYAnim, {
-            toValue: 0,
-            tension: 80,
-            friction: 5,
-            useNativeDriver: true,
-          }).start();
-          
-          // Phase 4: Scale return with slight bounce
-          Animated.spring(scaleAnim, {
-            toValue: 1,
-            tension: 100,
-            friction: 6,
-            useNativeDriver: true,
-          }).start();
-          
-          // Reset bounce effect
-          Animated.timing(bounceAnim, {
-            toValue: 0,
-            duration: 300,
-            useNativeDriver: true,
-          }).start();
-        });
-      });
+      // Always animate the indicator dot
+      if (indicatorRef.current) {
+        try {
+          indicatorRef.current.transition(
+            { opacity: 0, scale: 0 },
+            { opacity: 1, scale: 1 },
+            300,
+            'ease-out'
+          );
+        } catch (e) {
+          console.error('Indicator animation error:', e);
+        }
+      }
     } else {
-      // When unfocused, gently return to original state
-      Animated.parallel([
-        Animated.spring(translateYAnim, {
-          toValue: 0,
-          tension: 50,
-          friction: 7,
-          useNativeDriver: true,
-        }),
-        Animated.spring(scaleAnim, {
-          toValue: 1,
-          tension: 50,
-          friction: 7,
-          useNativeDriver: true,
-        }),
-        Animated.timing(bounceAnim, {
-          toValue: 0,
-          duration: 200,
-          useNativeDriver: true,
-        }),
-      ]).start();
+      // Fade out indicator when unfocused
+      if (indicatorRef.current && prevFocusedRef.current) {
+        try {
+          indicatorRef.current.transition(
+            { opacity: 1, scale: 1 },
+            { opacity: 0, scale: 0 },
+            200,
+            'ease-in'
+          );
+        } catch (e) {
+          console.error('Fade out animation error:', e);
+        }
+      }
     }
+    
+    // Update previous focus state
+    prevFocusedRef.current = focused;
   }, [focused]);
 
-  // Calculate squish effect (Discord icons slightly squish at peak of animation)
-  const squishX = bounceAnim.interpolate({
-    inputRange: [0, 0.5, 1],
-    outputRange: [1, 1.1, 1] // Horizontal stretch in middle of animation
-  });
-  
-  const squishY = bounceAnim.interpolate({
-    inputRange: [0, 0.5, 1],
-    outputRange: [1, 0.9, 1] // Vertical compress in middle of animation
-  });
-
-  // Discord style pill indicator
-  const pillScale = scaleAnim.interpolate({
-    inputRange: [1, 1.2],
-    outputRange: [0, 1],
-    extrapolate: 'clamp'
-  });
+  // Determine icon name based on focus state
+  let iconName = 'help-circle';
+  try {
+    switch (name) {
+      case 'home':
+        iconName = focused ? 'home' : 'home-outline';
+        break;
+      case 'chatbubbles':
+        iconName = focused ? 'chatbubbles' : 'chatbubbles-outline';
+        break;
+      case 'newspaper':
+        iconName = focused ? 'newspaper' : 'newspaper-outline';
+        break;
+      case 'person':
+        iconName = focused ? 'person' : 'person-outline';
+        break;
+      case 'notifications':
+        iconName = focused ? 'notifications' : 'notifications-outline';
+        break;
+      case 'search':
+        iconName = focused ? 'search' : 'search-outline';
+        break;
+      case 'settings':
+        iconName = focused ? 'settings' : 'settings-outline';
+        break;
+      case 'heart':
+        iconName = focused ? 'heart' : 'heart-outline';
+        break;
+      default:
+        // Try to automatically determine outline version
+        iconName = focused ? name : `${name}-outline`;
+    }
+  } catch (e) {
+    console.error('Icon name error:', e);
+  }
 
   return (
-    <View style={{ alignItems: 'center', justifyContent: 'center' }}>
-      <Animated.View
-        style={{
-          transform: [
-            { translateY: translateYAnim },
-            { scale: scaleAnim },
-            { scaleX: squishX },
-            { scaleY: squishY }
-          ],
-          alignItems: 'center',
-          justifyContent: 'center',
-        }}
+    <View style={{ 
+      alignItems: 'center', 
+      justifyContent: 'center', 
+      padding: Platform.OS === 'ios' ? 3 : 4,
+      height: 40,
+      position: 'relative'
+    }}>
+      {/* Animate the icon directly */}
+      <Animatable.View
+        ref={iconRef}
+        style={{ alignItems: 'center' }}
+        useNativeDriver
       >
-        <Ionicons name={name} size={size} color={color} />
-      </Animated.View>
-      
-      {/* Discord-style pill indicator */}
-      {focused && (
-        <Animated.View
-          style={{
-            position: 'absolute',
-            bottom: -8,
-            width: 6,
-            height: 6,
-            borderRadius: 3,
-            backgroundColor: color,
-            transform: [{ scale: pillScale }]
-          }}
+        <Ionicons
+          name={iconName as any}
+          size={size}
+          color={focused ? activeColor : inactiveColor}
         />
-      )}
+      </Animatable.View>
+      
+      {/* Indicator dot with improved animation */}
+      <Animatable.View
+        ref={indicatorRef}
+        useNativeDriver
+        style={{
+          position: 'absolute',
+          bottom: -2,
+          width: 4,
+          height: 4,
+          borderRadius: 2,
+          backgroundColor: activeColor,
+          opacity: focused ? 1 : 0,
+          transform: [{ scale: focused ? 1 : 0 }]
+        }}
+      />
     </View>
   );
 };
 
+// Usage example with tracking previous focus state
+class UserTabNavigator {
+  // Example of tracking previous focus states
+  static previousFocusStates = {
+    home: false,
+    chat: false,
+    profile: false
+    // Add other tabs as needed
+  };
+  
+  // Method to update previous focus state
+  static updateFocusState(tabName: string, isFocused: boolean) {
+    this.previousFocusStates[tabName] = isFocused;
+  }
+}
+
 export default AnimatedTabIcon;
+export { UserTabNavigator };

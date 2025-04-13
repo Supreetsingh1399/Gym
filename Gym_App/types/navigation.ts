@@ -29,3 +29,45 @@ export type RootStackParamList = {
     gymId: string;
   };
 };
+export type UserTabParamList = {
+  UserHome: undefined;
+  UserProfile: undefined;
+  UserChats: undefined;
+  UserNews: undefined;
+  UserSettings: undefined;
+  UserNotifications: undefined;
+  UserWorkoutDetails: {
+    workoutId: string;
+  };
+  UserExternalGymDetails: {
+    gymId: string;
+    gymName?: string;
+  };
+  UserSearchResults: {
+    query: string;  
+    filters?: Record<string, any>;
+  };
+  UserGymNews: undefined; 
+  UserGymHome: undefined;
+  UserTrainerHome: undefined;
+  UserTrainerProfile: undefined;
+  UserTrainerSettings: undefined;
+  UserTrainerNotifications: undefined;
+  UserTrainerWorkoutDetails: {
+    workoutId: string;
+  };
+  UserTrainerExternalGymDetails: {
+    gymId: string;
+    gymName?: string;
+  };
+  UserTrainerSearchResults: {
+    query: string;  
+    filters?: Record<string, any>;
+  };
+  UserTrainerGymNews: undefined;
+};
+export interface TabBarIconProps {
+  focused: boolean;
+  color: string;
+  size: number;
+}

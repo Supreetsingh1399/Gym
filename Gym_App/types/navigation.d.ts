@@ -37,6 +37,7 @@ export type AppRouteProp<T extends keyof RootStackParamList> = RouteProp<
   T
 >;
 
+
 // Props with navigation
 export interface NavigationProps<T extends keyof RootStackParamList = "Home"> {
   navigation: AppNavigationProp<T>;
@@ -50,3 +51,8 @@ export type ScreenProps<T extends keyof RootStackParamList> = {
   route: AppRouteProp<T>;
   UserTabParamList: RootStackParamList;
 };
+export interface TabBarIconProps {
+  focused: boolean;
+  color: string;
+  size: number;
+}
