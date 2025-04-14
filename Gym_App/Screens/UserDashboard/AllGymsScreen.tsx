@@ -612,7 +612,7 @@ const PopularGymsScreen: React.FC<{ route: any; navigation: any }> = ({
           }
     
           const response = await axios.get(
-            `${API_URL}/Register/Gyms/${currentUser.uid}`,
+            `${API_URL}/Register/Gyms`,
             {
               headers: {
                 Authorization: `Bearer ${token}`,
@@ -620,6 +620,7 @@ const PopularGymsScreen: React.FC<{ route: any; navigation: any }> = ({
               timeout: 15000,
             }
           );
+          console.log("Registered gyms response:", response.data);
     
           if (
             !response.data ||

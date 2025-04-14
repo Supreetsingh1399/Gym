@@ -277,12 +277,20 @@ const GymRegistrationWizard = ({ navigation }) => {
         ownerName: gymData.ownerName,
         contactNumber: gymData.contactNumber,
         email: gymData.email,
-        password: gymData.password, // Will be encrypted on server
+        password: gymData.password,
         description: gymData.description,
         location: gymData.location,
-        facilities: gymData.facilities,
+        facilities: {
+          ...gymData.facilities,
+          // Add these boolean fields that your app expects
+          hasPool: gymData.facilities.equipmentList.toLowerCase().includes('pool'),
+          hasClasses: gymData.facilities.equipmentList.toLowerCase().includes('class'),
+          hasCardio: gymData.facilities.equipmentList.toLowerCase().includes('cardio') || 
+                    gymData.facilities.equipmentList.toLowerCase().includes('treadmill'),
+          hasWeights: true // Default assumption for a gym
+        },
         pricing: gymData.pricing,
-        status: "pending", // Gyms need approval
+        status: "pending",
         createdAt: new Date().toISOString(),
       });
 
