@@ -57,7 +57,6 @@ router.post("/Register/Gyms", (req: Request, res: Response) =>
 router.get("/Register/Gyms", (req: Request, res: Response) =>
   getAllGyms(req, res),
 );
-// // Get a specific gym by ID
 // router.get('/Register/Gyms/:id', getGymById);
 router.put(
   "/Register/Gyms/:id/approve",
