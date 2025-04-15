@@ -1,4 +1,4 @@
-//@ts-nocheck
+
 import React, { useState, useEffect, useCallback, JSX } from "react";
 import {
   View,
@@ -102,7 +102,7 @@ const ExternalGymDetails: React.FC<ExternalGymDetailsProps> = ({
   const [placeDetails, setPlaceDetails] = useState<PlaceDetails | null>(null);
   const [showSplineView, setShowSplineView] = useState<boolean>(false);
   const [activePhoto, setActivePhoto] = useState<string | null>(null);
-  const [mainimageUrl, setMainImageUrl] = useState<string | null>(null);
+  const [mainImageUrl, setMainImageUrl] = useState<string | null>(null);
  
 
   // Fetch place details from Google Places API with types
@@ -134,35 +134,47 @@ if (sourceType === "registered" && gymData) {
       const gymDetails = response.data.data;
       
       // Create a placeDetails object using response data
-      setPlaceDetails({
-        place_id: gymDetails._id || gymData.id,
-        name: gymDetails.gymName || gymData.gymName,
-        formatted_address: gymDetails.address || gymData.location?.address,
-        formatted_phone_number: gymDetails.contactNumber || "Not available",
-        rating: gymDetails.rating || 4.0,
-        geometry: gymDetails.geometry || {
-          location: {
-            lat: 0,
-            lng: 0
-          }
-        },
-        opening_hours: {
-          weekday_text: ["Contact gym for hours"]
-        },
-        types: [gymDetails.gymType || "gym"],
-        photos: [],
-        website: "",
-        reviews: [],
-        // Add MongoDB-specific fields
-        isRegistered: true,
-        facilities: gymDetails.facilities || {},
-        trainers: gymDetails.trainers || [],
-        membershipType: gymDetails.membershipType,
-        source: "registered"
-      });
-      
-      // Set image directly from response
-      setMainImageUrl(gymDetails.media?.imageUrl || getRandomItem(GYM_IMAGES));
+   // When creating placeDetails from MongoDB data:
+setPlaceDetails({
+  place_id: gymDetails._id || gymData.id,
+  name: gymDetails.gymName || gymData.gymName,
+  // Format the address properly by combining all location parts
+  formatted_address: gymDetails.location ? 
+    `${gymDetails.location.address}, ${gymDetails.location.city}, ${gymDetails.location.state} ${gymDetails.location.zipCode}` : 
+    gymData.location?.address,
+  formatted_phone_number: gymDetails.contactNumber || "Not available",
+  rating: gymDetails.rating || 4.0,
+  // Fix geometry data for map display
+  geometry: {
+    location: {
+      // Default to central location if coordinates aren't available
+      lat: gymDetails.geometry?.location?.lat || 31.634,
+      lng: gymDetails.geometry?.location?.lng || 74.872
+    }
+  },
+  // Convert MongoDB operating hours format to Google-compatible format
+  opening_hours: {
+    weekday_text: convertOperatingHours(gymDetails.facilities?.operatingHours) || ["Contact gym for hours"]
+  },
+  types: [gymDetails.facilities?.gymType || "gym"],
+  photos: [], 
+  website: gymDetails.email ? `mailto:${gymDetails.email}` : "",
+  reviews: [],
+  isRegistered: true,
+  facilities: gymDetails.facilities || {},
+  trainers: gymDetails.trainers || [],
+  membershipType: gymDetails.pricing?.membershipPlans?.[0]?.name || "Standard",
+  source: "registered",
+  // Add pricing information
+  pricing: gymDetails.pricing || {}
+});
+
+// Set image directly from response - check gallery first
+setMainImageUrl(
+  (gymDetails.media?.gallery && gymDetails.media.gallery.length > 0) 
+    ? gymDetails.media.gallery[0] 
+    : gymDetails.media?.imageUrl || getRandomItem(GYM_IMAGES)
+);
     } else {
       // Fallback to gymData if API response doesn't contain the gym
       setPlaceDetails({
@@ -487,18 +499,21 @@ if (sourceType === "registered" && gymData) {
 
   // If showing map view, render that instead
   if (showSplineView && placeDetails) {
-    const gymForMap = {
-      id: placeId,
-      gymName: placeDetails.name,
-      imageUrl:
-        placeDetails.photos && placeDetails.photos.length > 0
-          ? getPhotoUrl(placeDetails.photos[0].photo_reference)
-          : getRandomItem(GYM_IMAGES),
-      source: "google" as "google",
-      rating: placeDetails.rating || 4.0,
-      address: placeDetails.formatted_address || "",
-      geometry: placeDetails.geometry,
-    };
+    const displayImageUrl = mainImageUrl || 
+      (placeDetails.photos && placeDetails.photos.length > 0
+        ? getPhotoUrl(placeDetails.photos[0].photo_reference)
+        : getRandomItem(GYM_IMAGES));
+
+   // In your showSplineView conditional:
+const gymForMap = {
+  id: placeId,
+  gymName: placeDetails.name,
+  imageUrl: displayImageUrl, // Use the correct variable  
+  source: sourceType || "google", // Use dynamic source
+  rating: placeDetails.rating || 4.0,
+  address: placeDetails.formatted_address || "",
+  geometry: placeDetails.geometry,
+};
 
     return (
       <SafeAreaView className="flex-1 bg-white">
@@ -588,12 +603,32 @@ if (sourceType === "registered" && gymData) {
       </SafeAreaView>
     );
   }
-
-  const mainImageUrl =
-    placeDetails.photos && placeDetails.photos.length > 0
+  const displayImageUrl = mainImageUrl || 
+    (placeDetails.photos && placeDetails.photos.length > 0
       ? getPhotoUrl(placeDetails.photos[0].photo_reference)
-      : getRandomItem(GYM_IMAGES);
+      : getRandomItem(GYM_IMAGES));
 
+      // Helper to convert MongoDB operating hours to Google format
+const convertOperatingHours = (hours: any): string[] => {
+  if (!hours) return ["Contact gym for hours"];
+  
+  try {
+    const weekdays = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+    return weekdays.map(day => {
+      const dayLower = day.toLowerCase();
+      if (hours[dayLower]) {
+        const { open, close } = hours[dayLower];
+        if (open && close) {
+          return `${day}: ${open} - ${close}`;
+        }
+      }
+      return `${day}: Closed`;
+    });
+  } catch (err) {
+    console.log("Error converting hours:", err);
+    return ["Contact gym for hours"];
+  }
+};
   return (
     <SafeAreaView className="flex-1 bg-white">
       <StatusBar
@@ -764,16 +799,16 @@ if (sourceType === "registered" && gymData) {
             </Text>
             
             <View className="w-full h-48 rounded-lg overflow-hidden">
-              <GymMapView 
-                gym={{
-                  id: placeId,
-                  gymName: placeDetails.name,
-                  imageUrl: mainImageUrl,
-                  source: "google",
-                  geometry: placeDetails.geometry,
-                  address: placeDetails.formatted_address || ""
-                }}
-              />
+            <GymMapView 
+  gym={{
+    id: placeId,
+    gymName: placeDetails.name,
+    imageUrl: displayImageUrl, // Use the correct variable
+    source: sourceType || "google", // Use dynamic source type
+    geometry: placeDetails.geometry,
+    address: placeDetails.formatted_address || ""
+  }}
+/>
             </View>
             
             <TouchableOpacity
@@ -790,7 +825,57 @@ if (sourceType === "registered" && gymData) {
             </TouchableOpacity>
           </Animatable.View>
         )}
-
+{/* Add MongoDB-specific section for registered gyms */}
+{sourceType === "registered" && placeDetails.isRegistered && (
+  <Animatable.View 
+    animation="fadeIn" 
+    duration={600}
+    delay={400}
+    className="p-5 border-b border-gray-200"
+  >
+    <Text className="text-lg font-semibold text-gray-800 mb-3">Gym Details</Text>
+    
+    {placeDetails.facilities?.gymType && (
+      <View className="flex-row justify-between mb-2">
+        <Text className="text-sm font-medium text-gray-700">Gym Type:</Text>
+        <Text className="text-sm text-gray-800">{placeDetails.facilities.gymType}</Text>
+      </View>
+    )}
+    
+    {placeDetails.facilities?.equipment && placeDetails.facilities.equipment.length > 0 && (
+      <View className="mb-3">
+        <Text className="text-sm font-medium text-gray-700 mb-1">Equipment:</Text>
+        <View className="flex-row flex-wrap">
+          {placeDetails.facilities.equipment.map((item: string, idx: number) => (
+            <View key={idx} className="bg-blue-50 px-2 py-1 rounded mr-2 mb-2">
+              <Text className="text-xs text-blue-700">{item}</Text>
+            </View>
+          ))}
+        </View>
+      </View>
+    )}
+    
+    {placeDetails.facilities?.specialFeatures && placeDetails.facilities.specialFeatures.length > 0 && (
+      <View className="mb-3">
+        <Text className="text-sm font-medium text-gray-700 mb-1">Special Features:</Text>
+        <View className="flex-row flex-wrap">
+          {placeDetails.facilities.specialFeatures.map((feature: string, idx: number) => (
+            <View key={idx} className="bg-green-50 px-2 py-1 rounded mr-2 mb-2">
+              <Text className="text-xs text-green-700">{feature}</Text>
+            </View>
+          ))}
+        </View>
+      </View>
+    )}
+    
+    {placeDetails.facilities?.parkingAvailable !== undefined && (
+      <View className="flex-row justify-between mb-2">
+        <Text className="text-sm font-medium text-gray-700">Parking Available:</Text>
+        <Text className="text-sm text-gray-800">{placeDetails.facilities.parkingAvailable ? "Yes" : "No"}</Text>
+      </View>
+    )}
+  </Animatable.View>
+)}
         {/* Photos Section */}
         {renderPhotos()}
 
