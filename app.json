@@ -17,6 +17,7 @@
       "supportsTablet": true
     },
     "android": {
+      "package": "com.supreetsingh.Gym",
       "adaptiveIcon": {
         "foregroundImage": "./assets/Gym_Project (1).png",
         "backgroundColor": "#ffffff"
