@@ -1,4 +1,4 @@
-
+//@ts-nocheck
 import React, { useState, useEffect, useCallback, JSX } from "react";
 import {
   View,

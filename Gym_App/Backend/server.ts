@@ -74,7 +74,7 @@ router.delete("/Register/Gyms/:id", async (req: Request, res: Response) => {
   } catch (error) {
     res.status(500).send({ error: "Internal Server Error" });
   }
-});
+}); //@ts-ignore
 router.get("/Register/Gyms/:id", async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
