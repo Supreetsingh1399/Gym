@@ -4,11 +4,11 @@
     "slug": "Gym",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/Gym_Project.jpg",
+    "icon": "./assets/Gym_Project (1).png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "splash": {
-      "image": "./assets/Gym_Project.jpg",
+      "image": "./assets/Gym_Project (1).png",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
@@ -18,7 +18,7 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/Gym_Project.jpg",
+        "foregroundImage": "./assets/Gym_Project (1).png",
         "backgroundColor": "#ffffff"
       }
     },
@@ -31,7 +31,7 @@
       ]
     ],
     "web": {
-      "favicon": "./assets/Gym_Project.jpg"
+      "favicon": "./assets/Gym_Project (1).png"
     }
   }
 }

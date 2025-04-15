@@ -265,13 +265,45 @@ const GymRegistrationWizard = ({ navigation }) => {
   const handleBack = () => {
     setStep(step - 1);
   };
+  const checkEmailExists = async (email: string): Promise<boolean> => {
+    try {
+      // Check if email exists in Users collection
+      const userResponse = await axios.get(`${API_URL}/Register/Users`);
+      const users = userResponse.data.users || [];
+      const userExists = users.some((user: { email: string }) => user.email === email);
+      
+      if (userExists) {
+        return true;
+      }
+      
+      // Check if email exists in Gyms collection
+      const gymResponse = await axios.get(`${API_URL}/Register/Gyms`);
+      const gyms = gymResponse.data.gyms || [];
+      const gymExists = gyms.some((gym: { email: string; }) => gym.email === email);
+      
+      return gymExists;
+    } catch (error) {
+      console.error("Error checking email:", error);
+      // If there's an error checking, assume it doesn't exist
+      return false;
+    }
+  };
+  
 
   const handleSubmit = async () => {
     setLoading(true);
     setError("");
 
     try {
-      // First, send gym registration to MongoDB for admin approval
+       // First check if the email already exists
+    const emailExists = await checkEmailExists(gymData.email);
+    
+    if (emailExists) {
+      setError("This email is already registered. Please use a different email or login instead.");
+      setLoading(false);
+      return;
+    }
+      // Then,send gym registration to MongoDB for admin approval
       const response = await axios.post(`${API_URL}/Register/Gyms`, {
         gymName: gymData.gymName,
         ownerName: gymData.ownerName,
