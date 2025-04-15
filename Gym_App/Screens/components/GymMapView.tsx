@@ -1,3 +1,4 @@
+import { GOOGLE_PLACES_API_KEY } from '@env';
 import React, { useState } from 'react';
 import { View, ActivityIndicator } from 'react-native';
 import { WebView } from 'react-native-webview';
@@ -37,11 +38,11 @@ const GymMapView: React.FC<GymMapViewProps> = ({
   // Generate Google Maps URL for iframe
   const generateGoogleMapsUrl = () => {
     if (gym.source === 'google' && placeId) {
-      return `https://www.google.com/maps/embed/v1/place?key=AIzaSyBNBe5L8c3eCem7vbQUbfbe00nNHereVSk&q=place_id:${placeId}&zoom=17`;
+      return `https://www.google.com/maps/embed/v1/place?key=${GOOGLE_PLACES_API_KEY}&q=place_id:${placeId}&zoom=17`;
     } else if (latitude && longitude) {
-      return `https://www.google.com/maps/embed/v1/view?key=AIzaSyBNBe5L8c3eCem7vbQUbfbe00nNHereVSk&center=${latitude},${longitude}&zoom=17`;
+      return `https://www.google.com/maps/embed/v1/view?key=${GOOGLE_PLACES_API_KEY}&center=${latitude},${longitude}&zoom=17`;
     } else {
-      return `https://www.google.com/maps/embed/v1/search?key=AIzaSyBNBe5L8c3eCem7vbQUbfbe00nNHereVSk&q=${encodeURIComponent(gym.gymName)}`;
+      return `https://www.google.com/maps/embed/v1/search?key=${GOOGLE_PLACES_API_KEY}=${encodeURIComponent(gym.gymName)}`;
     }
   };
   
