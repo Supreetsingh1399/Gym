@@ -3,11 +3,11 @@ module.exports = {
   slug: "Gym",
   version: "1.0.0",
   orientation: "portrait",
-  icon: "./assets/favicon.png",
+  icon: "./assets/Gym_Project.png",
   userInterfaceStyle: "light",
   entryPoint: "./index.js", // Explicitly set entry point
   splash: {
-    image: "./assets/Gym_Project.jpg",
+    image: "./assets/Gym_Project.png",
     resizeMode: "contain",
     backgroundColor: "#ffffff",
   },
@@ -20,12 +20,12 @@ module.exports = {
   },
   android: {
     adaptiveIcon: {
-      foregroundImage: "./assets/adaptive-icon.png",
+      foregroundImage: "./assets/Gym_Project.png",
       backgroundColor: "#ffffff",
     },
   },
   web: {
-    favicon: "./assets/favicon.png",
+    favicon: "./assets/Gym_Project.png",
   },
   extra: {
     eas: {

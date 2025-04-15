@@ -4,11 +4,11 @@
     "slug": "Gym",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/Gym_Project (1).png",
+    "icon": "./assets/Gym_Project.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "splash": {
-      "image": "./assets/Gym_Project (1).png",
+      "image": "./assets/Gym_Project.png",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
@@ -19,7 +19,7 @@
     "android": {
       "package": "com.supreetsingh.Gym",
       "adaptiveIcon": {
-        "foregroundImage": "./assets/Gym_Project (1).png",
+        "foregroundImage": "./assets/Gym_Project.png",
         "backgroundColor": "#ffffff"
       }
     },
@@ -32,7 +32,7 @@
       ]
     ],
     "web": {
-      "favicon": "./assets/Gym_Project (1).png"
+      "favicon": "./assets/Gym_Project.png"
     }
   }
 }
