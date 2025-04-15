@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback, JSX } from "react";
 import {
   View,
@@ -14,15 +15,15 @@ import {
   ShareContent,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { GOOGLE_PLACES_API_KEY } from "@env";
-import MapView, { Marker } from "react-native-maps";
+import * as Animatable from 'react-native-animatable';
+import { API_URL, GOOGLE_PLACES_API_KEY } from "@env";
 import axios from "axios";
 //@ts-ignore
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 
 import { GYM_IMAGES } from "./constants/assetUrls";
 import { getRandomItem } from "./utils/helpers";
-import GymSplineView from "../components/GymSplineView";
+import GymMapView from '../components/GymMapView';
 import { RootStackParamList } from "../../types";
 
 // Define types for Google Places API response
@@ -79,16 +80,9 @@ interface PlaceDetails {
   geometry?: PlaceGeometry;
   reviews?: PlaceReview[];
   types?: string[];
-}
-
-interface GymForSpline {
-  id: string;
-  gymName: string;
-  rating: number;
-  location: {
-    address: string;
-  };
-  geometry?: PlaceGeometry;
+  isRegistered?: boolean; // Added property
+  facilities?: any; // Added facilities property
+  trainers?: any[]; // Added trainers property
 }
 
 type ExternalGymDetailsProps = NativeStackScreenProps<
@@ -100,13 +94,16 @@ const ExternalGymDetails: React.FC<ExternalGymDetailsProps> = ({
   navigation,
   route,
 }) => {
-  const { placeId } = route.params;
+  const { placeId, sourceType, gymData } = route.params;
 
   // State with proper type annotations
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [placeDetails, setPlaceDetails] = useState<PlaceDetails | null>(null);
   const [showSplineView, setShowSplineView] = useState<boolean>(false);
+  const [activePhoto, setActivePhoto] = useState<string | null>(null);
+  const [mainimageUrl, setMainImageUrl] = useState<string | null>(null);
+ 
 
   // Fetch place details from Google Places API with types
   useEffect(() => {
@@ -114,23 +111,128 @@ const ExternalGymDetails: React.FC<ExternalGymDetailsProps> = ({
       try {
         setLoading(true);
         setError(null);
-
-        // Using axios to fetch place details
-        const response = await axios.get<{
-          status: string;
-          result: PlaceDetails;
-          error_message?: string;
-        }>(
-          `https://maps.googleapis.com/maps/api/place/details/json?place_id=${placeId}&fields=name,formatted_address,formatted_phone_number,international_phone_number,website,rating,user_ratings_total,opening_hours,photos,geometry,price_level,reviews,types&key=${GOOGLE_PLACES_API_KEY}`,
-        );
-
-        if (response.data.status === "OK" && response.data.result) {
-          setPlaceDetails(response.data.result);
-        } else {
-          setError(
-            response.data.error_message ||
-              "Could not load gym details. Please try again later.",
+        
+       // HANDLE REGISTERED GYMS FROM MONGODB
+if (sourceType === "registered" && gymData) {
+  console.log("Showing registered gym details from MongoDB");
+  try {
+    // First try to fetch the specific gym by ID
+    const response = await axios.get(
+      `${API_URL}/Register/Gyms/${gymData.id}`,
+      {
+        headers: {
+          "Content-Type": "application/json",
+        },
+        timeout: 15000,
+      }
+    );
+    
+    console.log("MongoDB gym response:", response.data);
+    
+    // Check if we got valid data back
+    if (response.data && response.data.data) {
+      const gymDetails = response.data.data;
+      
+      // Create a placeDetails object using response data
+      setPlaceDetails({
+        place_id: gymDetails._id || gymData.id,
+        name: gymDetails.gymName || gymData.gymName,
+        formatted_address: gymDetails.address || gymData.location?.address,
+        formatted_phone_number: gymDetails.contactNumber || "Not available",
+        rating: gymDetails.rating || 4.0,
+        geometry: gymDetails.geometry || {
+          location: {
+            lat: 0,
+            lng: 0
+          }
+        },
+        opening_hours: {
+          weekday_text: ["Contact gym for hours"]
+        },
+        types: [gymDetails.gymType || "gym"],
+        photos: [],
+        website: "",
+        reviews: [],
+        // Add MongoDB-specific fields
+        isRegistered: true,
+        facilities: gymDetails.facilities || {},
+        trainers: gymDetails.trainers || [],
+        membershipType: gymDetails.membershipType,
+        source: "registered"
+      });
+      
+      // Set image directly from response
+      setMainImageUrl(gymDetails.media?.imageUrl || getRandomItem(GYM_IMAGES));
+    } else {
+      // Fallback to gymData if API response doesn't contain the gym
+      setPlaceDetails({
+        place_id: gymData.id,
+        name: gymData.gymName,
+        formatted_address: gymData.location?.address,
+        formatted_phone_number: gymData.contactNumber || "Not available",
+        rating: gymData.rating || 4.0,
+        geometry: gymData.geometry || {
+          location: { lat: 0, lng: 0 }
+        },
+        opening_hours: {
+          weekday_text: ["Contact gym for hours"]
+        },
+        types: [gymData.facilities?.gymType || "gym"],
+        photos: [],
+        website: "",
+        reviews: [],
+        isRegistered: true,
+        facilities: gymData.facilities,
+        trainers: gymData.trainers || [],
+        membershipType: gymData.membershipType,
+        source: "registered"
+      });
+      
+      // Set image directly from gymData
+      setMainImageUrl(gymData.imageUrl || getRandomItem(GYM_IMAGES));
+    }
+    
+    setLoading(false);
+    return;
+  } catch (error) {
+    console.error("Error fetching specific gym details:", error);
+    // Continue with gymData as fallback
+    // Original code continues...
+  }
+}
+        
+        // ONLY call Google Places API for Google sources
+        if (sourceType !== "registered") {
+          if (!placeId) {
+            setError("No place ID provided");
+            setLoading(false);
+            return;
+          }
+          
+          // Existing Google Places API fetch code
+          const response = await axios.get<{
+            status: string;
+            result: PlaceDetails;
+            error_message?: string;
+          }>(
+            `https://maps.googleapis.com/maps/api/place/details/json?place_id=${placeId}&fields=name,formatted_address,formatted_phone_number,international_phone_number,website,rating,user_ratings_total,opening_hours,photos,geometry,price_level,reviews,types&key=${GOOGLE_PLACES_API_KEY}`,
           );
+
+          if (response.data.status === "OK" && response.data.result) {
+            setPlaceDetails(response.data.result);
+            
+            // Set mainImageUrl for Google places
+            if ((response.data.result.photos ?? []).length > 0) {
+              setMainImageUrl(getPhotoUrl(response.data.result.photos?.[0]?.photo_reference ?? ""));
+            } else {
+              setMainImageUrl(getRandomItem(GYM_IMAGES));
+            }
+          } else {
+            setError(
+              response.data.error_message ||
+                "Could not load gym details. Please try again later."
+            );
+          }
         }
       } catch (err) {
         console.error("Error fetching place details:", err);
@@ -141,7 +243,7 @@ const ExternalGymDetails: React.FC<ExternalGymDetailsProps> = ({
     };
 
     fetchPlaceDetails();
-  }, [placeId]);
+  }, [placeId, sourceType, gymData]); // Add all dependencies
 
   // Handle actions with typed parameters and return values
   const handleCall = useCallback((): void => {
@@ -190,6 +292,11 @@ const ExternalGymDetails: React.FC<ExternalGymDetailsProps> = ({
     setShowSplineView(!showSplineView);
   };
 
+  // Toggle expanded photo view
+  const handlePhotoPress = (photoRef: string): void => {
+    setActivePhoto(photoRef === activePhoto ? null : photoRef);
+  };
+
   // Get photo URL from photo reference with type
   const getPhotoUrl = useCallback((photoReference: string): string => {
     return `https://maps.googleapis.com/maps/api/place/photo?maxwidth=800&photoreference=${photoReference}&key=${GOOGLE_PLACES_API_KEY}`;
@@ -234,7 +341,12 @@ const ExternalGymDetails: React.FC<ExternalGymDetailsProps> = ({
     }
 
     return (
-      <View className="p-5 border-b border-gray-200">
+      <Animatable.View 
+        animation="fadeIn" 
+        duration={600} 
+        delay={300}
+        className="p-5 border-b border-gray-200"
+      >
         <Text className="text-lg font-semibold text-gray-800 mb-3">Hours</Text>
         <View>
           {placeDetails.opening_hours.weekday_text.map((day, index) => {
@@ -252,7 +364,10 @@ const ExternalGymDetails: React.FC<ExternalGymDetailsProps> = ({
           })}
         </View>
         {placeDetails.opening_hours.open_now !== undefined && (
-          <View
+          <Animatable.View
+            animation="pulse"
+            iterationCount="infinite"
+            duration={2000}
             className={`mt-2 self-start px-3 py-1.5 rounded-full ${
               placeDetails.opening_hours.open_now
                 ? "bg-green-100"
@@ -268,9 +383,51 @@ const ExternalGymDetails: React.FC<ExternalGymDetailsProps> = ({
             >
               {placeDetails.opening_hours.open_now ? "Open Now" : "Closed Now"}
             </Text>
-          </View>
+          </Animatable.View>
         )}
-      </View>
+      </Animatable.View>
+    );
+  };
+
+  // Render photos section
+  const renderPhotos = (): JSX.Element | null => {
+    if (!placeDetails?.photos || placeDetails.photos.length <= 1) {
+      return null;
+    }
+
+    return (
+      <Animatable.View 
+        animation="fadeIn" 
+        duration={600} 
+        delay={300}
+        className="p-5 border-b border-gray-200"
+      >
+        <Text className="text-lg font-semibold text-gray-800 mb-3">Photos</Text>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          className="flex-row"
+        >
+          {placeDetails.photos.map((photo, index) => (
+            <Animatable.View 
+              key={index}
+              animation="fadeInRight"
+              delay={100 * index}
+            >
+              <TouchableOpacity
+                onPress={() => handlePhotoPress(photo.photo_reference)}
+                activeOpacity={0.9}
+              >
+                <Image
+                  source={{ uri: getPhotoUrl(photo.photo_reference) }}
+                  className="w-40 h-28 mr-3 rounded-lg"
+                  resizeMode="cover"
+                />
+              </TouchableOpacity>
+            </Animatable.View>
+          ))}
+        </ScrollView>
+      </Animatable.View>
     );
   };
 
@@ -281,12 +438,22 @@ const ExternalGymDetails: React.FC<ExternalGymDetailsProps> = ({
     }
 
     return (
-      <View className="p-5 border-b border-gray-200">
+      <Animatable.View 
+        animation="fadeIn" 
+        duration={600} 
+        delay={400}
+        className="p-5 border-b border-gray-200"
+      >
         <Text className="text-lg font-semibold text-gray-800 mb-3">
           Reviews
         </Text>
         {placeDetails.reviews.slice(0, 3).map((review, index) => (
-          <View key={index} className="mb-4 pb-4 border-b border-gray-100">
+          <Animatable.View 
+            key={index} 
+            animation="fadeInUp" 
+            delay={index * 150}
+            className="mb-4 pb-4 border-b border-gray-100"
+          >
             <View className="mb-2">
               <Text className="text-sm font-semibold text-gray-800">
                 {review.author_name}
@@ -312,21 +479,24 @@ const ExternalGymDetails: React.FC<ExternalGymDetailsProps> = ({
             >
               {review.text}
             </Text>
-          </View>
+          </Animatable.View>
         ))}
-      </View>
+      </Animatable.View>
     );
   };
 
-  // If showing 3D view, render that instead
+  // If showing map view, render that instead
   if (showSplineView && placeDetails) {
-    const gymForSpline: GymForSpline = {
+    const gymForMap = {
       id: placeId,
       gymName: placeDetails.name,
+      imageUrl:
+        placeDetails.photos && placeDetails.photos.length > 0
+          ? getPhotoUrl(placeDetails.photos[0].photo_reference)
+          : getRandomItem(GYM_IMAGES),
+      source: "google" as "google",
       rating: placeDetails.rating || 4.0,
-      location: {
-        address: placeDetails.formatted_address || "",
-      },
+      address: placeDetails.formatted_address || "",
       geometry: placeDetails.geometry,
     };
 
@@ -338,11 +508,46 @@ const ExternalGymDetails: React.FC<ExternalGymDetailsProps> = ({
             <Ionicons name="arrow-back" size={24} color="white" />
           </Pressable>
           <Text className="text-lg font-bold text-white">
-            {placeDetails.name} - 3D View
+            {placeDetails.name} - Map View
           </Text>
           <View className="w-10" />
         </View>
-        <GymSplineView gym={gymForSpline} />
+        <GymMapView gym={gymForMap} onNavigate={handleDirections} />
+      </SafeAreaView>
+    );
+  }
+
+  // Expanded photo view
+  if (activePhoto && placeDetails) {
+    return (
+      <SafeAreaView className="flex-1 bg-black">
+        <StatusBar barStyle="light-content" />
+        <View className="absolute top-0 left-0 right-0 z-10 flex-row justify-between items-center p-4">
+          <TouchableOpacity 
+            onPress={() => setActivePhoto(null)}
+            className="bg-black/50 rounded-full p-2"
+          >
+            <Ionicons name="close" size={24} color="white" />
+          </TouchableOpacity>
+          <TouchableOpacity 
+            onPress={handleShare}
+            className="bg-black/50 rounded-full p-2"
+          >
+            <Ionicons name="share-outline" size={24} color="white" />
+          </TouchableOpacity>
+        </View>
+        
+        <Animatable.View 
+          animation="fadeIn" 
+          duration={300}
+          className="flex-1 justify-center items-center"
+        >
+          <Image
+            source={{ uri: getPhotoUrl(activePhoto) }}
+            className="w-full h-full"
+            resizeMode="contain"
+          />
+        </Animatable.View>
       </SafeAreaView>
     );
   }
@@ -352,10 +557,12 @@ const ExternalGymDetails: React.FC<ExternalGymDetailsProps> = ({
     return (
       <SafeAreaView className="flex-1 bg-white justify-center items-center">
         <StatusBar barStyle="dark-content" />
-        <ActivityIndicator size="large" color="#3b82f6" />
-        <Text className="mt-4 text-base text-gray-500">
+        <Animatable.View animation="rotate" iterationCount="infinite" easing="linear" duration={1500}>
+          <ActivityIndicator size="large" color="#3b82f6" />
+        </Animatable.View>
+        <Animatable.Text animation="pulse" iterationCount="infinite" className="mt-4 text-base text-gray-500">
           Loading gym details...
-        </Text>
+        </Animatable.Text>
       </SafeAreaView>
     );
   }
@@ -364,16 +571,20 @@ const ExternalGymDetails: React.FC<ExternalGymDetailsProps> = ({
     return (
       <SafeAreaView className="flex-1 bg-white justify-center items-center p-5">
         <StatusBar barStyle="dark-content" />
-        <Ionicons name="alert-circle-outline" size={64} color="#ef4444" />
-        <Text className="mt-3 text-base text-gray-600 text-center">
+        <Animatable.View animation="bounceIn">
+          <Ionicons name="alert-circle-outline" size={64} color="#ef4444" />
+        </Animatable.View>
+        <Animatable.Text animation="fadeIn" delay={300} className="mt-3 text-base text-gray-600 text-center">
           {error || "Failed to load gym details"}
-        </Text>
-        <TouchableOpacity
-          className="mt-6 px-6 py-3 bg-blue-600 rounded-lg"
-          onPress={() => navigation.goBack()}
-        >
-          <Text className="text-white text-base font-semibold">Go Back</Text>
-        </TouchableOpacity>
+        </Animatable.Text>
+        <Animatable.View animation="fadeIn" delay={600}>
+          <TouchableOpacity
+            className="mt-6 px-6 py-3 bg-blue-600 rounded-lg"
+            onPress={() => navigation.goBack()}
+          >
+            <Text className="text-white text-base font-semibold">Go Back</Text>
+          </TouchableOpacity>
+        </Animatable.View>
       </SafeAreaView>
     );
   }
@@ -393,37 +604,45 @@ const ExternalGymDetails: React.FC<ExternalGymDetailsProps> = ({
 
       {/* Header Image */}
       <View className="relative h-64">
-        <Image
-          source={{ uri: mainImageUrl }}
-          className="w-full h-full"
-          resizeMode="cover"
-        />
-        <View className="absolute inset-0 bg-black bg-opacity-30" />
+        <Animatable.View animation="fadeIn" duration={800}>
+          <Image
+            source={{ uri: mainImageUrl }}
+            className="w-full h-full"
+            resizeMode="cover"
+          />
+          <View className="absolute inset-0 bg-black bg-opacity-30" />
+        </Animatable.View>
 
         {/* Back Button */}
-        <Pressable
-          className="absolute top-10 left-4 w-10 h-10 rounded-full bg-black bg-opacity-50 items-center justify-center"
-          onPress={() => navigation.goBack()}
-        >
-          <Ionicons name="arrow-back" size={24} color="white" />
-        </Pressable>
+        <Animatable.View animation="fadeIn" delay={200} className="absolute top-10 left-4">
+          <Pressable
+            className="w-10 h-10 rounded-full bg-black bg-opacity-50 items-center justify-center"
+            onPress={() => navigation.goBack()}
+          >
+            <Ionicons name="arrow-back" size={24} color="white" />
+          </Pressable>
+        </Animatable.View>
 
         {/* Share Button */}
-        <Pressable
-          className="absolute top-10 right-4 w-10 h-10 rounded-full bg-black bg-opacity-50 items-center justify-center"
-          onPress={handleShare}
-        >
-          <Ionicons name="share-outline" size={24} color="white" />
-        </Pressable>
+        <Animatable.View animation="fadeIn" delay={200} className="absolute top-10 right-4">
+          <Pressable
+            className="w-10 h-10 rounded-full bg-black bg-opacity-50 items-center justify-center"
+            onPress={handleShare}
+          >
+            <Ionicons name="share-outline" size={24} color="white" />
+          </Pressable>
+        </Animatable.View>
 
-        {/* 3D View Button */}
-        <Pressable
-          className="absolute bottom-4 right-4 px-3 py-2 rounded-lg bg-blue-600 flex-row items-center"
-          onPress={handleToggleSplineView}
-        >
-          <Ionicons name="cube-outline" size={20} color="white" />
-          <Text className="text-white font-semibold ml-1">3D View</Text>
-        </Pressable>
+        {/* Map View Button */}
+        <Animatable.View animation="fadeInUp" delay={400} className="absolute bottom-4 right-4">
+          <Pressable
+            className="px-3 py-2 rounded-lg bg-blue-600 flex-row items-center"
+            onPress={handleToggleSplineView}
+          >
+            <Ionicons name="map-outline" size={20} color="white" />
+            <Text className="text-white font-semibold ml-1">Map View</Text>
+          </Pressable>
+        </Animatable.View>
       </View>
 
       <ScrollView
@@ -431,7 +650,7 @@ const ExternalGymDetails: React.FC<ExternalGymDetailsProps> = ({
         showsVerticalScrollIndicator={false}
       >
         {/* Gym Name and Rating */}
-        <View className="p-5">
+        <Animatable.View animation="fadeInUp" className="p-5">
           <Text className="text-2xl font-bold text-gray-800 mb-2">
             {placeDetails.name}
           </Text>
@@ -464,14 +683,16 @@ const ExternalGymDetails: React.FC<ExternalGymDetailsProps> = ({
                 )
                 .slice(0, 3)
                 .map((type, index) => (
-                  <View
+                  <Animatable.View
                     key={index}
+                    animation="fadeIn"
+                    delay={200 + index * 100}
                     className="bg-gray-100 px-3 py-1.5 rounded-full mr-2 mb-2"
                   >
                     <Text className="text-xs text-gray-600 font-medium">
                       {type.replace(/_/g, " ").toUpperCase()}
                     </Text>
-                  </View>
+                  </Animatable.View>
                 ))}
             </View>
           )}
@@ -485,10 +706,14 @@ const ExternalGymDetails: React.FC<ExternalGymDetailsProps> = ({
               </Text>
             </View>
           )}
-        </View>
+        </Animatable.View>
 
         {/* Action Buttons */}
-        <View className="flex-row justify-between px-5 pb-5 border-b border-gray-200">
+        <Animatable.View 
+          animation="fadeIn" 
+          delay={200}
+          className="flex-row justify-between px-5 pb-5 border-b border-gray-200"
+        >
           <TouchableOpacity className="items-center" onPress={handleDirections}>
             <View className="w-12 h-12 rounded-full bg-blue-50 items-center justify-center mb-1">
               <Ionicons name="navigate-outline" size={24} color="#3b82f6" />
@@ -521,35 +746,36 @@ const ExternalGymDetails: React.FC<ExternalGymDetailsProps> = ({
             </View>
             <Text className="text-xs text-gray-600">Share</Text>
           </TouchableOpacity>
-        </View>
+        </Animatable.View>
 
         {/* Opening Hours */}
         {renderOpeningHours()}
 
         {/* Map Section */}
-        {placeDetails.geometry?.location && (
-          <View className="p-5 border-b border-gray-200">
+        {placeDetails.geometry?.location && (//@ts-ignore
+          <Animatable.View 
+            animation="fadeIn" 
+            duration={600} 
+            delay={200}
+            className="p-5 border-b border-gray-200"
+          >
             <Text className="text-lg font-semibold text-gray-800 mb-3">
               Location
             </Text>
-            <MapView
-              className="w-full h-48 rounded-lg"
-              initialRegion={{
-                latitude: placeDetails.geometry.location.lat,
-                longitude: placeDetails.geometry.location.lng,
-                latitudeDelta: 0.005,
-                longitudeDelta: 0.005,
-              }}
-              provider="google"
-            >
-              <Marker
-                coordinate={{
-                  latitude: placeDetails.geometry.location.lat,
-                  longitude: placeDetails.geometry.location.lng,
+            
+            <View className="w-full h-48 rounded-lg overflow-hidden">
+              <GymMapView 
+                gym={{
+                  id: placeId,
+                  gymName: placeDetails.name,
+                  imageUrl: mainImageUrl,
+                  source: "google",
+                  geometry: placeDetails.geometry,
+                  address: placeDetails.formatted_address || ""
                 }}
-                title={placeDetails.name}
               />
-            </MapView>
+            </View>
+            
             <TouchableOpacity
               className="mt-3 flex-row items-center justify-center bg-blue-600 py-3 rounded-lg"
               onPress={handleDirections}
@@ -562,55 +788,25 @@ const ExternalGymDetails: React.FC<ExternalGymDetailsProps> = ({
                 style={{ marginLeft: 8 }}
               />
             </TouchableOpacity>
-          </View>
+          </Animatable.View>
         )}
 
         {/* Photos Section */}
-        {placeDetails.photos && placeDetails.photos.length > 1 && (
-          <View className="p-5 border-b border-gray-200">
-            <Text className="text-lg font-semibold text-gray-800 mb-3">
-              Photos
-            </Text>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              className="flex-row"
-            >
-              {placeDetails.photos.slice(1).map((photo, index) => (
-                <Image
-                  key={index}
-                  source={{ uri: getPhotoUrl(photo.photo_reference) }}
-                  className="w-40 h-28 mr-3 rounded-lg"
-                  resizeMode="cover"
-                />
-              ))}
-            </ScrollView>
-          </View>
-        )}
+        {renderPhotos()}
 
         {/* Reviews Section */}
         {renderReviews()}
 
-        {/* Register/Check-in Prompt
-        <View className="m-5 p-4 bg-gray-50 rounded-lg">
-          <Text className="text-lg font-semibold text-gray-800 mb-2">
-            Interested in this gym?
-          </Text>
-          <Text className="text-sm text-gray-600 mb-4 leading-5">
-            Add this gym to your personal collection to track your visits and
-            connect with trainers.
-          </Text>
-          <TouchableOpacity className="bg-blue-600 py-3 rounded-lg items-center">
-            <Text className="text-white font-semibold">Add to My Gyms</Text>
-          </TouchableOpacity>
-        </View> */}
-
         {/* Footer */}
-        <View className="items-center pb-6 pt-2">
+         <Animatable.View 
+          animation="fadeIn" 
+          delay={800}
+          className="items-center pb-6 pt-6"
+        >
           <Text className="text-xs text-gray-400">
             Data provided by Google Places
           </Text>
-        </View>
+        </Animatable.View>
       </ScrollView>
     </SafeAreaView>
   );

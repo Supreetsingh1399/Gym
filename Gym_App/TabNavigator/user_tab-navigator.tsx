@@ -1,3 +1,4 @@
+//@ts-nocheck
 import React, { useEffect } from "react";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { Platform } from "react-native";

@@ -505,9 +505,21 @@ const PopularGymsScreen: React.FC<{ route: any; navigation: any }> = ({
 
   // Handle gym press
   const handleGymPress = (gymId: string) => {
-    navigation.navigate("GymDetails", { gymId });
+    // Extract the actual place ID if it starts with "google-"
+    if (gymId.startsWith("google-")) {
+      const placeId = gymId.substring(7); // Remove "google-" prefix
+      const selectedGym = gyms.find(gym => gym.id === gymId);
+      
+      navigation.navigate("ExternalGymDetails", { 
+        placeId: placeId,
+        sourceType: "google",
+        gymData: selectedGym
+      });
+    } else {
+      // For internally registered gyms
+      navigation.navigate("GymDetails", { gymId });
+    }
   };
-
   // Render list item
   const renderGymItem = ({ item }: { item: any }) => (
     <GymListCard 
@@ -624,8 +636,8 @@ const PopularGymsScreen: React.FC<{ route: any; navigation: any }> = ({
     
           if (
             !response.data ||
-            !response.data.gyms ||
-            response.data.gyms.length === 0
+            !response.data.data||
+            response.data.data.length === 0
           ) {
             setGyms([]);
             setLoading(false);
@@ -633,16 +645,16 @@ const PopularGymsScreen: React.FC<{ route: any; navigation: any }> = ({
           }
     
           // Convert API response to GymData format
-          const registeredGyms = response.data.gyms.map((gym: any) => ({
-            id: gym.id,
-            gymName: gym.name || "Unnamed Gym",
+          const registeredGyms = response.data.data.map((gym: any) => ({
+            id: gym._id,
+            gymName: gym.gymName || "Unnamed Gym",
             location: {
               address: gym.address || "No address",
               city: gym.city || "",
               state: gym.state || "",
             },
             rating: gym.rating || 4.5,
-            imageUrl: gym.imageUrl || getRandomItem(GYM_IMAGES),
+            imageUrl:  gym.media?.imageUrl || getRandomItem(GYM_IMAGES),
             facilities: {
               gymType: gym.gymType || "General Fitness",
               hasPool: gym.facilities?.hasPool || false,
@@ -675,7 +687,26 @@ const PopularGymsScreen: React.FC<{ route: any; navigation: any }> = ({
     
       // Handle gym press
       const handleGymPress = (gymId: string) => {
-        navigation.navigate("GymDetails", { gymId });
+        // Extract the actual place ID if it starts with "google-"
+        if (gymId.startsWith("google-")) {
+          const placeId = gymId.substring(7); // Remove "google-" prefix
+          const selectedGym = gyms.find(gym => gym.id === gymId);
+          
+          navigation.navigate("ExternalGymDetails", { 
+            placeId: placeId,
+            sourceType: "google",
+            gymData: selectedGym
+          });
+        } else {
+          // For internally registered gyms
+          const selectedGym = gyms.find(gym => gym.id === gymId);
+          
+          navigation.navigate("ExternalGymDetails", { 
+            placeId: gymId,
+            sourceType: "registered",
+            gymData: selectedGym
+          });
+        }
       };
     
       // Handle find gyms press

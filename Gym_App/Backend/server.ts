@@ -75,6 +75,26 @@ router.delete("/Register/Gyms/:id", async (req: Request, res: Response) => {
     res.status(500).send({ error: "Internal Server Error" });
   }
 });
+router.get("/Register/Gyms/:id", async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ error: "Invalid gym ID format" });
+    }
+    
+    const gym = await Gym.findById(id);
+    
+    if (!gym) {
+      return res.status(404).json({ error: "Gym not found" });
+    }
+    
+    res.status(200).json({ data: gym });
+  } catch (error) {
+    console.error("Error fetching gym details:", error);
+    res.status(500).json({ error: "Failed to fetch gym details" });
+  }
+});
 // Add this route to get gyms for a specific user
 router.get("/Register/Gyms/:userId", async (req: Request, res: Response) => {
   try {

@@ -1,3 +1,4 @@
+//@ts-nocheck
 import React, { useRef, useEffect } from 'react';
 import { View, Platform } from 'react-native';
 import * as Animatable from 'react-native-animatable';

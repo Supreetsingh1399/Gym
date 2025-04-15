@@ -22,7 +22,7 @@ import * as Location from "expo-location";
 import { GOOGLE_PLACES_API_KEY } from "@env";
 import { GYM_IMAGES } from "./constants/assetUrls";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import GymSplineView from "../components/GymSplineView"; //@ts-ignore
+import GymMapView from "../components/GymMapView"; //@ts-ignore
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../types";
 
@@ -572,8 +572,8 @@ const SearchResults: React.FC<SearchResultsProps> = ({ navigation, route }) => {
         </View>
 
         <View className="flex-1">
-          <GymSplineView gym={selectedGym} />
-        </View>
+  <GymMapView gym={selectedGym} />
+</View>
 
         <TouchableOpacity
           className="m-4 p-3 bg-blue-600 rounded-lg"
