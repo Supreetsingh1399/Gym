@@ -308,7 +308,7 @@ const US_SignUp = ({
         // Add missing required field
         age: parseInt(userData.age) || 18, 
         // Convert to number for MongoDB validation
-        weight: parseInt(userData.weight),
+        weight: userData.weight ? `${userData.weight}kg` : null,
         // Add proper format
         height: userData.height + "cm",
         // Remove non-digit characters if any
