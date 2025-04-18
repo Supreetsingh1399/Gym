@@ -48,7 +48,7 @@ const connectDB = async () => {
 router.post("/Register/Users", (req: Request, res: Response) =>
   registerUser(req, res),
 );
-router.get("/Register/Users", (req: Request, res: Response) =>
+router.get("/Register/Users", (req: Request, res: Response) =>  
   getAllUsers(req, res),
 );
 router.post("/Register/Gyms", (req: Request, res: Response) =>
