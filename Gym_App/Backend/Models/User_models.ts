@@ -3,7 +3,7 @@ import mongoose from "mongoose";
 const userSchema = new mongoose.Schema({
   uid: { type: String, required: true, unique: true }, 
   email: { type: String, required: true, unique: true },
-  password: { type: String, required: true },
+  password: { type: String, required: false },
   name: { type: String, required: true },
   fitnessGoal: { type: String, required: true },
   gender: { type: String, required: true },
@@ -20,13 +20,8 @@ const userSchema = new mongoose.Schema({
   weight: {
     type: String,
     required: true,
-    validate: {
-      validator: function (v: string) {
-        return /^\d+(\.\d+)?(kg|lb)$/.test(v);
-      },
-      message: "Weight must be in kg or lb format",
+      message: "Weight must be in kg",
     },
-  },
   height: {
     type: String,
     required: true,
@@ -34,7 +29,7 @@ const userSchema = new mongoose.Schema({
       validator: function (v: string) {
         return /^\d+(\.\d+)?(cm|m)$/.test(v);
       },
-      message: "Height must be in cm or m format",
+      message: "Height must be in cm",
     },
     // Example: 180cm or 1.8m
     // where cm is centimeters and m is meters
