@@ -8,8 +8,8 @@ module.exports = {
   entryPoint: "./index.js", // Explicitly set entry point
   splash: {
     image: "./assets/Gym_Project.png",
-    resizeMode: "contain",
-    backgroundColor: "#ffffff",
+    resizeMode: "cover",
+    backgroundColor: "#000000",
   },
   updates: {
     fallbackToCacheTimeout: 0,
