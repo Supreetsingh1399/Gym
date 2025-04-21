@@ -3,32 +3,53 @@
  * This file should be placed in Gym_App/types/navigation.ts
  */
 
-// Define the root stack navigator param list
+// Add GymTabParamList type
+export type GymTabParamList = {
+  GymHome: undefined;
+  GymMembers: undefined;
+  GymChat: undefined;
+  GymProfile: undefined;
+};
+
+// Update RootStackParamList to include gym screens
 export type RootStackParamList = {
-  // Auth screens
+  // Authentication screens
   LoginScreen: undefined;
   User_SignUp: undefined;
   Forgot_Password: undefined;
   Gym_rgn: undefined;
-
-  // Main screens
+  
+  // Main navigation containers
   UserTabs: undefined;
-  TrainerHome: undefined;
+  GymDashboard: undefined;
+  
+  // User screens
   RGN_Gyms: undefined;
-
-  // Feature screens
-  SearchResults: {
-    query?: string;
-    filters?: any;
-  };
+  TrainerHome: undefined;
+  SearchResults: undefined;
   ExternalGymDetails: {
-    placeId: string;
-    gymId?: string;
+    placeId?: string;
+    gymData?: any;
+    sourceType?: string;
   };
-  GymDetails: {
-    gymId: string;
+  WorkoutDetails: {
+    workout: any;
   };
+  ExerciseDetail: {
+    exercise: any;
+  };
+  ProfileUpdate: undefined;
+  NearbyGyms: undefined;
+  RegisteredGyms: undefined;
+  PopularGyms: undefined;
 };
+
+// Ensure TabBarIconProps is exported
+export interface TabBarIconProps {
+  focused: boolean;
+  color: string;
+  size: number;
+}
 export type UserTabParamList = {
   UserHome: undefined;
   UserProfile: undefined;

@@ -1,22 +1,27 @@
-import React from "react";
-import { View, Text, TouchableOpacity } from "react-native";
+import { View, TouchableOpacity, Text } from "react-native";
 
+// Add customTitleClass to your props interface
 interface SectionHeaderProps {
   title: string;
   onSeeAllPress?: () => void;
+  isDarkMode?: boolean;
+  customTitleClass?: string;
 }
 
-export const SectionHeader: React.FC<SectionHeaderProps> = ({
-  title,
-  onSeeAllPress,
+export const SectionHeader: React.FC<SectionHeaderProps> = ({ 
+  title, 
+  onSeeAllPress, 
+  isDarkMode,
+  customTitleClass 
 }) => {
   return (
-    <View className="flex-row justify-between items-center px-6 py-2">
-      <Text className="text-lg font-bold text-gray-800">{title}</Text>
-
+    <View className="flex-row justify-between items-center py-4 px-6">
+      <Text className={`text-lg font-bold ${isDarkMode ? 'text-white' : 'text-gray-800'} ${customTitleClass || ''}`}>
+        {title}
+      </Text>
       {onSeeAllPress && (
         <TouchableOpacity onPress={onSeeAllPress}>
-          <Text className="text-sm text-blue-600">See all</Text>
+          <Text className={`${isDarkMode ? 'text-blue-400' : 'text-blue-500'}`}>See All</Text>
         </TouchableOpacity>
       )}
     </View>

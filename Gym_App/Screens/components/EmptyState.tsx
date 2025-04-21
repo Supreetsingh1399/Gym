@@ -10,6 +10,7 @@ interface EmptyStateProps {
   message: string;
   actionLabel?: string;
   onAction?: () => void;
+  isDarkMode?: boolean; 
 }
 
 export const EmptyState = ({ 

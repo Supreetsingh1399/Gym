@@ -1,164 +1,250 @@
-import React from "react";
-import {
-  View,
-  Text,
-  ScrollView,
-  TouchableOpacity,
-  StyleSheet,
-  SafeAreaView,
-} from "react-native";
-import { Ionicons } from "@expo/vector-icons";
-import { FireBase_Auth } from "Gym_App/Backend/firebase";
-import { signOut } from "@firebase/auth"; //@ts-ignore
-import { CommonActions } from "@react-navigation/native";
+import React, { useState } from 'react';
+import { View, Text, FlatList, TouchableOpacity, Modal, TextInput, Alert } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 
-interface GymHomeProps {
-  navigation: any;
-}
+// Mock data for trainers
+const initialTrainers = [
+  { id: '1', name: 'John Smith', specialty: 'Weight Training', experience: '5 years' },
+  { id: '2', name: 'Sarah Johnson', specialty: 'Yoga', experience: '7 years' },
+  { id: '3', name: 'Mike Williams', specialty: 'Cardio', experience: '3 years' },
+  { id: '4', name: 'Emily Davis', specialty: 'Pilates', experience: '6 years' },
+];
 
-const GymHome: React.FC<GymHomeProps> = ({ navigation }) => {
-  const handleSignOut = async () => {
-    try {
-      await signOut(FireBase_Auth);
-      // Navigation will be handled by the auth state change in App.tsx
-    } catch (error) {
-      console.error("Sign out error:", error);
+export default function GymHomeScreen() {
+  const [trainers, setTrainers] = useState(initialTrainers);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [editModalVisible, setEditModalVisible] = useState(false);
+  const [currentTrainer, setCurrentTrainer] = useState<{
+    id: string;
+    name: string;
+    specialty: string;
+    experience: string;
+  } | null>(null);
+  const [formData, setFormData] = useState({
+    name: '',
+    specialty: '',
+    experience: '',
+  });
+
+  const addTrainer = () => {
+    if (!formData.name || !formData.specialty || !formData.experience) {
+      Alert.alert('Error', 'Please fill all fields');
+      return;
     }
+
+    const newTrainer = {
+      id: Date.now().toString(),
+      name: formData.name,
+      specialty: formData.specialty,
+      experience: formData.experience,
+    };
+
+    setTrainers([...trainers, newTrainer]);
+    setFormData({ name: '', specialty: '', experience: '' });
+    setModalVisible(false);
   };
 
-  return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scrollContainer}>
-        <View style={styles.header}>
-          <Text style={styles.title}>Gym Dashboard</Text>
-          <TouchableOpacity style={styles.logoutButton} onPress={handleSignOut}>
-            <Ionicons name="log-out-outline" size={24} color="#fff" />
-            <Text style={styles.logoutText}>Logout</Text>
-          </TouchableOpacity>
-        </View>
+  const deleteTrainer = (id: string) => {
+    Alert.alert(
+      'Confirm Deletion',
+      'Are you sure you want to remove this trainer?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () => {
+            setTrainers(trainers.filter(trainer => trainer.id !== id));
+          },
+        },
+      ]
+    );
+  };
 
-        <View style={styles.card}>
-          <Text style={styles.welcomeText}>Welcome to your Gym Dashboard</Text>
-          <Text style={styles.subtitle}>
-            Manage your gym details, trainers, and more
-          </Text>
-        </View>
+  const openEditModal = (trainer: { id: string; name: string; specialty: string; experience: string }) => {
+    setCurrentTrainer(trainer);
+    setFormData({
+      name: trainer.name,
+      specialty: trainer.specialty,
+      experience: trainer.experience,
+    });
+    setEditModalVisible(true);
+  };
 
-        <View style={styles.menuContainer}>
-          <TouchableOpacity style={styles.menuItem}>
-            <Ionicons name="business-outline" size={32} color="#0091EA" />
-            <Text style={styles.menuText}>Gym Profile</Text>
-          </TouchableOpacity>
+  const updateTrainer = () => {
+    if (!formData.name || !formData.specialty || !formData.experience) {
+      Alert.alert('Error', 'Please fill all fields');
+      return;
+    }
 
-          <TouchableOpacity style={styles.menuItem}>
-            <Ionicons name="people-outline" size={32} color="#0091EA" />
-            <Text style={styles.menuText}>Manage Trainers</Text>
-          </TouchableOpacity>
+    if (currentTrainer) {
+      setTrainers(trainers.map(trainer => 
+        trainer.id === currentTrainer.id 
+          ? { ...trainer, ...formData } 
+          : trainer
+      ));
+    }
+    
+    setFormData({ name: '', specialty: '', experience: '' });
+    setEditModalVisible(false);
+  };
 
-          <TouchableOpacity style={styles.menuItem}>
-            <Ionicons name="barbell-outline" size={32} color="#0091EA" />
-            <Text style={styles.menuText}>Equipment</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.menuItem}>
-            <Ionicons name="calendar-outline" size={32} color="#0091EA" />
-            <Text style={styles.menuText}>Class Schedule</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.menuItem}>
-            <Ionicons name="analytics-outline" size={32} color="#0091EA" />
-            <Text style={styles.menuText}>Analytics</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.menuItem}>
-            <Ionicons name="settings-outline" size={32} color="#0091EA" />
-            <Text style={styles.menuText}>Settings</Text>
-          </TouchableOpacity>
-        </View>
-      </ScrollView>
-    </SafeAreaView>
+  const renderTrainerItem = ({ item }: { item: { id: string; name: string; specialty: string; experience: string } }) => (
+    <View className="bg-gray-800 p-4 rounded-xl mb-3 flex-row justify-between items-center">
+      <View>
+        <Text className="text-white text-lg font-bold">{item.name}</Text>
+        <Text className="text-gray-300">{item.specialty}</Text>
+        <Text className="text-gray-400 text-sm">{item.experience}</Text>
+      </View>
+      <View className="flex-row">
+        <TouchableOpacity 
+          onPress={() => openEditModal(item)} 
+          className="bg-indigo-600 p-2 rounded-full mr-2"
+        >
+          <Ionicons name="create-outline" size={22} color="white" />
+        </TouchableOpacity>
+        <TouchableOpacity 
+          onPress={() => deleteTrainer(item.id)} 
+          className="bg-red-500 p-2 rounded-full"
+        >
+          <Ionicons name="trash-outline" size={22} color="white" />
+        </TouchableOpacity>
+      </View>
+    </View>
   );
-};
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#f5f5f5",
-  },
-  scrollContainer: {
-    padding: 16,
-  },
-  header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 24,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: "bold",
-    color: "#333",
-  },
-  logoutButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#0091EA",
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 8,
-  },
-  logoutText: {
-    color: "#fff",
-    marginLeft: 4,
-    fontWeight: "600",
-  },
-  card: {
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    padding: 20,
-    marginBottom: 24,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  welcomeText: {
-    fontSize: 20,
-    fontWeight: "bold",
-    color: "#333",
-    marginBottom: 8,
-  },
-  subtitle: {
-    fontSize: 16,
-    color: "#666",
-    lineHeight: 22,
-  },
-  menuContainer: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "space-between",
-  },
-  menuItem: {
-    width: "48%",
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
-    alignItems: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
-  },
-  menuText: {
-    marginTop: 12,
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#333",
-    textAlign: "center",
-  },
-});
+  return (
+    <View className="flex-1 bg-gray-900 p-4">
+      <View className="flex-row justify-between items-center mb-6">
+        <Text className="text-white text-xl font-bold">Trainers List</Text>
+        <TouchableOpacity 
+          onPress={() => setModalVisible(true)}
+          className="bg-indigo-600 py-2 px-4 rounded-lg flex-row items-center"
+        >
+          <Ionicons name="add" size={20} color="white" />
+          <Text className="text-white ml-1 font-medium">Add Trainer</Text>
+        </TouchableOpacity>
+      </View>
 
-export default GymHome;
+      <FlatList
+        data={trainers}
+        keyExtractor={(item: { id: any; }) => item.id}
+        renderItem={renderTrainerItem}
+        showsVerticalScrollIndicator={false}
+        className="w-full"
+      />
+
+      {/* Add Trainer Modal */}
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={modalVisible}
+        onRequestClose={() => setModalVisible(false)}
+      >
+        <View className="flex-1 justify-center items-center bg-black/50">
+          <View className="bg-gray-800 p-6 rounded-xl w-5/6">
+            <Text className="text-white text-xl font-bold mb-4">Add New Trainer</Text>
+            
+            <Text className="text-gray-300 mb-1">Name</Text>
+            <TextInput
+              className="bg-gray-700 text-white p-3 rounded-lg mb-3"
+              placeholderTextColor="#9ca3af"
+              placeholder="Enter name"
+              value={formData.name}
+              onChangeText={(text: any) => setFormData({...formData, name: text})}
+            />
+            
+            <Text className="text-gray-300 mb-1">Specialty</Text>
+            <TextInput
+              className="bg-gray-700 text-white p-3 rounded-lg mb-3"
+              placeholderTextColor="#9ca3af"
+              placeholder="Enter specialty"
+              value={formData.specialty}
+              onChangeText={(text: any) => setFormData({...formData, specialty: text})}
+            />
+            
+            <Text className="text-gray-300 mb-1">Experience</Text>
+            <TextInput
+              className="bg-gray-700 text-white p-3 rounded-lg mb-6"
+              placeholderTextColor="#9ca3af"
+              placeholder="Enter experience"
+              value={formData.experience}
+              onChangeText={(text:any) => setFormData({...formData, experience: text})}
+            />
+            
+            <View className="flex-row justify-end">
+              <TouchableOpacity 
+                onPress={() => setModalVisible(false)}
+                className="bg-gray-600 py-2 px-4 rounded-lg mr-2"
+              >
+                <Text className="text-white font-medium">Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                onPress={addTrainer}
+                className="bg-indigo-600 py-2 px-4 rounded-lg"
+              >
+                <Text className="text-white font-medium">Add</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Edit Trainer Modal */}
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={editModalVisible}
+        onRequestClose={() => setEditModalVisible(false)}
+      >
+        <View className="flex-1 justify-center items-center bg-black/50">
+          <View className="bg-gray-800 p-6 rounded-xl w-5/6">
+            <Text className="text-white text-xl font-bold mb-4">Edit Trainer</Text>
+            
+            <Text className="text-gray-300 mb-1">Name</Text>
+            <TextInput
+              className="bg-gray-700 text-white p-3 rounded-lg mb-3"
+              placeholderTextColor="#9ca3af"
+              placeholder="Enter name"
+              value={formData.name}
+              onChangeText={(text:string) => setFormData({...formData, name: text})}
+            />
+            
+            <Text className="text-gray-300 mb-1">Specialty</Text>
+            <TextInput
+              className="bg-gray-700 text-white p-3 rounded-lg mb-3"
+              placeholderTextColor="#9ca3af"
+              placeholder="Enter specialty"
+              value={formData.specialty}
+              onChangeText={(text:string) => setFormData({...formData, specialty: text})}
+            />
+            
+            <Text className="text-gray-300 mb-1">Experience</Text>
+            <TextInput
+              className="bg-gray-700 text-white p-3 rounded-lg mb-6"
+              placeholderTextColor="#9ca3af"
+              placeholder="Enter experience"
+              value={formData.experience}
+              onChangeText={(text:string) => setFormData({...formData, experience: text})}
+            />
+            
+            <View className="flex-row justify-end">
+              <TouchableOpacity 
+                onPress={() => setEditModalVisible(false)}
+                className="bg-gray-600 py-2 px-4 rounded-lg mr-2"
+              >
+                <Text className="text-white font-medium">Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                onPress={updateTrainer}
+                className="bg-indigo-600 py-2 px-4 rounded-lg"
+              >
+                <Text className="text-white font-medium">Update</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+    </View>
+  );
+}

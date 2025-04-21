@@ -7,18 +7,26 @@ import { useIsFocused } from "@react-navigation/native";
 
 // Import your custom animated icon
 import AnimatedTabIcon from "../Screens/components/AnimatedTabIcon";
+// Import ThemeContext
+import { useTheme } from "../Screens/components/ThemeContext";
 
-// Screens
+// User Screens
 import UserHome from "../Screens/UserDashboard/UserHome";
 import UserProfile from "../Screens/UserDashboard/US_profile";
 import UserChats from "../Screens/UserDashboard/US_chats";
 import NewsScreen from "../Screens/UserDashboard/Gym_related_news";
-import { TabBarIconProps } from "../types/navigation";
+
+// Gym Screens
+import GymHomeScreen from "../Screens/GymDashboard/GymHome";
+import GymProfileScreen from "../Screens/GymDashboard/GymProfile";
+import GymChatScreen from "../Screens/GymDashboard/GymChat";
 
 // Navigation types
-import { UserTabParamList } from "../types/navigation";
+import { TabBarIconProps, UserTabParamList, GymTabParamList } from "../types/navigation";
+import useAuth from "../Backend/hooks/Auth"; 
 
-const Tab = createBottomTabNavigator<UserTabParamList>();
+const UserTab = createBottomTabNavigator<UserTabParamList>();
+const GymTab = createBottomTabNavigator<GymTabParamList>();
 
 // Track focus states for all tabs
 const UserTabNavigator = {
@@ -26,7 +34,8 @@ const UserTabNavigator = {
     home: false,
     chats: false,
     news: false,
-    profile: false
+    profile: false,
+    members: false
   },
   
   updateFocusState(tabName: string, isFocused: boolean) {
@@ -48,7 +57,7 @@ const HomeTabIcon = ({ color, size, focused }: TabBarIconProps) => {
   
   return (
     <AnimatedTabIcon 
-    key={`home-${Date.now()}`}
+      key={`home-${Date.now()}`}
       name="home" 
       size={size}
       color={color}
@@ -71,7 +80,7 @@ const ChatsTabIcon = ({ color, size, focused }: TabBarIconProps) => {
   
   return (
     <AnimatedTabIcon 
-    key={`home-${Date.now()}`}
+      key={`chats-${Date.now()}`}
       name="chatbubbles" 
       size={size} 
       color={color} 
@@ -94,7 +103,7 @@ const NewsTabIcon = ({ color, size, focused }: TabBarIconProps) => {
   
   return (
     <AnimatedTabIcon 
-    key={`home-${Date.now()}`}
+      key={`news-${Date.now()}`}
       name="newspaper" 
       size={size} 
       color={color} 
@@ -117,7 +126,7 @@ const ProfileTabIcon = ({ color, size, focused }: TabBarIconProps) => {
   
   return (
     <AnimatedTabIcon 
-    key={`home-${Date.now()}`}
+      key={`profile-${Date.now()}`}
       name="person" 
       size={size} 
       color={color} 
@@ -127,48 +136,79 @@ const ProfileTabIcon = ({ color, size, focused }: TabBarIconProps) => {
   );
 };
 
-// Main Tab Navigator component
-const MainTabNavigator = (): JSX.Element => {
+const MembersTabIcon = ({ color, size, focused }: TabBarIconProps) => {
+  const isFocused = useIsFocused();
+  
+  useEffect(() => {
+    if (isFocused) {
+      UserTabNavigator.updateFocusState('members', true);
+    } else {
+      UserTabNavigator.updateFocusState('members', false);
+    }
+  }, [isFocused]);
+  
   return (
-    <Tab.Navigator
+    <AnimatedTabIcon 
+      key={`members-${Date.now()}`}
+      name="people" 
+      size={size} 
+      color={color} 
+      focused={focused}
+      previouslyFocused={UserTabNavigator.previousFocusStates.members}
+    />
+  );
+};
+
+// Tab navigator base config for both user and gym tabs
+const getTabOptions = (darkMode) => ({
+  tabBarActiveTintColor: darkMode ? "#60A5FA" : "#0091EA",
+  tabBarInactiveTintColor: darkMode ? "#9CA3AF" : "gray",
+  tabBarStyle: {
+    paddingBottom: Platform.OS === "ios" ? 5 : 8,
+    height: Platform.OS === "ios" ? 60 : 65,
+    borderTopWidth: 1,
+    borderTopColor: darkMode ? "#374151" : "#e0e0e0",
+    backgroundColor: darkMode ? "#1F2937" : "#FFFFFF",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: darkMode ? 0.3 : 0.1,
+    shadowRadius: 2,
+    elevation: 5,
+  },
+  tabBarLabelStyle: {
+    fontSize: 12,
+    fontWeight: "500",
+    marginBottom: Platform.OS === "ios" ? 0 : 4,
+  },
+  tabBarItemStyle: {
+    padding: 5,
+  },
+  headerStyle: {
+    backgroundColor: darkMode ? "#111827" : "#FFFFFF",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: darkMode ? 0.3 : 0.1,
+    shadowRadius: 2,
+    elevation: 5,
+  },
+  headerTitleStyle: {
+    fontWeight: "bold",
+    fontSize: 18,
+    color: darkMode ? "#F9FAFB" : "#143549",
+  },
+  headerTintColor: darkMode ? "#F9FAFB" : "#143549",
+});
+
+// User Tab Navigator component
+const UserTabNavigatorComponent = (): JSX.Element => {
+  const { darkMode } = useTheme();
+  
+  return (
+    <UserTab.Navigator
       initialRouteName="UserHome"
-      screenOptions={{
-        tabBarActiveTintColor: "#0091EA",
-        tabBarInactiveTintColor: "gray",
-        tabBarStyle: {
-          paddingBottom: Platform.OS === "ios" ? 5 : 8,
-          height: Platform.OS === "ios" ? 60 : 65,
-          borderTopWidth: 1,
-          borderTopColor: "#e0e0e0",
-          shadowColor: "#000",
-          shadowOffset: { width: 0, height: -2 },
-          shadowOpacity: 0.1,
-          shadowRadius: 2,
-          elevation: 5,
-        },
-        tabBarLabelStyle: {
-          fontSize: 12,
-          fontWeight: "500",
-          marginBottom: Platform.OS === "ios" ? 0 : 4,
-        },
-        tabBarItemStyle: {
-          padding: 5,
-        },
-        headerStyle: {
-          shadowColor: "#000",
-          shadowOffset: { width: 0, height: 2 },
-          shadowOpacity: 0.1,
-          shadowRadius: 2,
-          elevation: 5,
-        },
-        headerTitleStyle: {
-          fontWeight: "bold",
-          fontSize: 18,
-        },
-        headerTintColor: "#143549",
-      }}
+      screenOptions={getTabOptions(darkMode)}
     >
-      <Tab.Screen
+      <UserTab.Screen
         name="UserHome"
         component={UserHome}
         options={{
@@ -181,7 +221,7 @@ const MainTabNavigator = (): JSX.Element => {
         }}
       />
 
-      <Tab.Screen
+      <UserTab.Screen
         name="UserChats"
         component={UserChats}
         options={{
@@ -194,7 +234,7 @@ const MainTabNavigator = (): JSX.Element => {
         }}
       />
 
-      <Tab.Screen
+      <UserTab.Screen
         name="UserNews"
         component={NewsScreen}
         options={{
@@ -207,7 +247,7 @@ const MainTabNavigator = (): JSX.Element => {
         }}
       />
 
-      <Tab.Screen
+      <UserTab.Screen
         name="UserProfile"
         component={UserProfile}
         options={{
@@ -219,8 +259,83 @@ const MainTabNavigator = (): JSX.Element => {
           tabPress: () => Haptics.selectionAsync(),
         }}
       />
-    </Tab.Navigator>
+    </UserTab.Navigator>
   );
+};
+
+// Gym Tab Navigator component
+const GymTabNavigatorComponent = (): JSX.Element => {
+  const { darkMode } = useTheme();
+  
+  return (
+    <GymTab.Navigator
+      initialRouteName="GymHome"
+      screenOptions={getTabOptions(darkMode)}
+    >
+      <GymTab.Screen
+        name="GymHome"
+        component={GymHomeScreen}
+        options={{
+          title: "Dashboard",
+          tabBarLabel: "Home",
+          tabBarIcon: (props: TabBarIconProps) => <HomeTabIcon {...props} />
+        }}
+        listeners={{
+          tabPress: () => Haptics.selectionAsync(),
+        }}
+      />
+
+      <GymTab.Screen
+        name="GymMembers"
+        component={GymMembersScreen}
+        options={{
+          title: "Members",
+          tabBarLabel: "Members",
+          tabBarIcon: (props: TabBarIconProps) => <MembersTabIcon {...props} />
+        }}
+        listeners={{
+          tabPress: () => Haptics.selectionAsync(),
+        }}
+      />
+
+      <GymTab.Screen
+        name="GymChat"
+        component={GymChatScreen}
+        options={{
+          title: "Messages",
+          tabBarLabel: "Chats",
+          tabBarIcon: (props: TabBarIconProps) => <ChatsTabIcon {...props} />
+        }}
+        listeners={{
+          tabPress: () => Haptics.selectionAsync(),
+        }}
+      />
+
+      <GymTab.Screen
+        name="GymProfile"
+        component={GymProfileScreen}
+        options={{
+          title: "Gym Profile",
+          tabBarLabel: "Profile",
+          tabBarIcon: (props: TabBarIconProps) => <ProfileTabIcon {...props} />
+        }}
+        listeners={{
+          tabPress: () => Haptics.selectionAsync(),
+        }}
+      />
+    </GymTab.Navigator>
+  );
+};
+
+// Main Tab Navigator component - decides which tab navigator to show based on user type
+const MainTabNavigator = (): JSX.Element => {
+  const { user } = useAuth();
+  const isGym = user?.type === 'gym' || user?.role === 'gym';
+
+  console.log('[TabNavigator] Rendering tabs for:', isGym ? 'Gym Owner' : 'Regular User');
+  
+  // Return appropriate tab navigator based on user type
+  return isGym ? <GymTabNavigatorComponent /> : <UserTabNavigatorComponent />;
 };
 
 export { UserTabNavigator };

@@ -11,6 +11,8 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import axios from "axios";
+// Import ThemeContext
+import { useTheme } from "../components/ThemeContext";
 
 const API_KEY = process.env.News_api;
 const API_URL = `https://newsapi.org/v2/everything?q=gym OR fitness OR workout&apiKey=${API_KEY}`;
@@ -25,6 +27,8 @@ interface Article {
 }
 
 const NewsScreen = () => {
+  // Add theme context
+  const { darkMode } = useTheme();
   const [news, setNews] = useState<Article[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -56,16 +60,20 @@ const NewsScreen = () => {
   const renderNewsItem = ({ item }: { item: Article }) => (
     <TouchableOpacity
       onPress={() => Linking.openURL(item.url)}
-      className="mb-4 p-3 bg-gray-100 rounded-lg active:bg-gray-200"
+      className={`mb-4 p-3 ${darkMode ? 'bg-gray-800' : 'bg-gray-100'} rounded-lg active:${darkMode ? 'bg-gray-700' : 'bg-gray-200'}`}
     >
       <View>
         <Image
           source={{ uri: item.urlToImage }}
           className="w-full h-52 rounded-lg"
         />
-        <Text className="text-base font-bold my-1">{item.title}</Text>
-        <Text className="text-sm text-gray-600">{item.description}</Text>
-        <Text className="text-xs text-gray-500 mt-2">
+        <Text className={`text-base font-bold my-1 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+          {item.title}
+        </Text>
+        <Text className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+          {item.description}
+        </Text>
+        <Text className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'} mt-2`}>
           {new Date(item.publishedAt).toLocaleDateString()}
         </Text>
       </View>
@@ -74,16 +82,16 @@ const NewsScreen = () => {
 
   if (loading) {
     return (
-      <View className="flex-1 justify-center items-center">
-        <ActivityIndicator size="large" color="#0091EA" />
+      <View className={`flex-1 justify-center items-center ${darkMode ? 'bg-gray-900' : 'bg-white'}`}>
+        <ActivityIndicator size="large" color={darkMode ? "#60A5FA" : "#0091EA"} />
       </View>
     );
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-gray-200">
+    <SafeAreaView className={`flex-1 ${darkMode ? 'bg-gray-900' : 'bg-gray-200'}`}>
       <View className="flex-1 px-4 mt-2">
-        {/* <Text className="text-2xl font-bold  text-center mb-4">
+        {/* <Text className={`text-2xl font-bold text-center mb-4 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
           Gym & Fitness News
         </Text> */}
         <FlatList
@@ -95,7 +103,8 @@ const NewsScreen = () => {
             <RefreshControl
               refreshing={refreshing}
               onRefresh={onRefresh}
-              colors={["#0091EA"]}
+              colors={[darkMode ? "#60A5FA" : "#0091EA"]}
+              tintColor={darkMode ? "#60A5FA" : "#0091EA"}
             />
           }
           showsVerticalScrollIndicator={false}

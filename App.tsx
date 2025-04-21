@@ -1,5 +1,6 @@
-import React, { useEffect, useState } from "react"; //@ts-ignore
-import { NavigationContainer } from "@react-navigation/native"; //@ts-ignore
+//@ts-nocheck
+import React, { useEffect, useState } from "react";
+import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import {
   ActivityIndicator,
@@ -9,14 +10,15 @@ import {
   StyleSheet,
 } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
-import { User } from "firebase/auth";
+
+import { navigationRef } from './Gym_App/Backend/hooks/Auth';
 
 // Import navigation types
 import { RootStackParamList } from "./Gym_App/types/navigation";
 
 // Import Firebase first to ensure initialization
 import { FireBase_Auth, isFirebaseReady } from "./Gym_App/Backend/firebase";
-import { NearbyGymsScreen, RegisteredGymsScreen,PopularGymsScreen } from "Gym_App/Screens/UserDashboard/AllGymsScreen";
+import { NearbyGymsScreen, RegisteredGymsScreen, PopularGymsScreen } from "./Gym_App/Screens/UserDashboard/AllGymsScreen";
 
 // Import toast manager for notifications
 import ToastManager from "./Gym_App/Screens/components/ToastManager";
@@ -26,7 +28,7 @@ import { showToast } from "./Gym_App/Screens/components/ToastManager";
 import ForgotPass from "./Gym_App/Screens/Login/ForgotPass";
 import US_SignUp from "./Gym_App/Screens/Register/US_SGNP";
 import TrainerHome from "./Gym_App/Screens/TrainerDashboard/TrainerHome";
-import TabNavigator from "./Gym_App/TabNavigator/user_tab-navigator";
+import MainTabNavigator from "./Gym_App/TabNavigator/user_tab-navigator";
 import GymRegistrationWizard from "./Gym_App/Screens/Register/GymRegistrationWizard";
 import Registered_Gyms from "./Gym_App/Screens/UserDashboard/User_home_touchables/Registered_gyms";
 import HandleLogin from "./Gym_App/Screens/Login/LoginScreen";
@@ -34,12 +36,22 @@ import SearchResults from "./Gym_App/Screens/UserDashboard/SearchResults";
 import ExternalGymDetails from "./Gym_App/Screens/UserDashboard/ExternalGymDetails";
 import WorkoutDetails from "./Gym_App/Screens/UserDashboard/WorkoutDetails";
 import ExerciseDetail from "./Gym_App/Screens/UserDashboard/ExerciseDetail";
-import ProfileUpdate from "Gym_App/Screens/UserDashboard/ProfileUpdate";
+import ProfileUpdate from "./Gym_App/Screens/UserDashboard/ProfileUpdate";
 
 // Hooks
 import useAuth from "./Gym_App/Backend/hooks/Auth";
-import { ThemeProvider } from "Gym_App/Screens/components/ThemeContext";
-import { UserProvider } from "Gym_App/Screens/components/UserContext";
+import { ThemeProvider } from "./Gym_App/Screens/components/ThemeContext";
+import { UserProvider } from "./Gym_App/Screens/components/UserContext";
+
+// Define extended user type that includes role information
+interface AppUser {
+  uid: string;
+  email: string | null;
+  displayName: string | null;
+  role?: string;
+  type?: string;
+  [key: string]: any; // Allow for additional properties
+}
 
 // Define interface for ErrorBoundary props and state
 interface ErrorBoundaryProps {
@@ -101,21 +113,28 @@ const Stack = createNativeStackNavigator<RootStackParamList>();
 
 // Stack Navigator props interface
 interface StackNavigatorProps {
-  user: User | null;
+  user: AppUser | null;
 }
 
 /**
  * Stack Navigator component that handles navigation based on authentication state
  */
 const StackNavigator = ({ user }: StackNavigatorProps): JSX.Element => {
+  // Check if the user is a gym by checking the user type or role
+  const isGym = user?.type === 'gym' || user?.role === 'gym';
+  
   console.log(
     "[Navigation] Rendering StackNavigator with user:",
-    user ? "Logged in" : "Not logged in",
+    user ? (isGym ? "Gym logged in" : "User logged in") : "Not logged in",
   );
 
   return (
     <Stack.Navigator
-      initialRouteName={user ? "UserTabs" : "LoginScreen"}
+      initialRouteName={
+        user 
+          ? (isGym ? "GymDashboard" : "UserTabs") 
+          : "LoginScreen"
+      }
       screenOptions={{
         headerShown: true,
         headerTitleStyle: {
@@ -133,36 +152,56 @@ const StackNavigator = ({ user }: StackNavigatorProps): JSX.Element => {
             options={{ title: "Login" }}
           />
           <Stack.Screen
-            //@ts-ignore
             name="User_SignUp"
             component={US_SignUp}
             options={{ title: "Create User Account" }}
           />
-
           <Stack.Screen
-            //@ts-ignore
             name="Forgot_Password"
             component={ForgotPass}
             options={{ title: "Reset Password" }}
           />
           <Stack.Screen
-            //@ts-ignore
             name="Gym_rgn"
             component={GymRegistrationWizard}
             options={{ title: "Register Gym" }}
           />
         </>
-      ) : (
-        // Protected screens - only accessible when authenticated
+      ) : isGym ? (
+        // Gym screens - only accessible when authenticated as a gym
         <>
           <Stack.Screen
-            //@ts-ignore
-            name="UserTabs"
-            component={TabNavigator}
+            name="GymDashboard"
+            component={MainTabNavigator}
             options={{ headerShown: false }}
           />
           <Stack.Screen
-            //@ts-ignore
+            name="RGN_Gyms"
+            component={Registered_Gyms}
+            options={{ title: "Registered Gyms" }}
+          />
+          <Stack.Screen
+            name="SearchResults"
+            component={SearchResults}
+            options={{ title: "Search Results" }}
+          />
+          <Stack.Screen
+            name="ExternalGymDetails"
+            component={ExternalGymDetails}
+            options={{ title: "Gym Details" }}
+          />
+          <Stack.Screen name="WorkoutDetails" component={WorkoutDetails} />
+          <Stack.Screen name="ExerciseDetail" component={ExerciseDetail} />
+        </>
+      ) : (
+        // Protected screens - only accessible when authenticated as regular user
+        <>
+          <Stack.Screen
+            name="UserTabs"
+            component={MainTabNavigator}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
             name="RGN_Gyms"
             component={Registered_Gyms}
             options={{ title: "Registered Gyms" }}
@@ -174,12 +213,12 @@ const StackNavigator = ({ user }: StackNavigatorProps): JSX.Element => {
           />
           <Stack.Screen
             name="SearchResults"
-            component={SearchResults as any}
+            component={SearchResults}
             options={{ title: "Search Results" }}
           />
           <Stack.Screen
             name="ExternalGymDetails"
-            component={ExternalGymDetails as any}
+            component={ExternalGymDetails}
             options={{ title: "Gym Details" }}
           />
           <Stack.Screen name="WorkoutDetails" component={WorkoutDetails} />
@@ -328,23 +367,22 @@ const App = (): JSX.Element => {
   }
 
   // Render the app when everything is ready
-return (
-  <ErrorBoundary>
-    <UserProvider>
-      <ThemeProvider>
-        <SafeAreaProvider>
-          <NavigationContainer>
-            <StackNavigator
-            //@ts-ignore
-              user={user}
-            />
-          </NavigationContainer>
-          <ToastManager />
-        </SafeAreaProvider>
-      </ThemeProvider>
-    </UserProvider>
-  </ErrorBoundary>
-);
+  return (
+    <ErrorBoundary>
+        <ThemeProvider>
+      <UserProvider>
+          <SafeAreaProvider>
+            <NavigationContainer  ref={navigationRef}>
+              <StackNavigator 
+                user={user as AppUser} 
+              />
+            </NavigationContainer>
+            <ToastManager />
+          </SafeAreaProvider>
+      </UserProvider>
+        </ThemeProvider>
+    </ErrorBoundary>
+  );
 };
 
 const styles = StyleSheet.create({

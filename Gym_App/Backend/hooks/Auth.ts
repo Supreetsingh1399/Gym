@@ -1,6 +1,36 @@
 import { User, onAuthStateChanged } from "@firebase/auth";
 import { useState, useEffect, useRef } from "react";
 import { FireBase_Auth } from "../firebase";
+import React from "react";  //@ts-ignore
+import { CommonActions } from "@react-navigation/native";
+
+// Define navigation reference OUTSIDE the hook
+export const navigationRef = React.createRef<any>();
+
+// Define logout function OUTSIDE the hook
+export const handleLogout = async (): Promise<void> => {
+  console.log("1. Starting logout process");
+  try {
+    await FireBase_Auth.signOut();
+    console.log("2. Firebase signOut completed");
+
+    // This will reset the entire navigation state
+    if (navigationRef.current) {
+      console.log("3. Navigation ref available, resetting to LoginScreen");
+      navigationRef.current.dispatch(
+        CommonActions.reset({
+          index: 0,
+          routes: [{ name: "LoginScreen" }],
+        })
+      );
+      console.log("4. Navigation reset dispatched");
+    } else {
+      console.error("3. ERROR: Navigation reference is not available!");
+    }
+  } catch (error) {
+    console.error("Logout error:", error);
+  }
+};
 
 /**
  * Custom hook for Firebase authentication state management
@@ -82,20 +112,18 @@ const useAuth = () => {
       }
 
       // Set a timeout to prevent infinite loading
-      // This will only fire if onAuthStateChanged doesn't complete in time
       timeoutId = setTimeout(() => {
         if (isMounted.current && loading && !authInitializedRef.current) {
           console.log("[Auth Hook] Auth check timeout reached");
           setLoading(false);
 
-          // Only set error if auth hasn't been initialized yet
           if (!authInitializedRef.current) {
             setError(
               "Authentication check timed out - please check your network connection",
             );
           }
         }
-      }, 7000); // Increased timeout to give more time for initialization
+      }, 7000);
     } catch (setupError) {
       console.error("[Auth Hook] Auth setup error:", setupError);
       if (isMounted.current) {

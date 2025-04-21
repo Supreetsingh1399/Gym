@@ -7,6 +7,9 @@ interface GymCardProps {
   gym: GymData;
   onPress: () => void;
   showDistance?: boolean; 
+  showMembership?: boolean;
+  isDarkMode?: boolean;
+  showRating?: boolean;
 }
 
 export const GymCard: React.FC<GymCardProps> = memo(({ gym, onPress }) => (

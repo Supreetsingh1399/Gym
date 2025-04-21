@@ -596,88 +596,99 @@ const PopularGymsScreen: React.FC<{ route: any; navigation: any }> = ({
       }, []);
     
       // Fetch gyms the user has registered with
-      const fetchRegisteredGyms = async () => {
-        if (!FireBase_Auth || !FireBase_Auth.currentUser) {
-          setGyms([]);
-          setLoading(false);
-          return;
-        }
+      // Fix for accessing API response data properly
+const fetchRegisteredGyms = async () => {
+  if (!FireBase_Auth || !FireBase_Auth.currentUser) {
+    setGyms([]);
+    return;
+  }
+
+  try {
+    const currentUser = FireBase_Auth.currentUser;
+    if (!currentUser) {
+      setGyms([]);
+      return;
+    }
+
+    let token;
+    try {
+      token = await currentUser.getIdToken();
+    } catch (tokenError) {
+      console.error("Error getting token:", tokenError);
+      setGyms([]);
+      return;
+    }
+
+    // Modified to fetch ALL registered gyms, not just user's gyms
+    console.log("Making API request to fetch all registered gyms");
+
+    const response = await axios.get(
+      `${API_URL}/Register/Gyms`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        timeout: 15000,
+      }
+    );
+
+    console.log("API response for registered gyms:", response.data);
+
+    // Handle different possible API response formats
+    let gymsData = [];
     
-        try {
-          setLoading(true);
-    
-          const currentUser = FireBase_Auth.currentUser;
-          if (!currentUser) {
-            setGyms([]);
-            setLoading(false);
-            return;
-          }
-    
-          let token;
-          try {
-            token = await currentUser.getIdToken();
-          } catch (tokenError) {
-            console.error("Error getting token:", tokenError);
-            setGyms([]);
-            setLoading(false);
-            return;
-          }
-    
-          const response = await axios.get(
-            `${API_URL}/Register/Gyms`,
-            {
-              headers: {
-                Authorization: `Bearer ${token}`,
-              },
-              timeout: 15000,
-            }
-          );
-          console.log("Registered gyms response:", response.data);
-    
-          if (
-            !response.data ||
-            !response.data.data||
-            response.data.data.length === 0
-          ) {
-            setGyms([]);
-            setLoading(false);
-            return;
-          }
-    
-          // Convert API response to GymData format
-          const registeredGyms = response.data.data.map((gym: any) => ({
-            id: gym._id,
-            gymName: gym.gymName || "Unnamed Gym",
-            location: {
-              address: gym.address || "No address",
-              city: gym.city || "",
-              state: gym.state || "",
-            },
-            rating: gym.rating || 4.5,
-            imageUrl:  gym.media?.imageUrl || getRandomItem(GYM_IMAGES),
-            facilities: {
-              gymType: gym.gymType || "General Fitness",
-              hasPool: gym.facilities?.hasPool || false,
-              hasClasses: gym.facilities?.hasClasses || false,
-              hasCardio: gym.facilities?.hasCardio || false,
-              hasWeights: gym.facilities?.hasWeights || false,
-            },
-            isRegistered: true,
-            trainers: gym.trainers || [],
-            membershipType: gym.membershipType,
-            distance: gym.distance || "0.0 mi",
-            source: "registered",
-          }));
-    
-          setGyms(registeredGyms);
-        } catch (error) {
-          console.error("Error fetching registered gyms:", error);
-          setGyms([]);
-        } finally {
-          setLoading(false);
-          setRefreshing(false);
-        }
-      };
+    if (response.data?.data && Array.isArray(response.data.data)) {
+      // Format: { data: [...] }
+      gymsData = response.data.data;
+    } else if (response.data?.gyms && Array.isArray(response.data.gyms)) {
+      // Format: { gyms: [...] }
+      gymsData = response.data.gyms;
+    } else if (Array.isArray(response.data)) {
+      // Format: direct array
+      gymsData = response.data;
+    }
+
+    if (gymsData.length === 0) {
+      console.log("No gyms found in API response");
+      setGyms([]);
+      return;
+    }
+
+    // Convert API response to GymData format
+    const gyms: GymData[] = gymsData.map((gym: any) => ({
+      id: gym.id || gym._id || `gym-${Math.random().toString(36).substring(7)}`,
+      gymName: gym.name || gym.gymName || "Unnamed Gym",
+      location: {
+        address: gym.address || gym.location?.address || "No address",
+        city: gym.city || gym.location?.city || "",
+        state: gym.state || gym.location?.state || "",
+      },
+      rating: gym.rating || 4.5,
+      imageUrl: gym.imageUrl || gym.image || getRandomItem(GYM_IMAGES),
+      facilities: {
+        gymType: gym.gymType || gym.facilities?.gymType || "General Fitness",
+        hasPool: gym.facilities?.hasPool || false,
+        hasClasses: gym.facilities?.hasClasses || false,
+        hasCardio: gym.facilities?.hasCardio || false,
+        hasWeights: gym.facilities?.hasWeights || false,
+      },
+      isRegistered: true,
+      trainers: gym.trainers || [],
+      membershipType: gym.membershipType,
+      distance: gym.distance || "0.0 mi",
+      source: "registered",
+    }));
+
+    console.log(`Successfully mapped ${gyms.length} registered gyms`);
+    setGyms(gyms);
+  } catch (error) {
+    console.error("Error fetching registered gyms:", error);
+    setGyms([]);
+  } finally {
+    setLoading(false);
+    setRefreshing(false);
+  }
+};
     
       // Handle refreshing
       const onRefresh = useCallback(async () => {

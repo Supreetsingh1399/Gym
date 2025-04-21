@@ -18,9 +18,10 @@ import { Ionicons } from "@expo/vector-icons";
 import axios from "axios";
 import { API_URL } from "@env";
 import ToastManager,{showToast} from "../components/ToastManager";
+import { useUser } from '../components/UserContext';
 // import * as ImagePicker from "expo-image-picker";
 // import { Picker } from "@react-native-picker/picker";
-
+import { useTheme } from '../components/ThemeContext';
 // Define interfaces
 interface ProfileUpdateProps {
   navigation: any;
@@ -35,7 +36,8 @@ interface ProfileUpdateProps {
 
 export default function ProfileUpdate({ navigation, route }: ProfileUpdateProps) {
   // Get user data from route params
-  const { userData, darkMode, onProfileUpdate } = route.params;
+  const { userData} = route.params;
+  const { userData: contextUserData, updateUserProfile, loading: contextLoading } = useUser();
   
   // State variables for all editable user fields
   const [name, setName] = useState(userData?.name || "");
@@ -59,7 +61,8 @@ export default function ProfileUpdate({ navigation, route }: ProfileUpdateProps)
     const toast = ToastManager;
   // State for loading indicators
   const [isLoading, setIsLoading] = useState(false);
-
+  const { darkMode } = useTheme();
+  
   // Parse initial values
   useEffect(() => {
     if (height) {
@@ -144,82 +147,58 @@ export default function ProfileUpdate({ navigation, route }: ProfileUpdateProps)
     }
   };
 
-  // Handle form submission
-  const handleSaveChanges = async () => {
-    // Validate inputs
-    if (!name.trim()) {
-      showToast.error("Error", "Name cannot be empty");
-      return;
-    }
-    
-    setIsLoading(true);
-    
-    try {
-      // Get current user token
-      const token = await FireBase_Auth.currentUser?.getIdToken(true);
-      const userId = FireBase_Auth.currentUser?.uid;
-      
-      if (!userId || !token) {
-        throw new Error("Authentication error");
-      }
-      
-      // Prepare updated user data
-      const updatedUserData = {
-        name,
-        phone,
-        height: getFormattedHeight(),
-        weight: getFormattedWeight(),
-        fitnessGoal,
-        profilePic,
-        // Keep other data that we're not updating
-        email: userData.email,
-        membership: userData.membership,
-        trainer: userData.trainer,
-      };
-      
-      // Send update request to API
-      const response = await axios.put(
-        `${API_URL}/Register/Users/${userId}`,
-        updatedUserData,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-          timeout: 10000,
-        }
-      );
-      
-      if (response.status === 200) {
-        // Call the optional callback if provided
-        if (onProfileUpdate) {
-          onProfileUpdate();
-        }
-        showToast.success("Success", "Profile updated successfully");
-        Alert.alert(
-          "Success",
-          undefined,
-          [{ 
-            text: "OK", 
-            onPress: () => {
-              // Navigate back and then force a refresh by navigating to the profile screen again
-              navigation.goBack();
-              if (navigation.getParent()) {
-                // This will force the parent navigator to refresh the current screen
-                navigation.getParent().setOptions({ refresh: Date.now() });
-              }
-            } 
-          }]
-        );
-      }
-    } catch (error) {
-      console.error("Error updating profile:", error);
-      Alert.alert("Error", "Failed to update profile. Please try again.");
-    } finally {
-      setIsLoading(false);
-    }
-  };
+ // Inside ProfileUpdate.tsx
+// Update the handleSaveChanges function:
 
+// Updated handleSaveChanges function in ProfileUpdate.tsx
+const handleSaveChanges = async () => {
+  // Validate inputs
+  if (!name.trim()) {
+    showToast.error("Error", "Name cannot be empty");
+    return;
+  }
+  
+  setIsLoading(true);
+  
+  try {
+    // Prepare updated user data
+    const updatedUserData = {
+      name,
+      phone,
+      height: getFormattedHeight(),
+      weight: getFormattedWeight(),
+      fitnessGoal,
+      profilePic,
+      // Keep other data that we're not updating
+      email: userData.email,
+      membership: userData.membership,
+      trainer: userData.trainer,
+    };
+    
+    // Use updateUserProfile from UserContext
+    const success = await updateUserProfile(updatedUserData);
+    
+    if (success) {
+      showToast.success("Success", "Profile updated successfully");
+      
+      // Simplest approach - just go back
+      navigation.goBack();
+      
+      // If you need to call a callback from the route params, do it here
+      if (route.params?.onProfileUpdate) {
+        route.params.onProfileUpdate();
+      }
+      
+    } else {
+      showToast.error("Error", "Failed to update profile");
+    }
+  } catch (error) {
+    console.error("Error updating profile:", error);
+    showToast.error("Error", "Failed to update profile. Please try again.");
+  } finally {
+    setIsLoading(false);
+  }
+};
   return (
     <SafeAreaView className={`flex-1 ${darkMode ? 'bg-gray-900' : 'bg-white'}`}>
       <KeyboardAvoidingView
