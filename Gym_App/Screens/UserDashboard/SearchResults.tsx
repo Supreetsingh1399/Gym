@@ -572,8 +572,8 @@ const SearchResults: React.FC<SearchResultsProps> = ({ navigation, route }) => {
         </View>
 
         <View className="flex-1">
-  <GymMapView gym={selectedGym} />
-</View>
+          <GymMapView gym={selectedGym} />
+        </View>
 
         <TouchableOpacity
           className="m-4 p-3 bg-blue-600 rounded-lg"
@@ -611,29 +611,25 @@ const SearchResults: React.FC<SearchResultsProps> = ({ navigation, route }) => {
               language: "en",
               types: "establishment",
               keyword: "gym fitness",
+              components: "country:in",
               location: userLocation
                 ? `${userLocation.latitude},${userLocation.longitude}`
                 : undefined,
               radius: "5000",
               strictbounds: true,
               rankby: "distance",
-              // Remove the components restriction and use region bias instead
-              region: "in", // for India
             }}
             nearbyPlacesAPI="GooglePlacesSearch"
             predefinedPlacesAlwaysVisible={false}
-            minLength={2} // Only start searching after 2 characters
+            minLength={2}
             enableHighAccuracyLocation={true}
-            timeout={5000} // Timeout for location requests
-            GooglePlacesSearchQuery={{
-              // Additional search parameters
-              type: "gym",
-              rankby: "distance",
+            filterReverseGeocodingByTypes={["establishment"]}
+            textInputProps={{
+              placeholderTextColor: "rgb(156 163 175)",
+              autoCorrect: false,
+              autoCapitalize: "none",
             }}
-            suppressDefaultStyles={false}
-            onFail={(error) =>
-              console.error("PlacesAutoComplete Error:", error)
-            }
+            onNotFound={() => setErrorMsg("No gyms found matching your search")}
             styles={{
               container: {
                 flex: 1,
@@ -667,51 +663,102 @@ const SearchResults: React.FC<SearchResultsProps> = ({ navigation, route }) => {
               },
             }}
             renderRow={(rowData, index) => {
-              // Skip empty results
-              if (
-                !rowData ||
-                (!rowData.structured_formatting && !rowData.description)
-              ) {
-                return <View />;
+
+              console.log('GooglePlaces rowData:', {
+                fullObject: rowData,
+                // structuredFormatting: rowData?.structured_formatting,
+                // mainText: rowData?.structured_formatting?.main_text,
+                // secondaryText: rowData?.structured_formatting?.secondary_text,
+                // placeId: rowData?.place_id,
+                // geometry: rowData?.geometry,
+                // distance: rowData?.distance_meters,
+              });
+              // Check if data is valid and gym-related
+              const mainText = rowData?.structured_formatting?.main_text || '';
+              const secondaryText = rowData?.structured_formatting?.secondary_text || '';
+
+              // Enhanced gym-related keywords
+              const gymKeywords = [
+                "gym",
+                "fitness",
+                "sport",
+                "workout",
+                "athletic",
+                "crossfit",
+                "yoga",
+                "training",
+                "health club",
+                "weight",
+                "bodybuilding",
+                "wellness",
+                "exercise",
+              ];
+
+              // More strict filtering
+              const isGymRelated = gymKeywords.some(
+                (keyword) =>
+                  mainText.toLowerCase().includes(keyword.toLowerCase()) ||
+                  secondaryText.toLowerCase().includes(keyword.toLowerCase())
+              );
+
+              // Return empty view if not valid or not gym-related
+              if (!mainText || !isGymRelated || mainText.trim() === "") {
+                return <Text >No results found</Text>; // Return  of null
               }
+              // if (!rowData) {
+              //   return <Text>no results found</Text>; // Return empty view instead of null
+              // }
 
-              const mainText =
-                rowData.structured_formatting?.main_text || rowData.description;
-              const secondaryText =
-                rowData.structured_formatting?.secondary_text || "";
-
-              // Skip results without a main text
-              if (!mainText) {
-                return <View />;
-              }
-
+              // Render data
               return (
                 <View className="flex-row items-center p-3 border-b border-gray-100">
                   <View className="w-10 h-10 rounded-full bg-blue-50 items-center justify-center mr-3">
                     <Ionicons
-                      name="fitness-outline"
+                      name={
+                        mainText.toLowerCase().includes("yoga")
+                          ? "leaf"
+                          : "fitness-outline"
+                      }
                       size={20}
                       color="#3b82f6"
                     />
                   </View>
                   <View className="flex-1">
-                    <Text className="text-gray-900 font-medium">
+                    <Text
+                      className="text-gray-900 font-medium"
+                      numberOfLines={1}
+                    >
                       {mainText}
                     </Text>
                     {secondaryText ? (
-                      <Text className="text-gray-500 text-sm mt-0.5">
+                      <Text
+                        className="text-gray-500 text-sm mt-0.5"
+                        numberOfLines={1}
+                      >
                         {secondaryText}
                       </Text>
                     ) : null}
                   </View>
-                  {(rowData as any)?.structured_formatting?.distance && (
+                  {(rowData as any).distance_meters && (
                     <Text className="text-sm text-blue-600 ml-2">
-                      {(rowData as any).structured_formatting.distance}
+                      {((rowData as any).distance_meters / 1000).toFixed(1)} km 
                     </Text>
                   )}
                 </View>
               );
             }}
+            GooglePlacesSearchQuery={{
+              // Enhanced search parameters
+              type: "gym",
+              rankby: "distance"
+            }}
+            GooglePlacesDetailsQuery={{
+              // Additional place details
+              fields:
+                "formatted_address,name,rating,formatted_phone_number,opening_hours,geometry,photos",
+            }}
+            debounce={300}
+            enablePoweredByContainer={false}
           />
         </View>
       </View>
