@@ -5,7 +5,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
 // A very basic home screen
 const HomeScreen = ({ navigation }) => (
-  <SafeAreaView style={styles.container}>
+  <SafeAreaView style={styles.container}> 
     <Text style={styles.title}>Debug Home</Text>
     <View style={styles.buttonContainer}>
       <Button 
