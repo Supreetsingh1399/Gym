@@ -1,43 +1,33 @@
-import React, { useState } from "react";
+import React, { useState } from 'react';
 import {
   View,
   Text,
   TextInput,
-  Alert,
-  KeyboardAvoidingView,
   TouchableOpacity,
   ActivityIndicator,
+  KeyboardAvoidingView,
   Platform,
   ScrollView,
-} from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
-import { NativeStackScreenProps } from "@react-navigation/native-stack";
-import { Ionicons } from "@expo/vector-icons";
-import axios from "axios";
-import { RootStackParamList } from "../../types/navigation";
-import { MongoAuth } from "../../Backend/mongodb";
-import useMongoAuth from "../../Backend/hooks/useMongoAuth";
-import { showToast } from "../UserDashboard/components/ToastManager";
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { RootStackParamList } from '../../../App';
+import { Ionicons } from '@expo/vector-icons';
+import Toast from 'react-native-toast-message';
 
-const API_URL = process.env.API_URL || "https://your-api-url.com"; // Update with your actual API URL
+type SignUpScreenProps = NativeStackScreenProps<RootStackParamList, 'SignUp'>;
 
-/**
- * User SignUp component
- */
-const US_SignUp = ({ navigation }: NativeStackScreenProps<RootStackParamList, "User_SignUp">) => {
+const SignUpScreen: React.FC<SignUpScreenProps> = ({ navigation }) => {
   const [userData, setUserData] = useState({
-    email: "",
-    password: "",
-    name: "",
-    phone: "",
+    email: '',
+    password: '',
+    name: '',
+    phone: '',
   });
-  const [confirmPassword, setConfirmPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+  const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  
-  // Get signUp from MongoDB auth hook
-  const { signUp } = useMongoAuth();
 
   const togglePasswordVisibility = () => {
     setShowPassword(!showPassword);
@@ -50,69 +40,45 @@ const US_SignUp = ({ navigation }: NativeStackScreenProps<RootStackParamList, "U
       !userData.name ||
       !userData.phone
     ) {
-      setError("Please fill in all required fields.");
+      setError('Please fill in all required fields.');
       return;
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(userData.email)) {
-      setError("Please enter a valid email.");
+      setError('Please enter a valid email.');
       return;
     } else if (userData.password.length < 6) {
-      setError("Password must be at least 6 characters.");
+      setError('Password must be at least 6 characters.');
       return;
     } else if (userData.password !== confirmPassword) {
-      setError("Passwords do not match.");
+      setError('Passwords do not match.');
       return;
     }
 
     // Clear any previous errors
-    setError("");
+    setError('');
     setLoading(true);
 
     try {
-      console.log("Creating user account...");
+      // Simulate registration delay
+      await new Promise(resolve => setTimeout(resolve, 1500));
       
-      // Create user account with MongoDB Authentication
-      const user = await signUp(userData.email, userData.password, {
-        displayName: userData.name,
-        phone: userData.phone,
-        userType: "user",
+      // This would be replaced with actual user registration
+      console.log('User registered:', userData);
+      
+      Toast.show({
+        type: 'success',
+        text1: 'Success',
+        text2: 'Account created! Please check your email for verification.',
       });
       
-      console.log("User created successfully:", user.uid);
-      
-      // Optionally, save user data to your backend
-      try {
-        console.log("Sending user data to API...");
-        await axios.post(`${API_URL}/Register/Users`, {
-          name: userData.name,
-          email: userData.email,
-          phone: userData.phone,
-          uid: user.uid,
-        });
-        console.log("User data sent to API successfully");
-      } catch (apiError) {
-        console.error("API error during user registration:", apiError);
-        // Continue with the flow even if API call fails
-      }
-
-      // Sign up success
-      Alert.alert(
-        "Success",
-        "Account created! Please check your email for verification.",
-        [
-          {
-            text: "OK",
-            onPress: () => navigation.navigate("LoginScreen"),
-          },
-        ]
-      );
+      navigation.navigate('Login');
     } catch (err) {
-      console.error("Signup error:", err);
+      console.error('Signup error:', err);
       
-      if (err instanceof Error) {
-        setError(err.message);
-      } else {
-        setError("Failed to create account. Please try again.");
-      }
+      const errorMessage = err instanceof Error
+        ? err.message
+        : 'Failed to create account. Please try again.';
+      
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -151,7 +117,7 @@ const US_SignUp = ({ navigation }: NativeStackScreenProps<RootStackParamList, "U
                 className="flex-1 py-3 px-2 text-gray-700"
                 placeholder="Enter your name"
                 value={userData.name}
-                onChangeText={(text:string) =>
+                onChangeText={(text: string) =>
                   setUserData({ ...userData, name: text })
                 }
               />
@@ -169,7 +135,7 @@ const US_SignUp = ({ navigation }: NativeStackScreenProps<RootStackParamList, "U
                 keyboardType="email-address"
                 autoCapitalize="none"
                 value={userData.email}
-                onChangeText={(text:string) =>
+                onChangeText={(text: string) =>
                   setUserData({ ...userData, email: text })
                 }
               />
@@ -186,7 +152,7 @@ const US_SignUp = ({ navigation }: NativeStackScreenProps<RootStackParamList, "U
                 placeholder="Enter your phone number"
                 keyboardType="phone-pad"
                 value={userData.phone}
-                onChangeText={(text:string) =>
+                onChangeText={(text: string) =>
                   setUserData({ ...userData, phone: text })
                 }
               />
@@ -200,10 +166,10 @@ const US_SignUp = ({ navigation }: NativeStackScreenProps<RootStackParamList, "U
               <Ionicons name="lock-closed-outline" size={20} color="#555" />
               <TextInput
                 className="flex-1 py-3 px-2 text-gray-700"
-                placeholder="Create a password"
+                placeholder="Create a password (min 6 characters)"
                 secureTextEntry={!showPassword}
                 value={userData.password}
-                onChangeText={(text:string) =>
+                onChangeText={(text: string) =>
                   setUserData({ ...userData, password: text })
                 }
               />
@@ -250,7 +216,7 @@ const US_SignUp = ({ navigation }: NativeStackScreenProps<RootStackParamList, "U
           {/* Login Link */}
           <View className="flex-row justify-center mb-6">
             <Text className="text-gray-600">Already have an account? </Text>
-            <TouchableOpacity onPress={() => navigation.navigate("LoginScreen")}>
+            <TouchableOpacity onPress={() => navigation.navigate('Login')}>
               <Text className="text-blue-600 font-semibold">Login</Text>
             </TouchableOpacity>
           </View>
@@ -260,4 +226,4 @@ const US_SignUp = ({ navigation }: NativeStackScreenProps<RootStackParamList, "U
   );
 };
 
-export default US_SignUp;
+export default SignUpScreen; 

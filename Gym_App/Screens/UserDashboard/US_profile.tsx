@@ -139,28 +139,28 @@ export default function UserProfile({ navigation }: NavigationProps<'Profile'>) 
         // Set default user data for testing/fallback
         setUser({
           profilePic: "https://randomuser.me/api/portraits/men/32.jpg",
-          name: "John Doe",
+    name: "John Doe",
           email: FireBase_Auth.currentUser?.email || "user@example.com",
           phone: "(123) 456-7890",
           height: "5'10\"",
           weight: "175 lbs",
           fitnessGoal: "Build muscle and improve endurance",
-          membership: {
+    membership: {
             gym: "Fitness Plus",
-            type: "Premium",
+      type: "Premium",
             expiry: "Dec 31, 2023",
             active: true,
-          },
-          trainer: {
+    },
+    trainer: {
             name: "Mike Johnson",
-            experience: "5 years",
+      experience: "5 years",
             imageUrl: "https://randomuser.me/api/portraits/men/41.jpg",
-          },
+    },
         });
       } finally {
         setLoading(false);
       }
-    };
+  };
   
     fetchUserData();
   }, [authAvailable]);
@@ -230,8 +230,8 @@ export default function UserProfile({ navigation }: NavigationProps<'Profile'>) 
         {/* Profile Information */}
         <View className="flex-row items-center px-5 py-5">
         {user?.profilePic ? (
-          <Image
-            source={{ uri: user.profilePic }}
+        <Image
+          source={{ uri: user.profilePic }}
             className="w-[60px] h-[60px] rounded-full"
             onError={() => console.log("Image failed to load:", user.profilePic)}
           />
@@ -282,9 +282,9 @@ export default function UserProfile({ navigation }: NavigationProps<'Profile'>) 
             <Text className="text-base font-bold text-gray-800 ml-2">Fitness Goal</Text>
           </View>
           <Text className="text-sm text-gray-700 ml-7">{user?.fitnessGoal}</Text>
-        </View>
+      </View>
 
-        {/* Membership Details */}
+      {/* Membership Details */}
         <View className="mx-5 my-2.5 bg-white rounded-xl p-4 border border-gray-100">
           <View className="flex-row items-center mb-2.5">
             <Ionicons name="card" size={20} color="#0091EA" />
@@ -351,7 +351,7 @@ export default function UserProfile({ navigation }: NavigationProps<'Profile'>) 
               trackColor={{ false: '#d0d0d0', true: '#aed6f1' }}
               thumbColor={notifications ? '#0091EA' : '#f4f3f4'}
             />
-          </View>
+      </View>
 
           <View className="flex-row items-center justify-between py-3 border-b border-gray-100">
             <View className="flex-row items-center">
@@ -364,9 +364,9 @@ export default function UserProfile({ navigation }: NavigationProps<'Profile'>) 
               trackColor={{ false: '#d0d0d0', true: '#aed6f1' }}
               thumbColor={darkMode ? '#0091EA' : '#f4f3f4'}
             />
-          </View>
+      </View>
 
-          <TouchableOpacity
+      <TouchableOpacity
             className="flex-row items-center justify-between py-3 border-b border-gray-100"
             onPress={() => Alert.alert("Coming Soon", "This feature will be available soon!")}
           >
@@ -375,9 +375,9 @@ export default function UserProfile({ navigation }: NavigationProps<'Profile'>) 
               <Text className="text-base text-gray-800 ml-2.5">Privacy Settings</Text>
             </View>
             <Ionicons name="chevron-forward" size={22} color="#aaa" />
-          </TouchableOpacity>
+      </TouchableOpacity>
 
-          <TouchableOpacity
+      <TouchableOpacity
             className="flex-row items-center justify-between py-3 border-b border-gray-100"
             onPress={() => Alert.alert("Coming Soon", "This feature will be available soon!")}
           >
@@ -386,11 +386,11 @@ export default function UserProfile({ navigation }: NavigationProps<'Profile'>) 
               <Text className="text-base text-gray-800 ml-2.5">Help & Support</Text>
             </View>
             <Ionicons name="chevron-forward" size={22} color="#aaa" />
-          </TouchableOpacity>
+      </TouchableOpacity>
         </View>
 
         {/* Logout */}
-        <TouchableOpacity
+      <TouchableOpacity
           className="bg-red-500 mx-5 my-5 rounded-xl py-3 items-center justify-center"
           onPress={confirmLogout}
           disabled={authLoading || !authAvailable}
@@ -403,7 +403,7 @@ export default function UserProfile({ navigation }: NavigationProps<'Profile'>) 
               <Text className="text-white text-base font-bold ml-2">Logout</Text>
             </View>
           )}
-        </TouchableOpacity>
+      </TouchableOpacity>
 
         {/* Version */}
         <Text className="text-center text-gray-400 text-xs mb-5">Version 1.0.0</Text>

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -7,31 +7,24 @@ import {
   KeyboardAvoidingView,
   ActivityIndicator,
   StyleSheet,
-} from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
-import { Ionicons } from "@expo/vector-icons";
-import { showToast } from "../UserDashboard/components/ToastManager";
-import { NativeStackScreenProps } from "@react-navigation/native-stack";
-import { RootStackParamList } from "../../types/navigation";
-import { MongoAuth } from "../../Backend/mongodb";
-import useMongoAuth from "../../Backend/hooks/useMongoAuth";
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { RootStackParamList } from '../../../App';
+import { Ionicons } from '@expo/vector-icons';
+import Toast from 'react-native-toast-message';
 
-/**
- * Forgot Password screen component
- * @returns JSX.Element
- */
-const ForgotPass = ({ navigation }: NativeStackScreenProps<RootStackParamList, "Forgot_Password">) => {
-  const [email, setEmail] = useState<string>("");
-  const [error, setError] = useState<string>("");
+type ForgotPasswordScreenProps = NativeStackScreenProps<RootStackParamList, 'ForgotPassword'>;
+
+const ForgotPasswordScreen: React.FC<ForgotPasswordScreenProps> = ({ navigation }) => {
+  const [email, setEmail] = useState<string>('');
+  const [error, setError] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(false);
-  
-  // Get resetPassword from the hook
-  const { resetPassword } = useMongoAuth();
 
   // Function to handle the reset password
   const handleResetPassword = async (): Promise<void> => {
     if (!email) {
-      setError("Please enter your email address");
+      setError('Please enter your email address');
       return;
     }
 
@@ -41,41 +34,51 @@ const ForgotPass = ({ navigation }: NativeStackScreenProps<RootStackParamList, "
     };
 
     if (!validateEmail(email)) {
-      setError("Please enter a valid email address");
+      setError('Please enter a valid email address');
       return;
     }
 
-    setError("");
+    setError('');
     setLoading(true);
     
     try {
-      // Send password reset email through MongoDB Auth
-      await resetPassword(email);
-      showToast.success("Success", "Password reset email sent! Please check your inbox.");
-      navigation.navigate("LoginScreen");
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
+      Toast.show({
+        type: 'success',
+        text1: 'Success',
+        text2: 'Password reset email sent! Please check your inbox.',
+      });
+      
+      navigation.navigate('Login');
     } catch (err) {
-      console.error("Reset password error:", err);
-      let errorMessage = "Failed to reset password. Please try again.";
+      console.error('Reset password error:', err);
+      let errorMessage = 'Failed to reset password. Please try again.';
       
       if (err instanceof Error) {
         // Handle specific error messages
-        if (err.message.includes("not found")) {
-          errorMessage = "No account exists with this email";
-        } else if (err.message.includes("invalid")) {
-          errorMessage = "Invalid email format";
-        } else if (err.message.includes("too many")) {
-          errorMessage = "Too many attempts. Please try again later.";
+        if (err.message.includes('not found')) {
+          errorMessage = 'No account exists with this email';
+        } else if (err.message.includes('invalid')) {
+          errorMessage = 'Invalid email format';
+        } else if (err.message.includes('too many')) {
+          errorMessage = 'Too many attempts. Please try again later.';
         }
       }
       
       setError(errorMessage);
-      showToast.error("Error", errorMessage);
+      Toast.show({
+        type: 'error',
+        text1: 'Error',
+        text2: errorMessage,
+      });
     } finally {
       setLoading(false);
     }
   };
 
-  const handleNavigateToLogin = () => navigation.navigate("LoginScreen");
+  const handleNavigateToLogin = () => navigation.navigate('Login');
 
   return (
     <SafeAreaView style={styles.container}>
@@ -95,9 +98,9 @@ const ForgotPass = ({ navigation }: NativeStackScreenProps<RootStackParamList, "
             style={styles.input}
             placeholder="Enter your email"
             value={email}
-            onChangeText={(text:string) => {
+            onChangeText={(text: string) => {
               setEmail(text);
-              if (error) setError("");
+              if (error) setError('');
             }}
             keyboardType="email-address"
             autoCapitalize="none"
@@ -205,4 +208,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default ForgotPass;
+export default ForgotPasswordScreen; 

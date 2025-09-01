@@ -152,7 +152,7 @@ const GymRegistrationWizard = ({ navigation}) => {
     value: string,
   ) => {
     if (parent === 'facilities' && child === 'operatingHours') {
-      setGymData((prev) => ({
+    setGymData((prev) => ({
         ...prev,
         facilities: {
           ...prev.facilities,
@@ -328,7 +328,7 @@ const GymRegistrationWizard = ({ navigation}) => {
 
   // If Firebase services are not ready
   if (!servicesReady) {
-    return (
+  return (
       <SafeAreaView className="flex-1 bg-white justify-center items-center">
         <ActivityIndicator size="large" color="#0091EA" />
         <Text className="mt-4 text-gray-600">Initializing services...</Text>
@@ -739,7 +739,7 @@ const GymRegistrationWizard = ({ navigation}) => {
               <Text className="text-blue-600 font-semibold">Login</Text>
             </TouchableOpacity>
           </View>
-        </ScrollView>
+    </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );

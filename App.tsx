@@ -3,17 +3,23 @@ import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { ActivityIndicator, View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
-import { User } from "firebase/auth";
+import { Ionicons } from "@expo/vector-icons";
+import Toast from 'react-native-toast-message';
+import { StatusBar } from 'expo-status-bar';
 
 // Import navigation types
 import { RootStackParamList } from "./Gym_App/types/navigation";
 
-// Import Firebase first to ensure initialization
+// Import Firebase for authentication
 import { FireBase_Auth, isFirebaseReady } from "./Gym_App/Backend/firebase";
+import { onAuthStateChanged } from "firebase/auth";
 
 // Import toast manager for notifications
 import ToastManager from "./Gym_App/Screens/UserDashboard/components/ToastManager";
 import { showToast } from "./Gym_App/Screens/UserDashboard/components/ToastManager";
+
+// Import NetworkManager
+import NetworkManager from "./Gym_App/Screens/UserDashboard/components/NetworkManager";
 
 // Screen imports
 import ForgotPass from "./Gym_App/Screens/Login/ForgotPass";
@@ -28,6 +34,9 @@ import ExternalGymDetails from "./Gym_App/Screens/UserDashboard/ExternalGymDetai
 
 // Hooks
 import useAuth from "./Gym_App/Backend/hooks/Auth";
+
+// Import toast configuration
+import toastConfig from './src/components/ToastConfig';
 
 // Define interface for ErrorBoundary props and state
 interface ErrorBoundaryProps {
@@ -78,127 +87,61 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
 // Define the stack navigator
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
-// Stack Navigator props interface
-interface StackNavigatorProps {
-  user: User | null;
+// App State Interface
+interface AppState {
+  networkAvailable: boolean;
+  isFirebaseReady: boolean;
 }
-
-/**
- * Stack Navigator component that handles navigation based on authentication state
- */
-const StackNavigator = ({ user }: StackNavigatorProps): JSX.Element => {
-  console.log("[Navigation] Rendering StackNavigator with user:", user ? "Logged in" : "Not logged in");
-  
-  return (
-    <Stack.Navigator
-      initialRouteName={user ? "UserTabs" : "LoginScreen"}
-      screenOptions={{
-        headerShown: true,
-        headerTitleStyle: {
-          fontWeight: 'bold',
-        },
-        headerTintColor: '#0091EA',
-      }}
-    >
-      {!user ? (
-        // Authentication screens
-        <>
-          <Stack.Screen 
-            name="LoginScreen" 
-            component={HandleLogin} 
-            options={{ title: "Login" }} 
-          />
-          <Stack.Screen 
-            //@ts-ignore
-            name="User_SignUp" 
-            component={US_SignUp}
-            options={{ title: "Create User Account" }}
-          />
-          <Stack.Screen 
-            //@ts-ignore
-            name="Forgot_Password" 
-            component={ForgotPass}
-            options={{ title: "Reset Password" }}
-          />
-          <Stack.Screen 
-            //@ts-ignore
-            name="Gym_rgn" 
-            component={GymRegistrationWizard}
-            options={{ title: "Register Gym" }}
-          />
-        </>
-      ) : (
-        // Protected screens - only accessible when authenticated
-        <>
-          <Stack.Screen
-            //@ts-ignore
-            name="UserTabs"
-            component={TabNavigator}
-            options={{ headerShown: false }}
-          />
-          <Stack.Screen 
-            //@ts-ignore
-            name="RGN_Gyms" 
-            component={Registered_Gyms}
-            options={{ title: "Registered Gyms" }}
-          />
-          <Stack.Screen 
-            name="TrainerHome"
-            component={TrainerHome}
-            options={{ title: "Trainer Dashboard" }}
-          />
-          <Stack.Screen 
-            name="SearchResults" 
-            component={SearchResults as any}
-            options={{ title: "Search Results" }}
-          />
-          <Stack.Screen 
-            name="ExternalGymDetails" 
-            component={ExternalGymDetails as any}
-            options={{ title: "Gym Details" }}
-          />
-        </>
-      )}
-    </Stack.Navigator>
-  );
-};
 
 /**
  * Main App component
  * Manages authentication state and renders appropriate screens
  */
 const App = (): JSX.Element => {
-  const [servicesReady, setServicesReady] = useState<boolean>(false);
-  const [initAttempts, setInitAttempts] = useState<number>(0);
-  const { user, loading, error } = useAuth();
+  // Define all state variables first to maintain consistent hook order
+  const [appState, setAppState] = useState<AppState>({
+    networkAvailable: true,
+    isFirebaseReady: false
+  });
   
-  // Max number of initialization attempts before showing retry button
-  const MAX_INIT_ATTEMPTS = 10;
-
-  // Check if Firebase services are ready
+  // Use Firebase auth hook
+  const { user, loading, error, isAuthenticated } = useAuth();
+  
+  // Check if Firebase Auth is initialized
   useEffect(() => {
-    // Skip if services are already marked as ready
-    if (servicesReady) return;
-    
-    // Don't try more than MAX_INIT_ATTEMPTS times automatically
-    if (initAttempts >= MAX_INIT_ATTEMPTS) return;
+    const unsubscribe = onAuthStateChanged(FireBase_Auth, () => {
+      // If we reach here, Firebase Auth is initialized
+      setAppState(prevState => ({ 
+        ...prevState, 
+        isFirebaseReady: true 
+      }));
+      console.log("[App] Firebase Auth is ready");
+    });
 
-    console.log(`[App] Checking Firebase services, attempt ${initAttempts + 1}/${MAX_INIT_ATTEMPTS}`);
-    
-    const services = isFirebaseReady();
-    
-    if (services.auth && services.db) {
-      console.log("[App] Firebase services are ready");
-      setServicesReady(true);
-    } else {
-      // Schedule next check
-      const timer = setTimeout(() => {
-        setInitAttempts(prev => prev + 1);
-      }, 1000);
-      
-      return () => clearTimeout(timer);
+    return () => unsubscribe();
+  }, []);
+  
+  // Handle network status changes from NetworkManager
+  const handleNetworkStatusChange = (isAvailable: boolean) => {
+    console.log(`[App] Network status change: ${isAvailable ? 'Available' : 'Unavailable'}`);
+    setAppState(prevState => ({ 
+      ...prevState, 
+      networkAvailable: isAvailable 
+    }));
+
+    if (!isAvailable) {
+      showToast.warning(
+        "Network Unavailable",
+        "Some features may be limited without network connectivity"
+      );
     }
-  }, [initAttempts, servicesReady]);
+  };
+
+  // Handle force offline mode
+  const handleForceOfflineMode = () => {
+    console.log("[App] User selected to continue in offline mode");
+    // This is now just a stub since we don't need to do anything special
+  };
 
   // Log important state changes
   useEffect(() => {
@@ -206,72 +149,50 @@ const App = (): JSX.Element => {
       loading, 
       error: error ? "Error present" : "No error",
       userExists: !!user,
-      servicesReady,
-      initAttempts
+      networkAvailable: appState.networkAvailable,
+      isFirebaseReady: appState.isFirebaseReady
     });
-  }, [loading, error, user, servicesReady, initAttempts]);
+  }, [loading, error, user, appState]);
 
   // Show toast notifications for auth state changes
   useEffect(() => {
-    if (!loading && user) {
-      showToast.success("Authentication", "Successfully logged in");
-    }
-
-    if (error) {
-      showToast.error("Authentication Error", error);
+    if (!loading) {
+      if (user) {
+        showToast.success("Authentication", "Successfully logged in");
+      }
+  
+      if (error) {
+        showToast.error("Authentication Error", error);
+      }
     }
   }, [user, loading, error]);
 
-  const handleRetry = (): void => {
-    console.log("[App] Retrying Firebase initialization...");
-    showToast.info("Connection", "Retrying connection to services...");
-    setInitAttempts(0);
-    setServicesReady(false);
-  };
-
-  // Show loading state if services aren't ready or auth is still loading
-  if (!servicesReady || loading) {
-    const showRetryButton = initAttempts >= MAX_INIT_ATTEMPTS || error;
-    
+  // Show loading state if auth is still loading or Firebase is not ready
+  if (loading || !appState.isFirebaseReady) {
     return (
       <SafeAreaProvider>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#0091EA" />
           <Text style={styles.loadingText}>
-            {!servicesReady ? "Initializing services..." : "Loading user data..."}
+            {!appState.isFirebaseReady 
+              ? "Initializing Firebase..." 
+              : "Loading user data..."}
           </Text>
-          <Text style={styles.statusText}>
-            Firebase Auth: {FireBase_Auth ? "Available" : "Initializing"}
-          </Text>
-          {initAttempts > 0 && (
-            <Text style={styles.statusText}>
-              Initialization attempts: {initAttempts}/{MAX_INIT_ATTEMPTS}
-            </Text>
-          )}
-          
-          {showRetryButton && (
-            <TouchableOpacity style={styles.retryButton} onPress={handleRetry}>
-              <Text style={styles.retryText}>Retry Connection</Text>
-            </TouchableOpacity>
-          )}
         </View>
-        <ToastManager />
+        <Toast config={toastConfig} />
       </SafeAreaProvider>
     );
   }
 
-  // Show authentication error
+  // Authentication error 
   if (error) {
     return (
       <SafeAreaProvider>
         <View style={styles.errorContainer}>
           <Text style={styles.errorTitle}>Authentication Error</Text>
           <Text style={styles.errorMessage}>{error}</Text>
-          <TouchableOpacity style={styles.retryButton} onPress={handleRetry}>
-            <Text style={styles.retryText}>Retry</Text>
-          </TouchableOpacity>
         </View>
-        <ToastManager />
+        <Toast config={toastConfig} />
       </SafeAreaProvider>
     );
   }
@@ -281,61 +202,121 @@ const App = (): JSX.Element => {
     <ErrorBoundary>
       <SafeAreaProvider>
         <NavigationContainer>
-          <StackNavigator user={user} />
+          <StatusBar style="auto" />
+          <NetworkManager 
+            onNetworkStatusChange={handleNetworkStatusChange}
+            onForceOfflineMode={handleForceOfflineMode}
+          />
+          <Stack.Navigator
+            initialRouteName={isAuthenticated ? "UserTabs" : "LoginScreen"}
+            screenOptions={{
+              headerStyle: {
+                backgroundColor: '#0091EA',
+              },
+              headerTintColor: '#fff',
+              headerTitleStyle: {
+                fontWeight: 'bold',
+              },
+            }}
+          >
+            {/* Authentication screens */}
+            <Stack.Screen 
+              name="LoginScreen" 
+              component={HandleLogin} 
+              options={{ title: "Login" }} 
+            />
+            <Stack.Screen 
+              name="User_SignUp" 
+              component={US_SignUp}
+              options={{ title: "Create User Account" }}
+            />
+            <Stack.Screen 
+              name="Forgot_Password" 
+              component={ForgotPass}
+              options={{ title: "Reset Password" }}
+            />
+            <Stack.Screen 
+              name="Gym_rgn" 
+              component={GymRegistrationWizard}
+              options={{ title: "Register Gym" }}
+            />
+
+            {/* Main navigation */}
+            <Stack.Screen 
+              name="UserTabs" 
+              component={TabNavigator}
+              options={{ headerShown: false }}
+            />
+            <Stack.Screen 
+              name="TrainerHome" 
+              component={TrainerHome}
+              options={{ title: "Trainer Dashboard" }}
+            />
+            <Stack.Screen 
+              name="RGN_Gyms" 
+              component={Registered_Gyms}
+              options={{ title: "My Gyms" }}
+            />
+            <Stack.Screen 
+              name="SearchResults" 
+              component={SearchResults}
+              options={{ title: "Search Results" }}
+            />
+            <Stack.Screen 
+              name="ExternalGymDetails" 
+              component={ExternalGymDetails}
+              options={{ title: "Gym Details" }}
+            />
+          </Stack.Navigator>
+          <Toast config={toastConfig} />
         </NavigationContainer>
-        <ToastManager />
       </SafeAreaProvider>
     </ErrorBoundary>
   );
 };
 
+// Styles
 const styles = StyleSheet.create({
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'white',
-    padding: 20
+    backgroundColor: '#FFFFFF',
   },
   loadingText: {
-    marginTop: 16,
+    marginTop: 10,
     fontSize: 16,
-    color: '#666'
-  },
-  statusText: {
-    marginTop: 8,
-    fontSize: 12,
-    color: '#999'
+    color: '#666666',
   },
   errorContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'white',
-    padding: 20
+    backgroundColor: '#FFFFFF',
+    padding: 20,
   },
   errorTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#e53935',
-    marginBottom: 12
+    color: '#D32F2F',
+    marginBottom: 10,
   },
   errorMessage: {
-    fontSize: 14,
-    color: '#666',
+    fontSize: 16,
+    color: '#666666',
     textAlign: 'center',
-    marginBottom: 20
+    marginBottom: 20,
   },
   retryButton: {
     backgroundColor: '#0091EA',
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    borderRadius: 8,
-    marginTop: 16
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 5,
   },
   retryText: {
-    color: 'white',
-    fontWeight: 'bold'
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: 'bold',
   }
 });
 

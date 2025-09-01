@@ -1,26 +1,18 @@
-// Learn more https://docs.expo.io/guides/customizing-metro
+// Learn more https://docs.expo.dev/guides/customizing-metro
 const { getDefaultConfig } = require('expo/metro-config');
 const path = require('path');
 
 /** @type {import('expo/metro-config').MetroConfig} */
 const config = getDefaultConfig(__dirname);
 
+// Extend the default config
 module.exports = {
     ...config,
-    // Add this resolver configuration
     resolver: {
         ...config.resolver,
-        extraNodeModules: {
-            ...config.resolver.extraNodeModules,
-            // Add any custom module resolution here
-        },
+        sourceExts: ['js', 'jsx', 'json', 'ts', 'tsx', 'cjs'],
         assetExts: [...config.resolver.assetExts],
-        sourceExts: [...config.resolver.sourceExts, 'cjs'],
     },
-    // Make sure this is pointing to your entry file
-    watchFolders: [
-        path.resolve(__dirname, './'),
-    ],
     transformer: {
         ...config.transformer,
         getTransformOptions: async () => ({
@@ -30,4 +22,7 @@ module.exports = {
             },
         }),
     },
+    watchFolders: [
+        path.resolve(__dirname, './'),
+    ],
 }; 

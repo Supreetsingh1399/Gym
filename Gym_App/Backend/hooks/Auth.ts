@@ -1,10 +1,10 @@
 import { User, onAuthStateChanged } from "firebase/auth";
 import { useState, useEffect, useRef } from "react";
-import { FireBase_Auth } from "../firebase";
+import { FireBase_Auth, isUsingMockImplementation } from "../firebase";
 
 /**
  * Custom hook for Firebase authentication state management
- * Simplified version that doesn't rely on authReady state
+ * Handles cases when Firebase Auth is not available
  * @returns {Object} Authentication state with user and loading status
  */
 const useAuth = () => {
@@ -41,20 +41,37 @@ const useAuth = () => {
         return;
       }
       
+      // Check if we're using mock implementations
+      if (isUsingMockImplementation()) {
+        console.log("[Auth Hook] Using mock Firebase implementation");
+        if (isMounted.current) {
+          setUser(null);
+          setLoading(false);
+        }
+        return;
+      }
+      
       console.log("[Auth Hook] Setting up auth subscription");
       
       try {
-        // Set up the auth state listener
-        unsubscribeRef.current = onAuthStateChanged(
+        // Wrap in try-catch since onAuthStateChanged might fail
+        // if Firebase Auth isn't properly initialized
+        const unsub = onAuthStateChanged(
           FireBase_Auth,
+          // Success callback
           (currentUser) => {
             if (!isMounted.current) return;
             
             console.log("[Auth Hook] Auth state changed:", currentUser ? "User logged in" : "No user");
             setUser(currentUser);
             setLoading(false);
-          }
+          },
+          // Error callback - note that we handle errors in the try/catch instead
+          // as onAuthStateChanged only takes 2 parameters
         );
+        
+        // Store the unsubscribe function
+        unsubscribeRef.current = unsub;
       } catch (authError) {
         console.error("[Auth Hook] Error in auth state listener:", authError);
         if (isMounted.current) {
@@ -82,6 +99,13 @@ const useAuth = () => {
     
     return () => {
       clearTimeout(timeoutId);
+      if (unsubscribeRef.current) {
+        try {
+          unsubscribeRef.current();
+        } catch (e) {
+          console.error("[Auth Hook] Error during cleanup:", e);
+        }
+      }
     };
   }, []);
   

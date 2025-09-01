@@ -5,9 +5,8 @@ module.exports = {
     orientation: "portrait",
     icon: "./assets/favicon.png",
     userInterfaceStyle: "light",
-    entryPoint: "./index.js", // Explicitly set entry point
     splash: {
-        image: "./assets/Gym_Project.jpg",
+        image: "./assets/favicon.png",
         resizeMode: "contain",
         backgroundColor: "#ffffff"
     },

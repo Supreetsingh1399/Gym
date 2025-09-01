@@ -815,12 +815,12 @@ const UserHome: React.FC<NavigationProps> = ({ navigation }) => {
             />
           )}
           {!userLocation && !locationLoading && (
-            <TouchableOpacity
+          <TouchableOpacity
               className="ml-2 px-2 py-1 bg-blue-100 rounded-full"
               onPress={loadUserLocation}
-            >
+          >
               <Text className="text-xs text-blue-600 font-medium">Enable</Text>
-            </TouchableOpacity>
+          </TouchableOpacity>
           )}
         </View>
         
@@ -877,16 +877,16 @@ const UserHome: React.FC<NavigationProps> = ({ navigation }) => {
               </ScrollView>
             ) : (
               <View className="px-6">
-                <TouchableOpacity 
+          <TouchableOpacity
                   className="bg-blue-50 py-3 px-4 rounded-lg flex-row items-center justify-center"
                   onPress={loadUserLocation}
-                >
+          >
                   <Ionicons name="location-outline" size={20} color={THEME.colors.blue} />
                   <Text className="ml-2 text-blue-600">
                     Enable location to see gyms near you
                   </Text>
-                </TouchableOpacity>
-              </View>
+          </TouchableOpacity>
+        </View>
             )}
           </View>
 
@@ -953,7 +953,7 @@ const UserHome: React.FC<NavigationProps> = ({ navigation }) => {
                 </Text>
               </View>
             </ImageBackground>
-          </View>
+      </View>
         </ScrollView>
       )}
     </SafeAreaView>
