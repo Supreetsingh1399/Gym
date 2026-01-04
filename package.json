@@ -41,7 +41,7 @@
     "expo-status-bar": "~1.4.4",
     "expo-three": "^8.0.0",
     "expo-three-orbit-controls": "^2.0.0",
-    "express": "^4.21.2",
+    "express": "^4.22.0",
     "formik": "^2.4.6",
     "helmet": "^8.0.0",
     "mongoose": "^7.0.0",
